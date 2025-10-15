@@ -1,0 +1,249 @@
+openapi: 3.0.0
+info:
+  title: AI Image Stylist API
+  description: |
+    OpenAPI specification for the AI Image Stylist project.
+    This file is documentation-driven and reflects requirements from:
+      - .documents/api_specification.md
+      - .documents/project_architecture.md
+      - .documents/ui_ux_design.md
+  version: 1.0.0
+
+servers:
+  - url: https://<your-backend-api-url>
+    description: Backend API base URL
+
+paths:
+  /v1/auth/register:
+    post:
+      summary: Đăng ký tài khoản mới
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRegisterRequest'
+      responses:
+        '200':
+          description: Đăng ký thành công, trả về JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccess'
+        '400':
+          description: Dữ liệu đầu vào không hợp lệ hoặc email đã tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security: []
+
+  /v1/auth/login:
+    post:
+      summary: Đăng nhập
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthLoginRequest'
+      responses:
+        '200':
+          description: Đăng nhập thành công, trả về JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccess'
+        '400':
+          description: Dữ liệu đầu vào không hợp lệ hoặc thông tin đăng nhập sai
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sai thông tin đăng nhập
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security: []
+
+  /v1/templates:
+    get:
+      summary: Lấy danh sách template AI
+      tags:
+        - Templates
+      responses:
+        '200':
+          description: Danh sách template
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplatesList'
+        '401':
+          description: Chưa xác thực
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /v1/images/process:
+    post:
+      summary: Xử lý ảnh với một template AI
+      description: |
+        Client gọi endpoint này sau khi đã upload ảnh lên.
+        Endpoint sẽ lấy prompt bí mật, gọi đến AI API, và lưu kết quả.
+      tags:
+        - Image Processing
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessImageRequest'
+      responses:
+        '200':
+          description: Xử lý ảnh thành công.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessImageSuccess'
+        '400':
+          description: Dữ liệu đầu vào không hợp lệ.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Lỗi xác thực (JWT không hợp lệ hoặc bị thiếu).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Không tìm thấy template hoặc ảnh gốc.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Lỗi server (ví dụ: AI API thất bại).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    AuthRegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+          example: "strongpassword"
+      required:
+        - email
+        - password
+
+    AuthLoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+          example: "strongpassword"
+      required:
+        - email
+        - password
+
+    AuthSuccess:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT token dùng cho các request tiếp theo
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    TemplatesList:
+      type: object
+      properties:
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Template'
+      required:
+        - templates
+
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "anime-style"
+        name:
+          type: string
+          example: "Phong cách Anime"
+        thumbnail_url:
+          type: string
+          format: uri
+          example: "https://your-storage/templates/anime-style-thumb.jpg"
+      required:
+        - id
+        - name
+        - thumbnail_url
+
+    ProcessImageRequest:
+      type: object
+      properties:
+        template_id:
+          type: string
+          description: ID của template được chọn.
+          example: "anime-style"
+        image_path:
+          type: string
+          description: Path của ảnh gốc đã được upload.
+          example: "user-uploads/uuid-1234/my-image.jpg"
+      required:
+        - template_id
+        - image_path
+
+    ProcessImageSuccess:
+      type: object
+      properties:
+        processed_image_url:
+          type: string
+          format: uri
+          description: URL công khai của ảnh đã được xử lý.
+          example: "https://your-storage/generated-images/processed-image.jpg"
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Mô tả chi tiết về lỗi.
+          example: "Template or image not found."
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token được cấp sau khi người dùng đăng nhập.
