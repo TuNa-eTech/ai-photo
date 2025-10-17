@@ -65,16 +65,24 @@ struct ImageProcessingView: View {
                         Text("\(Int(viewModel.progress * 100))%")
                     }
                 } else if let processedURL = viewModel.processedImageURL {
-                    VStack {
-                        Text("Generation Complete!").font(.headline)
-                        AsyncImage(url: processedURL) {
-                            $0.resizable().aspectRatio(contentMode: .fit)
-                        } placeholder: {
-                            ProgressView()
+                    NavigationLink(
+                        destination: ResultView(
+                            originalImage: viewModel.selectedImage,
+                            processedImageURL: processedURL,
+                            onTryAnotherStyle: {
+                                // Reset state and pop to previous view
+                                viewModel.processedImageURL = nil
+                                viewModel.selectedImage = nil
+                            }
+                        ),
+                        isActive: .constant(true),
+                        label: {
+                            Text("View Result")
+                                .font(.headline)
+                                .foregroundColor(.green)
+                                .padding()
                         }
-                        .cornerRadius(10)
-                        .frame(maxHeight: 300)
-                    }
+                    )
                 } else {
                     Button(action: { viewModel.processImage(for: template) }) {
                         Text("Generate")

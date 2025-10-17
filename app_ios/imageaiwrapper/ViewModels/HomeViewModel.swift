@@ -7,7 +7,6 @@
 
 import Foundation
 import Combine
-import Supabase
 
 @MainActor
 class HomeViewModel: ObservableObject {
@@ -18,16 +17,17 @@ class HomeViewModel: ObservableObject {
     func fetchTemplates() {
         isLoading = true
         errorMessage = nil
-        
+
         Task {
             do {
-                let templates: [Template] = try await supabase
-                    .from("templates")
-                    .select("id, name, thumbnail_url")
-                    .execute()
-                    .value
-                
-                self.templates = templates
+                // Example: Replace with your backend API call using Firebase ID token
+                guard FirebaseAuthManager.shared.idToken != nil else {
+                    throw URLError(.userAuthenticationRequired)
+                }
+                // TODO: Replace with real API call to your Go backend, passing idToken in Authorization header
+                // let templates = try await MyAPI.fetchTemplates(idToken: idToken)
+                // self.templates = templates
+                self.templates = [] // Placeholder
             } catch {
                 print("### Error fetching templates: \(error.localizedDescription)")
                 self.errorMessage = error.localizedDescription

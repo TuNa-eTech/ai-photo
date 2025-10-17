@@ -6,8 +6,6 @@
 //
 
 import SwiftUI
-import Supabase
-
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     
@@ -39,7 +37,7 @@ struct HomeView: View {
                                 NavigationLink(destination: ImageProcessingView(template: template)) {
                                     TemplateCard(template: template)
                                 }
-                                .buttonStyle(.plain) // Use plain button style to avoid default list styling on the card
+                                .buttonStyle(.plain)
                             }
                         }
                         .padding()
@@ -50,15 +48,12 @@ struct HomeView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Sign Out") {
-                        Task {
-                            try? await supabase.auth.signOut()
-                        }
+                        FirebaseAuthManager.shared.signOut()
                     }
                     .foregroundColor(.red)
                 }
             }
-            .task {
-                // Fetch templates when the view appears
+            .onAppear {
                 viewModel.fetchTemplates()
             }
         }

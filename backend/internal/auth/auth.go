@@ -11,11 +11,15 @@ import (
 	"google.golang.org/api/option"
 )
 
+type FirebaseAuthClient interface {
+	VerifyIDToken(ctx context.Context, idToken string) (*firebaseauth.Token, error)
+}
+
 // FirebaseAuth holds the Firebase app and context
 type FirebaseAuth struct {
 	App    *firebase.App
 	Ctx    context.Context
-	Client *firebaseauth.Client
+	Client FirebaseAuthClient
 }
 
 // NewFirebaseAuth initializes Firebase Admin SDK using the service account JSON file
@@ -33,7 +37,7 @@ func NewFirebaseAuth(serviceAccountPath string) (*FirebaseAuth, error) {
 	return &FirebaseAuth{
 		App:    app,
 		Ctx:    ctx,
-		Client: client,
+		Client: client, // *firebaseauth.Client implements FirebaseAuthClient
 	}, nil
 }
 

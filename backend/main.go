@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"os"
 
+	"imageaiwrapper-backend/internal/api"
 	"imageaiwrapper-backend/internal/auth"
 	"imageaiwrapper-backend/internal/config"
+
 	"github.com/joho/godotenv"
 )
 
@@ -35,26 +37,19 @@ func main() {
 		log.Fatalf("Failed to initialize Firebase Auth: %v", err)
 	}
 
-	// Protected handler example
-	protectedHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token, ok := auth.GetFirebaseUser(r)
-		if !ok {
-			http.Error(w, `{"error": "Unauthorized. Invalid, expired, or missing Firebase authentication token."}`, http.StatusUnauthorized)
-			return
-		}
-		// Example: return the user's UID and email (if available)
-		email := ""
-		if e, ok := token.Claims["email"].(string); ok {
-			email = e
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"uid": "%s", "email": "%s"}`, token.UID, email)
-	})
+	// Import the real ProcessImageHandler
+	importedHandler := http.HandlerFunc(api.ProcessImageHandler)
 
 	// Set up HTTP server and routes
 	mux := http.NewServeMux()
-	mux.Handle("/v1/images/process", firebaseAuth.AuthMiddleware(protectedHandler))
+
+	disableAuth := os.Getenv("DISABLE_AUTH")
+	if disableAuth == "true" {
+		fmt.Println("WARNING: Firebase Auth is DISABLED for local development.")
+		mux.Handle("/v1/images/process", importedHandler)
+	} else {
+		mux.Handle("/v1/images/process", firebaseAuth.AuthMiddleware(importedHandler))
+	}
 
 	fmt.Printf("Server listening on port %s\n", cfg.Port)
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, mux))

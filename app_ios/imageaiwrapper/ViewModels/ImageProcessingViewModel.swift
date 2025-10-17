@@ -7,8 +7,35 @@
 
 import Foundation
 import SwiftUI
-import Supabase
 import Combine
+
+import FirebaseAuth
+
+protocol ImageProcessingAPIService {
+    func processImage(templateID: String, imagePath: String, idToken: String) async throws -> URL
+}
+
+class DefaultImageProcessingAPIService: ImageProcessingAPIService {
+    func processImage(templateID: String, imagePath: String, idToken: String) async throws -> URL {
+        let requestBody: [String: Any] = ["template_id": templateID, "image_path": imagePath]
+        let url = URL(string: "http://localhost:8080/v1/images/process")! // Update as needed
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody, options: [])
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
+        guard let urlString = json?["processed_image_url"] as? String, let processedURL = URL(string: urlString) else {
+            throw URLError(.badServerResponse)
+        }
+        return processedURL
+    }
+}
 
 @MainActor
 class ImageProcessingViewModel: ObservableObject {
@@ -18,6 +45,12 @@ class ImageProcessingViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var progress: Double = 0.0
+
+    private let apiService: ImageProcessingAPIService
+
+    init(apiService: ImageProcessingAPIService = DefaultImageProcessingAPIService()) {
+        self.apiService = apiService
+    }
 
     func processImage(for template: Template) {
         guard let selectedImage else {
@@ -36,36 +69,24 @@ class ImageProcessingViewModel: ObservableObject {
         
         Task {
             do {
-                guard let user = try? await supabase.auth.user() else {
-                    // This error should ideally not happen if the user is in HomeView
+                guard let user = FirebaseAuthManager.shared.user else {
+                    throw URLError(.userAuthenticationRequired)
+                }
+                guard let idToken = FirebaseAuthManager.shared.idToken else {
                     throw URLError(.userAuthenticationRequired)
                 }
 
-                // 1. Upload image to Supabase Storage
+                // 1. Upload image to backend (mocked)
                 self.progress = 0.1
                 let fileName = "\(UUID().uuidString).jpeg"
-                let filePath = "\(user.id)/\(fileName)"
-                
-                try await supabase.storage
-                    .from("user-uploads")
-                    .upload(filePath, data: imageData, options: .init(contentType: "image/jpeg"))
-                
+                let filePath = "\(user.uid)/\(fileName)"
+                // MOCK: Simulate upload delay and return filePath as if uploaded
+                try await Task.sleep(nanoseconds: 800_000_000) // 0.8s delay
                 self.progress = 0.5 // Mark upload as complete
-                
-                // 2. Call the Edge Function
-                let requestBody = ["template_id": template.id, "image_path": filePath]
-                let jsonData = try JSONSerialization.data(withJSONObject: requestBody, options: [])
-                let options = FunctionInvokeOptions(body: jsonData)
-                let response: [String: String] = try await supabase.functions.invoke(
-                    "process-image",
-                    options: options
-                )
-                
-                guard let urlString = response["processed_image_url"], let url = URL(string: urlString) else {
-                    throw URLError(.badServerResponse)
-                }
-                
-                self.processedImageURL = url
+
+                // 2. Call backend process-image endpoint via injected service
+                let processedURL = try await apiService.processImage(templateID: template.id, imagePath: filePath, idToken: idToken)
+                self.processedImageURL = processedURL
                 self.progress = 1.0 // Mark process as complete
 
             } catch {

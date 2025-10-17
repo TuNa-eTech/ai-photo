@@ -105,7 +105,7 @@ Backend Go sử dụng các biến môi trường sau để cấu hình:
 | Tên biến                  | Bắt buộc | Mô tả                                                      | Giá trị mẫu                                  |
 |---------------------------|----------|------------------------------------------------------------|----------------------------------------------|
 | FIREBASE_SERVICE_ACCOUNT  | Có       | Đường dẫn tới file JSON service account của Firebase        | /app/secret/firebase-service-account.json    |
-| PORT                      | Không    | Cổng mà backend sẽ lắng nghe (mặc định: 8081)              | 8081                                         |
+| PORT                      | Không    | Cổng mà backend sẽ lắng nghe (mặc định: 8080)              | 8080                                         |
 | DATABASE_URL              | Không    | URL kết nối tới cơ sở dữ liệu (PostgreSQL, v.v.)            | postgres://user:pass@host:5432/dbname        |
 | GEMINI_API_KEY            | Không    | API key cho dịch vụ AI Gemini                              | sk-xxx...                                    |
 
@@ -121,7 +121,7 @@ services:
     image: imageai-backend:latest
     environment:
       - FIREBASE_SERVICE_ACCOUNT=/run/secrets/firebase-service-account.json
-      - PORT=8081
+      - PORT=8080
       - DATABASE_URL=postgres://user:pass@host:5432/dbname
       - GEMINI_API_KEY=sk-xxx...
     secrets:

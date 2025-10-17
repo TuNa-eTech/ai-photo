@@ -2,6 +2,17 @@
 
 Tài liệu này đặc tả chi tiết các API endpoint được sử dụng trong dự án.
 
+---
+
+## Lưu ý về xác thực
+
+- **Backend KHÔNG cung cấp API login.**
+- **Toàn bộ xác thực (Google/Apple) được thực hiện qua Firebase Auth trên client (iOS app).**
+- **Backend chỉ xác thực Firebase ID token (JWT) gửi từ client qua header `Authorization: Bearer <firebase-id-token>`.**
+- Nếu cần lưu thông tin profile user, sử dụng API register (mô tả bên dưới).
+
+---
+
 ## 1. API: `process-image`
 
 Đây là API chính để xử lý ảnh, được gọi từ ứng dụng client (SwiftUI).
@@ -97,5 +108,67 @@ Tài liệu này đặc tả chi tiết các API endpoint được sử dụng t
   ```json
   {
     "error": "An internal server error occurred while processing the image."
+  }
+  ```
+
+---
+
+## 2. API: `register-user`
+
+API này dùng để đăng ký hoặc cập nhật thông tin profile user trên backend. Không xử lý xác thực đăng nhập, chỉ lưu thông tin profile.
+
+- **Endpoint:** `/v1/users/register`
+- **Method:** `POST`
+- **Authentication:** Bắt buộc. Yêu cầu header `Authorization: Bearer <firebase-id-token>`
+- **Headers:**
+  - `Content-Type: application/json`
+- **Body Schema (JSON):**
+  ```json
+  {
+    "name": "string",
+    "email": "string",
+    "avatar_url": "string"
+  }
+  ```
+  - `name` (bắt buộc): Tên hiển thị của user.
+  - `email` (bắt buộc): Email user (nên lấy từ Firebase).
+  - `avatar_url` (tùy chọn): Link ảnh đại diện.
+
+### **Responses**
+
+#### **200 OK - Success**
+- **Mô tả:** Đăng ký/cập nhật profile thành công.
+- **Body Schema (JSON):**
+  ```json
+  {
+    "user_id": "string",
+    "message": "User registered/updated successfully."
+  }
+  ```
+
+#### **400 Bad Request**
+- **Mô tả:** Thiếu trường bắt buộc hoặc dữ liệu không hợp lệ.
+- **Body Schema (JSON):**
+  ```json
+  {
+    "error": "Invalid request body. name and email are required."
+  }
+  ```
+
+#### **401 Unauthorized**
+- **Mô tả:** Token không hợp lệ, hết hạn, hoặc thiếu.
+- **Body Schema (JSON):**
+  ```json
+  {
+    "error": "Unauthorized. Invalid, expired, or missing Firebase authentication token."
+  }
+  ```
+
+#### **500 Internal Server Error**
+- **Mô tả:** Lỗi server khi lưu thông tin user.
+- **Body Schema (JSON):**
+  ```json
+  {
+    "error": "An internal server error occurred while registering the user."
   }
   ```

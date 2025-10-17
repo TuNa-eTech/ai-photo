@@ -7,9 +7,9 @@ import (
 
 type Config struct {
 	FirebaseServiceAccount string
-	Port                  string
-	DatabaseURL           string
-	GeminiAPIKey          string
+	Port                   string
+	DatabaseURL            string
+	GeminiAPIKey           string
 }
 
 func LoadConfig() (*Config, error) {
@@ -21,10 +21,10 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("FIREBASE_SERVICE_ACCOUNT environment variable is required")
 	}
 
-	// Optional: Port (default 8081)
+	// Optional: Port (default 8080)
 	cfg.Port = os.Getenv("PORT")
 	if cfg.Port == "" {
-		cfg.Port = "8081"
+		cfg.Port = "8080"
 	}
 
 	// Optional: Database URL

@@ -14,63 +14,44 @@ servers:
     description: Backend API base URL
 
 paths:
-  /v1/auth/register:
+  /v1/users/register:
     post:
-      summary: Đăng ký tài khoản mới
+      summary: Đăng ký hoặc cập nhật thông tin profile user (profile only, không xác thực đăng nhập)
       tags:
-        - Authentication
+        - User
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AuthRegisterRequest'
+              $ref: '#/components/schemas/UserRegisterRequest'
       responses:
         '200':
-          description: Đăng ký thành công, trả về JWT token
+          description: Đăng ký/cập nhật profile thành công
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthSuccess'
+                $ref: '#/components/schemas/UserRegisterSuccess'
         '400':
-          description: Dữ liệu đầu vào không hợp lệ hoặc email đã tồn tại
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security: []
-
-  /v1/auth/login:
-    post:
-      summary: Đăng nhập
-      tags:
-        - Authentication
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AuthLoginRequest'
-      responses:
-        '200':
-          description: Đăng nhập thành công, trả về JWT token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthSuccess'
-        '400':
-          description: Dữ liệu đầu vào không hợp lệ hoặc thông tin đăng nhập sai
+          description: Thiếu trường bắt buộc hoặc dữ liệu không hợp lệ
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Sai thông tin đăng nhập
+          description: Token không hợp lệ, hết hạn, hoặc thiếu
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      security: []
+        '500':
+          description: Lỗi server khi lưu thông tin user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /v1/templates:
     get:
@@ -135,7 +116,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '500':
-          description: Lỗi server (ví dụ: AI API thất bại).
+          description: "Lỗi server."
           content:
             application/json:
               schema:
@@ -143,43 +124,33 @@ paths:
 
 components:
   schemas:
-    AuthRegisterRequest:
+    UserRegisterRequest:
       type: object
       properties:
+        name:
+          type: string
+          example: "Nguyen Van A"
         email:
           type: string
           format: email
           example: "user@example.com"
-        password:
+        avatar_url:
           type: string
-          format: password
-          example: "strongpassword"
+          format: uri
+          example: "https://your-storage/avatars/user123.jpg"
       required:
+        - name
         - email
-        - password
 
-    AuthLoginRequest:
+    UserRegisterSuccess:
       type: object
       properties:
-        email:
+        user_id:
           type: string
-          format: email
-          example: "user@example.com"
-        password:
+          example: "user-uuid-1234"
+        message:
           type: string
-          format: password
-          example: "strongpassword"
-      required:
-        - email
-        - password
-
-    AuthSuccess:
-      type: object
-      properties:
-        token:
-          type: string
-          description: JWT token dùng cho các request tiếp theo
-          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          example: "User registered/updated successfully."
 
     TemplatesList:
       type: object
@@ -246,4 +217,4 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token được cấp sau khi người dùng đăng nhập.
+      description: Firebase ID token được cấp sau khi người dùng đăng nhập Google/Apple qua Firebase Auth.

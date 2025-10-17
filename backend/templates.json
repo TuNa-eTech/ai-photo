@@ -1,0 +1,12 @@
+[
+  {
+    "id": "example",
+    "name": "Example Template",
+    "prompt": "Apply artistic style"
+  },
+  {
+    "id": "cartoon",
+    "name": "Cartoon Style",
+    "prompt": "Transform the image into a vibrant cartoon illustration"
+  }
+]

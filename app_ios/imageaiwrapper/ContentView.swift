@@ -6,27 +6,19 @@
 //
 
 import SwiftUI
-import Supabase
-
 struct ContentView: View {
-    @State private var session: Session? = nil
+    @ObservedObject private var authManager = FirebaseAuthManager.shared
 
     var body: some View {
         Group {
-            if session != nil {
-                // If the user is logged in, show the HomeView.
+            if authManager.user != nil {
                 HomeView()
             } else {
-                // If the user is not logged in, show the AuthView.
                 AuthView()
             }
         }
-        .task {
-            // Listen for authentication state changes.
-            // This will automatically update the `session` state variable.
-            for await (_, session) in supabase.auth.authStateChanges {
-                self.session = session
-            }
+        .onAppear {
+            authManager.refreshIDToken()
         }
     }
 }

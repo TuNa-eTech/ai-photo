@@ -6,8 +6,10 @@
 //
 
 import SwiftUI
-import Supabase
 import AuthenticationServices
+import GoogleSignIn
+import FirebaseAuth
+import UIKit
 
 struct AuthView: View {
     @State private var isLoading = false
@@ -22,6 +24,43 @@ struct AuthView: View {
             
             Spacer()
 
+            // Google Sign-In Button
+            Button(action: {
+                isLoading = true
+                authError = nil
+                if let rootVC = Self.rootViewController() {
+                    FirebaseAuthManager.shared.signInWithGoogle(presentingViewController: rootVC) { result in
+                        DispatchQueue.main.async {
+                            isLoading = false
+                            switch result {
+                            case .success(_):
+                                break // Success handled by ContentView session state
+                            case .failure(let error):
+                                self.authError = error
+                            }
+                        }
+                    }
+                } else {
+                    isLoading = false
+                    self.authError = NSError(domain: "AuthView", code: 1, userInfo: [
+                        NSLocalizedDescriptionKey: "Unable to find the root view controller."
+                    ])
+                }
+            }) {
+                HStack {
+                    Image(systemName: "globe")
+                    Text("Sign in with Google")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color(.systemBlue))
+                .foregroundColor(.white)
+                .cornerRadius(10)
+            }
+            .frame(height: 55)
+
+            // Apple Sign-In Button
             SignInWithAppleButton(
                 onRequest: { request in
                     request.requestedScopes = [.fullName, .email]
@@ -48,14 +87,21 @@ struct AuthView: View {
         .padding()
     }
 
+    /// Returns the current key window's rootViewController in a modern iOS 15+ compatible way.
+    static func rootViewController() -> UIViewController? {
+        // Get connected scenes
+        return UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first(where: { $0.isKeyWindow })?.rootViewController
+    }
+
     private func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
         isLoading = true
         authError = nil
         
         guard case .success(let authorization) = result,
-              let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
-              let idTokenData = appleIDCredential.identityToken,
-              let idToken = String(data: idTokenData, encoding: .utf8)
+              let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential
         else {
             if case .failure(let error) = result {
                 print("### Apple Sign-In Error: \(error.localizedDescription)")
@@ -69,17 +115,16 @@ struct AuthView: View {
             return
         }
 
-        Task {
-            do {
-                try await supabase.auth.signInWithIdToken(
-                    credentials: .init(provider: .apple, idToken: idToken)
-                )
-                // The session is automatically handled by the `.onAuthStateChange` listener in the main App file.
-            } catch {
-                print("### Supabase Auth Error: \(error.localizedDescription)")
-                self.authError = error
+        FirebaseAuthManager.shared.signInWithApple(credential: appleIDCredential) { result in
+            DispatchQueue.main.async {
+                isLoading = false
+                switch result {
+                case .success(_):
+                    break // Success handled by ContentView session state
+                case .failure(let error):
+                    self.authError = error
+                }
             }
-            isLoading = false
         }
     }
 }
