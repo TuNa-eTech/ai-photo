@@ -27,9 +27,9 @@ go test -cover ./...
 ### Chạy test bằng CLI (Terminal):
 ```bash
 cd app_ios
-xcodebuild test -scheme imageaiwrapper -destination 'platform=iOS Simulator,name=iPhone 15'
+xcodebuild test -scheme imageaiwrapper -destination 'platform=iOS Simulator,name=Iphone 17' -parallel-testing-enabled NO | xcpretty
 ```
-- Thay đổi `name=iPhone 15` thành simulator bạn có cài đặt.
+- Thay đổi `name=Iphone 17` thành simulator bạn có cài đặt.
 - Kết quả sẽ hiển thị trong terminal.
 
 ---

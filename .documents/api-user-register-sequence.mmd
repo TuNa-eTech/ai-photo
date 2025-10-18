@@ -1,0 +1,29 @@
+sequenceDiagram
+    participant Client
+    participant API as RegisterUserHandler
+    participant Firebase as Firebase Admin SDK
+    participant DB as Database
+
+    Client->>API: POST /v1/users/register\nAuthorization: Bearer <idToken>\nBody: {name, email, avatar_url}
+    API->>API: Kiểm tra header Authorization
+    alt Header thiếu/sai
+        API-->>Client: 401 Unauthorized
+    else Header hợp lệ
+        API->>API: Parse & validate body
+        alt Body lỗi/thiếu trường
+            API-->>Client: 400 Bad Request
+        else Body hợp lệ
+            API->>Firebase: Xác thực idToken
+            alt Token không hợp lệ
+                API-->>Client: 401 Unauthorized
+            else Token hợp lệ
+                API->>DB: Tìm user theo email
+                alt User đã tồn tại
+                    API->>DB: Cập nhật thông tin user
+                else User chưa tồn tại
+                    API->>DB: Tạo mới user
+                end
+                API-->>Client: 200 OK\n{user_id, message}
+            end
+        end
+    end

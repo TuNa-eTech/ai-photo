@@ -4,9 +4,10 @@ _This file documents the technologies used, development setup, technical constra
 
 ## Technologies Used
 - **Frontend:**
-    - Swift
-    - SwiftUI
-    - Firebase SDK (for authentication: Google/Apple login, ID token)
+    - Swift, SwiftUI, MVVM, async/await, Observable, MainActor.
+    - Interface-driven: AuthManagerProtocol, APIClientProtocol, dễ test/mock.
+    - Firebase SDK (Google/Apple login, ID token).
+    - Đầy đủ unit test cho ViewModel, API, xác thực, mock network, test error case.
 - **Backend:**
     - Go (Golang, >=1.18, ưu tiên >=1.16 để không dùng io/ioutil)
     - Firebase Admin SDK (for ID token verification)
@@ -37,6 +38,11 @@ _This file documents the technologies used, development setup, technical constra
 - The application is for iOS only.
 - **Authentication is 100% handled by Firebase Auth (client-side login, backend verifies idToken). Backend KHÔNG cung cấp API login, chỉ xác thực idToken.**
 - **API `/v1/users/register` chỉ để lưu/cập nhật profile user, không xác thực đăng nhập.**
+- Đầy đủ unit test cho ViewModel, API, xác thực, mock network, test error case.
+- TODO: Hoàn thiện các TODO (API thực tế trong ViewModel, ví dụ fetchTemplates).
+- TODO: Bổ sung thêm UI test (UITest) cho các flow chính nếu muốn tăng độ tin cậy.
+- TODO: Bổ sung test cho các edge case (network timeout, backend 500, ...).
+- TODO: Đảm bảo BASE_URL được config động qua Info.plist/environment.
 - Secret keys and prompts for AI APIs must be handled securely on the backend.
 - The backend is containerizable for deployment.
 
@@ -58,6 +64,11 @@ _This file documents the technologies used, development setup, technical constra
 - The backend loads environment variables from a `.env` file (if present) for local development, and from the environment in production.
 - Firebase Console is used for managing authentication and service accounts.
 - **Sau khi đăng nhập Firebase thành công, app iOS phải gọi API `/v1/users/register` (gửi idToken + profile info) để lưu/cập nhật thông tin user.**
+- Đầy đủ unit test cho ViewModel, API, xác thực, mock network, test error case.
+- TODO: Hoàn thiện các TODO (API thực tế trong ViewModel, ví dụ fetchTemplates).
+- TODO: Bổ sung thêm UI test (UITest) cho các flow chính nếu muốn tăng độ tin cậy.
+- TODO: Bổ sung test cho các edge case (network timeout, backend 500, ...).
+- TODO: Đảm bảo BASE_URL được config động qua Info.plist/environment.
 - Google Gemini API: tích hợp manual HTTP, truyền prompt động, xử lý ảnh base64, nhận kết quả base64, decode và lưu file.
 - Không dùng io/ioutil (Go >=1.16), thay bằng os.ReadFile, io.ReadAll.
 - Cấu hình email pgAdmin phải dùng email hợp lệ (không dùng domain .local).

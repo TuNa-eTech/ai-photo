@@ -47,8 +47,10 @@ func main() {
 	if disableAuth == "true" {
 		fmt.Println("WARNING: Firebase Auth is DISABLED for local development.")
 		mux.Handle("/v1/images/process", importedHandler)
+		mux.Handle("/v1/users/register", http.HandlerFunc(api.RegisterUserHandler))
 	} else {
 		mux.Handle("/v1/images/process", firebaseAuth.AuthMiddleware(importedHandler))
+		mux.Handle("/v1/users/register", http.HandlerFunc(api.RegisterUserHandler))
 	}
 
 	fmt.Printf("Server listening on port %s\n", cfg.Port)

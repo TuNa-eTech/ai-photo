@@ -11,29 +11,171 @@ import (
 	"imageaiwrapper-backend/internal/models"
 )
 
-// --- Mock dependencies ---
-
 var (
 	mockImageExists     func(string) bool
 	mockGetTemplateByID func(string) (*models.Template, error)
 	mockProcessImage    func(*models.ProcessImageRequest) (string, error)
 )
 
-func init() {
-	// Patch the dependencies with mocks for testing
-	// (In real code, use interfaces and dependency injection. Here, use package-level vars for simplicity.)
-}
-
 // --- Test helpers ---
 
 func setMocks(
-	imageExists func(string) bool,
-	getTemplateByID func(string) (*models.Template, error),
-	processImage func(*models.ProcessImageRequest) (string, error),
+	imageExistsFunc func(string) bool,
+	getTemplateByIDFunc func(string) (*models.Template, error),
+	processImageFunc func(*models.ProcessImageRequest) (string, error),
 ) {
-	mockImageExists = imageExists
-	mockGetTemplateByID = getTemplateByID
-	mockProcessImage = processImage
+	mockImageExists = imageExistsFunc
+	mockGetTemplateByID = getTemplateByIDFunc
+	mockProcessImage = processImageFunc
+
+	// Inject mocks into handler dependencies
+	imageExists = imageExistsFunc
+	getTemplateByID = getTemplateByIDFunc
+	processImage = processImageFunc
+}
+
+/* --- RegisterUserHandler Tests --- */
+
+func TestRegisterUserHandler_Success(t *testing.T) {
+	reqBody := models.UserRegisterRequest{
+		Name:  "Test User",
+		Email: "test@example.com",
+	}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest("POST", "/v1/users/register", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer valid-token")
+	w := httptest.NewRecorder()
+
+	RegisterUserHandler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d", resp.StatusCode)
+	}
+	var out models.UserRegisterResponse
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if out.UserID != "test@example.com" {
+		t.Errorf("unexpected user_id: %s", out.UserID)
+	}
+	if out.Message == "" {
+		t.Errorf("expected non-empty message")
+	}
+}
+
+func TestRegisterUserHandler_MissingAuthHeader(t *testing.T) {
+	reqBody := models.UserRegisterRequest{Name: "Test", Email: "test@example.com"}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest("POST", "/v1/users/register", bytes.NewReader(body))
+	// No Authorization header
+	w := httptest.NewRecorder()
+
+	RegisterUserHandler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401 Unauthorized, got %d", resp.StatusCode)
+	}
+	var out models.ErrorResponse
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		t.Fatalf("failed to decode error response: %v", err)
+	}
+	if out.ErrorCode != "unauthorized" {
+		t.Errorf("expected error_code 'unauthorized', got '%s'", out.ErrorCode)
+	}
+}
+
+func TestRegisterUserHandler_InvalidAuthHeader(t *testing.T) {
+	reqBody := models.UserRegisterRequest{Name: "Test", Email: "test@example.com"}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest("POST", "/v1/users/register", bytes.NewReader(body))
+	req.Header.Set("Authorization", "InvalidTokenFormat")
+	w := httptest.NewRecorder()
+
+	RegisterUserHandler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401 Unauthorized, got %d", resp.StatusCode)
+	}
+	var out models.ErrorResponse
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		t.Fatalf("failed to decode error response: %v", err)
+	}
+	if out.ErrorCode != "unauthorized" {
+		t.Errorf("expected error_code 'unauthorized', got '%s'", out.ErrorCode)
+	}
+}
+
+func TestRegisterUserHandler_MissingIDToken(t *testing.T) {
+	reqBody := models.UserRegisterRequest{Name: "Test", Email: "test@example.com"}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest("POST", "/v1/users/register", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer ")
+	w := httptest.NewRecorder()
+
+	RegisterUserHandler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401 Unauthorized, got %d", resp.StatusCode)
+	}
+	var out models.ErrorResponse
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		t.Fatalf("failed to decode error response: %v", err)
+	}
+	if out.ErrorCode != "unauthorized" {
+		t.Errorf("expected error_code 'unauthorized', got '%s'", out.ErrorCode)
+	}
+}
+
+func TestRegisterUserHandler_InvalidRequestBody(t *testing.T) {
+	req := httptest.NewRequest("POST", "/v1/users/register", bytes.NewReader([]byte("not-json")))
+	req.Header.Set("Authorization", "Bearer valid-token")
+	w := httptest.NewRecorder()
+
+	RegisterUserHandler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request, got %d", resp.StatusCode)
+	}
+	var out models.ErrorResponse
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		t.Fatalf("failed to decode error response: %v", err)
+	}
+	if out.ErrorCode != "invalid_request" {
+		t.Errorf("expected error_code 'invalid_request', got '%s'", out.ErrorCode)
+	}
+}
+
+func TestRegisterUserHandler_MissingFields(t *testing.T) {
+	reqBody := models.UserRegisterRequest{Name: "", Email: ""}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest("POST", "/v1/users/register", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer valid-token")
+	w := httptest.NewRecorder()
+
+	RegisterUserHandler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request, got %d", resp.StatusCode)
+	}
+	var out models.ErrorResponse
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		t.Fatalf("failed to decode error response: %v", err)
+	}
+	if out.ErrorCode != "missing_fields" {
+		t.Errorf("expected error_code 'missing_fields', got '%s'", out.ErrorCode)
+	}
 }
 
 // --- Test cases ---
@@ -76,6 +218,7 @@ func TestProcessImageHandler_Success(t *testing.T) {
 func TestProcessImageHandler_InvalidRequest(t *testing.T) {
 	req := httptest.NewRequest("POST", "/v1/images/process", bytes.NewReader([]byte("not-json")))
 	w := httptest.NewRecorder()
+	ProcessImageHandler(w, req)
 	ProcessImageHandler(w, req)
 	resp := w.Result()
 	defer resp.Body.Close()

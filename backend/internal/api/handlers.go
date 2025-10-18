@@ -11,6 +11,13 @@ import (
 	"imageaiwrapper-backend/internal/storage"
 )
 
+// --- Dependency injection for testability ---
+var (
+	imageExists     = storage.ImageExists
+	getTemplateByID = database.GetTemplateByID
+	processImage    = image.ProcessImage
+)
+
 // ProcessImageHandler handles the /v1/images/process endpoint.
 func ProcessImageHandler(w http.ResponseWriter, r *http.Request) {
 	var req models.ProcessImageRequest
@@ -32,7 +39,7 @@ func ProcessImageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !storage.ImageExists(req.ImagePath) {
+	if !imageExists(req.ImagePath) {
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(models.ErrorResponse{
 			Error:     "image not found",
@@ -41,7 +48,7 @@ func ProcessImageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := database.GetTemplateByID(req.TemplateID)
+	_, err := getTemplateByID(req.TemplateID)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(models.ErrorResponse{
@@ -52,7 +59,7 @@ func ProcessImageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call image processing logic (stub)
-	processedURL, err := image.ProcessImage(&req)
+	processedURL, err := processImage(&req)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(models.ErrorResponse{

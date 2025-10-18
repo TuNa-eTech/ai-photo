@@ -36,3 +36,11 @@ type UserRegisterResponse struct {
 	UserID  string `json:"user_id"`
 	Message string `json:"message"`
 }
+
+// User represents a user profile stored in the database.
+type User struct {
+	ID        string `json:"id"` // Unique user ID (could be Firebase UID or email)
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	AvatarURL string `json:"avatar_url"`
+}
