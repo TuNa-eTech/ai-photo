@@ -3,79 +3,119 @@
 _This file documents the technologies used, development setup, technical constraints, dependencies, and tool usage patterns._
 
 ## Technologies Used
-- **Frontend:**
-    - Swift, SwiftUI, MVVM, async/await, Observable, MainActor.
-    - Interface-driven: AuthManagerProtocol, APIClientProtocol, dễ test/mock.
-    - Firebase SDK (Google/Apple login, ID token).
-    - Đầy đủ unit test cho ViewModel, API, xác thực, mock network, test error case.
-- **Backend:**
-    - Go (Golang, >=1.18, ưu tiên >=1.16 để không dùng io/ioutil)
-    - Firebase Admin SDK (for ID token verification)
-    - Google Gemini API (tích hợp thực tế cho AI image processing)
-    - PostgreSQL (recommended for data storage)
-    - Object Storage (e.g., S3, GCS, or MinIO)
-- **AI:**
-    - Google Gemini (tích hợp thực tế, xử lý ảnh base64, prompt động)
+- Frontend (iOS):
+  - Swift, SwiftUI, MVVM, async/await, @Observable ViewModels, MainActor where appropriate
+  - Protocol-driven: APIClientProtocol, repository pattern for testability
+  - Firebase SDK (Google/Apple login, ID token)
+  - Unit tests for ViewModels and business logic (XCTest); UI tests for critical flows
+- Backend (Go):
+  - Go >= 1.25 (Docker toolchain uses golang:1.25-alpine to satisfy go.mod >= 1.25.2)
+  - Firebase Admin SDK (todo: verify ID tokens server-side)
+  - PostgreSQL for persistence (user_profiles)
+  - golang-migrate for schema migrations
+  - pgx stdlib driver for database/sql connectivity
+  - Simple file storage for images under backend/ and backend/processed/
+- AI:
+  - Google Gemini (manual HTTP integration planned/partial for image processing)
 
 ## Development Setup
-- **Frontend:**
-    1. Open `imageaiwrapper.xcodeproj` in Xcode.
-    2. Select a simulator or a connected device.
-    3. Click the "Run" button.
-- **Backend:**
-    1. Ensure Go (>=1.18) is installed.
-    2. Place the Firebase service account JSON in the `backend/` directory.
-    3. Create a `.env` file in the `backend/` directory (see `.env.example` for template) or set environment variables directly.
-    4. To tắt xác thực Firebase Auth cho local/test, thêm `DISABLE_AUTH=true` vào `.env`.
-    5. Tạo file `templates.json` trong backend/ để định nghĩa các template AI style.
-    6. Tất cả ảnh gốc và ảnh kết quả đều lưu trực tiếp trên ổ đĩa (backend/ và backend/processed/).
-    7. From the `backend/` directory, run `go run main.go` to start the server.
-    8. The backend listens on port 8080 by default (or as set in `.env`/env vars).
-    9. The backend automatically loads environment variables from `.env` using [github.com/joho/godotenv](https://github.com/joho/godotenv) for local development. In production/Docker, use real environment variables.
+- iOS:
+  1) Open `AIPhotoApp/AIPhotoApp.xcodeproj` in Xcode.
+  2) Select simulator (e.g., iPhone 17) and Run.
+  3) Ensure `AppConfig.backendBaseURL` points to the backend (http://localhost:8080 for Simulator).
+  4) API requests use APIClient with detailed logging; logs appear in Xcode console.
 
+- Backend (local without Docker):
+  1) Install Go >= 1.25.
+  2) Set required env vars (see “Environment Variables”).
+  3) Run the correct entrypoint:
+     - `cd backend && go run ./cmd/api/main.go`
+     - or build: `cd backend && go build -o app ./cmd/api/main.go && ./app`
+     Note: Do not run a stray `main.go` at backend root; use `./cmd/api/main.go`.
+  4) PostgreSQL must be available; run migrations before starting features that depend on schema (see “Migrations”).
 
-## Technical Constraints
-- The application is for iOS only.
-- **Authentication is 100% handled by Firebase Auth (client-side login, backend verifies idToken). Backend KHÔNG cung cấp API login, chỉ xác thực idToken.**
-- **API `/v1/users/register` chỉ để lưu/cập nhật profile user, không xác thực đăng nhập.**
-- Đầy đủ unit test cho ViewModel, API, xác thực, mock network, test error case.
-- TODO: Hoàn thiện các TODO (API thực tế trong ViewModel, ví dụ fetchTemplates).
-- TODO: Bổ sung thêm UI test (UITest) cho các flow chính nếu muốn tăng độ tin cậy.
-- TODO: Bổ sung test cho các edge case (network timeout, backend 500, ...).
-- TODO: Đảm bảo BASE_URL được config động qua Info.plist/environment.
-- Secret keys and prompts for AI APIs must be handled securely on the backend.
-- The backend is containerizable for deployment.
+- Backend (Docker + Docker Compose):
+  1) Start Postgres:
+     - `cd docker && docker compose up -d db`
+  2) Apply migrations using containerized golang-migrate (recommended for local):
+     - `docker run --rm -v "$(pwd)/backend/migrations:/migrations" --network container:imageaiwrapper-db migrate/migrate:latest -path=/migrations -database "postgres://imageai:imageai_pass@localhost:5432/imageai_db?sslmode=disable" up`
+  3) Build/Run backend:
+     - `cd docker && docker compose up -d --build backend`
+  4) Verify backend logs:
+     - `docker logs --tail 200 imageaiwrapper-backend`
+  5) Verify DB:
+     - `docker exec -e PGPASSWORD=imageai_pass -it imageaiwrapper-db psql -U imageai -d imageai_db -c "SELECT id,email,name,avatar_url,created_at,updated_at FROM user_profiles ORDER BY id DESC LIMIT 10;"`
+
+## Environment Variables
+- Backend (read by app or Docker Compose):
+  - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE` (defaults: db, 5432, imageai, imageai_pass, imageai_db, disable)
+  - `DATABASE_URL` (optional) overrides individual DB_* vars, e.g. `postgres://user:pass@host:5432/db?sslmode=disable`
+  - `PORT` (default 8080)
+  - `FIREBASE_SERVICE_ACCOUNT` (required in production; not enforced in current local stub)
+  - `GEMINI_API_KEY` (if integrating Gemini in backend)
+- Docker Compose sets DB env for backend service:
+  - See `docker/docker-compose.yml` for DB container and backend environment.
+
+## Migrations
+- Files live in `backend/migrations/` and follow `*.up.sql` naming.
+- Local host vs container:
+  - Preferred (local dev): run golang-migrate in a container sharing the DB container network namespace:
+    ```
+    docker run --rm -v "$(pwd)/backend/migrations:/migrations" \
+      --network container:imageaiwrapper-db \
+      migrate/migrate:latest \
+      -path=/migrations \
+      -database "postgres://imageai:imageai_pass@localhost:5432/imageai_db?sslmode=disable" up
+    ```
+  - Makefile target (host) uses `localhost` but may fail due to auth/SCRAM; use the containerized approach above for reliability.
+- Example:
+  - 0001_create_users_table.up.sql (legacy, auth-oriented)
+  - 0002_create_user_profiles_table.up.sql (current profile storage used by `/v1/users/register`)
+- Creating a migration:
+  - `migrate create -ext sql -dir backend/migrations -seq create_<name>`
 
 ## Dependencies
-- **Frontend:**
-    - Firebase iOS SDK (Google/Apple login, ID token)
-- **Backend:**
-    - Go (Golang >=1.18, ưu tiên >=1.16 để không dùng io/ioutil)
-    - Firebase Admin SDK for Go (`firebase.google.com/go/v4`)
-    - Google API Client for Go (`google.golang.org/api/option`)
-    - Google Gemini API (manual HTTP, có thể mở rộng dùng SDK)
-    - [github.com/joho/godotenv](https://github.com/joho/godotenv) (for loading `.env` in local development)
-    - PostgreSQL driver (if using Postgres)
-    - Object storage SDK (if using S3, GCS, etc.)
+- iOS:
+  - Firebase iOS SDK (Google/Apple login, ID token)
+- Backend:
+  - `firebase.google.com/go/v4` (Admin SDK) [todo: integrate token verification in register handler]
+  - `google.golang.org/api/option` (if using Google APIs)
+  - `github.com/jackc/pgx/v5/stdlib` (Postgres driver via database/sql)
+  - `github.com/joho/godotenv` (for local env loading, if used)
+  - `github.com/golang-migrate/migrate/v4/cmd/migrate` (CLI) or dockerized `migrate/migrate`
 
 ## Tool Usage Patterns
-- Xcode is used for all frontend development.
-- Go tools (`go run`, `go mod tidy`, etc.) are used for backend development and dependency management.
-- The backend loads environment variables from a `.env` file (if present) for local development, and from the environment in production.
-- Firebase Console is used for managing authentication and service accounts.
-- **Sau khi đăng nhập Firebase thành công, app iOS phải gọi API `/v1/users/register` (gửi idToken + profile info) để lưu/cập nhật thông tin user.**
-- Đầy đủ unit test cho ViewModel, API, xác thực, mock network, test error case.
-- TODO: Hoàn thiện các TODO (API thực tế trong ViewModel, ví dụ fetchTemplates).
-- TODO: Bổ sung thêm UI test (UITest) cho các flow chính nếu muốn tăng độ tin cậy.
-- TODO: Bổ sung test cho các edge case (network timeout, backend 500, ...).
-- TODO: Đảm bảo BASE_URL được config động qua Info.plist/environment.
-- Google Gemini API: tích hợp manual HTTP, truyền prompt động, xử lý ảnh base64, nhận kết quả base64, decode và lưu file.
-- Không dùng io/ioutil (Go >=1.16), thay bằng os.ReadFile, io.ReadAll.
-- Cấu hình email pgAdmin phải dùng email hợp lệ (không dùng domain .local).
-- Integration test API bằng curl:
-  ```
-  curl -X POST http://localhost:8080/v1/images/process -H "Content-Type: application/json" -d '{"template_id": "example", "image_path": "test_img.png"}'
-  ```
-  (Khi DISABLE_AUTH=true, không cần header Authorization)
-- File-based storage: kiểm tra file kết quả trong backend/processed/
-- Template: chỉnh sửa backend/templates.json để thêm/sửa template AI style.
+- iOS logging:
+  - APIClient prints:
+    - “➡️ API Request: METHOD URL”
+    - Headers (sensitive fields redacted)
+    - Request body (pretty JSON)
+    - “⬅️ API Response: STATUS METHOD URL (xx.x ms)”
+    - Response headers (redacted sensitive)
+    - Response body (pretty JSON)
+  - Toggle logging:
+    - `var client = APIClient(); client.logger.enabled = true/false` (enabled by default in DEBUG)
+- Backend run (Docker):
+  - `cd docker && docker compose up -d db`
+  - Apply migrations (containerized)
+  - `cd docker && docker compose up -d --build backend`
+- Integration check (register user):
+  - `curl -X POST http://localhost:8080/v1/users/register -H "Authorization: Bearer <token-or-stub>" -H "Content-Type: application/json" -d '{"name":"Full Name","email":"user@example.com","avatar_url":""}'`
+  - Verify DB row exists in `user_profiles`.
+
+## Technical Constraints
+- iOS-only client.
+- Authentication is via Firebase Auth; backend does not implement classic login.
+- `/v1/users/register` is for storing/updating user profile, not for authentication.
+- Postgres is the source of truth for profile persistence; images persisted to disk for dev.
+- Keep Go toolchain >= 1.25 to satisfy go.mod and Dockerfile.
+- Future:
+  - Implement Firebase ID token verification server-side in register handler.
+  - Consider consolidating earlier `users` table with `user_profiles` or keep separated (auth vs profile) and document in OpenAPI.
+
+## Reference Commands (Quick Runbook)
+- Start DB: `cd docker && docker compose up -d db`
+- Migrate: see “Migrations” (containerized migrate command)
+- Rebuild backend: `cd docker && docker compose up -d --build backend`
+- Verify DB: psql SELECT from `user_profiles`
+- From iOS simulator, test Google/Apple login → app will auto-call register → check Xcode console logs and DB row.

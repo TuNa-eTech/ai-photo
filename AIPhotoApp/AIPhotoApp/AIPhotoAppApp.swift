@@ -6,27 +6,23 @@
 //
 
 import SwiftUI
-import SwiftData
+import FirebaseCore
+import GoogleSignIn
 
 @main
 struct AIPhotoAppApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+    @State private var authModel = AuthViewModel(authService: AuthService(), userRepository: UserRepository())
 
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    init() {
+        FirebaseApp.configure()
+    }
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootRouterView(model: authModel)
+                .onOpenURL { url in
+                    GIDSignIn.sharedInstance.handle(url)
+                }
         }
-        .modelContainer(sharedModelContainer)
     }
 }

@@ -60,7 +60,7 @@ AI-powered photo styling platform for iOS, with a secure, scalable Go backend an
 4. Run the backend:
     ```bash
     cd backend
-    go run main.go
+    go run ./cmd/api/main.go
     ```
 5. API runs on `http://localhost:8080` by default.
 

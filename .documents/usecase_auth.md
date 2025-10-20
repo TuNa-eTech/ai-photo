@@ -103,8 +103,8 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     A[User opens app] --> B{Is user authenticated?}
-    B -- No --> C[Show AuthView]
-    C --> D{Login method?}
+    B -- No --> C[Show AuthView with Google/Apple login]
+    C --> D{User chooses provider}
     D -- Google --> E[Google Sign-In via Firebase]
     D -- Apple --> F[Apple Sign-In via Firebase]
     E & F --> G[Obtain Firebase ID token]

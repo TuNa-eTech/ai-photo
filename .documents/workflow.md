@@ -137,6 +137,27 @@ func TestVerifyIDToken_InvalidToken(t *testing.T) {
 
 Dự án sẽ có ít nhất 2 môi trường backend riêng biệt:
 
+---
+
+## Hướng dẫn chạy Backend (Go)
+
+**Để chạy backend đúng entrypoint:**
+- Sử dụng lệnh:
+  ```
+  go run ./cmd/api/main.go
+  ```
+  hoặc build từ đúng source:
+  ```
+  go build -o app ./cmd/api/main.go
+  ./app
+  ```
+- **Không chạy** `go run ./cmd/api/main.go` ở thư mục backend root, vì file này không đăng ký đầy đủ các API handler.
+
+**Lý do:**  
+- File entrypoint chuẩn là `backend/cmd/api/main.go`. Nếu chạy nhầm file `backend/main.go`, API sẽ không hoạt động đúng (truy cập `/` sẽ trả về 404).
+
+**Kiểm tra:**  
+
 1.  **Staging/Development:**
     - Dùng cho việc phát triển và kiểm thử các tính năng mới.
     - Sử dụng một môi trường riêng với dữ liệu giả (mock data).
@@ -148,3 +169,109 @@ Dự án sẽ có ít nhất 2 môi trường backend riêng biệt:
     - API keys và URLs được lưu trong file `Production.xcconfig` và không được commit vào Git (sẽ được inject vào lúc build).
 
 Việc chuyển đổi giữa các môi trường trong ứng dụng iOS sẽ được quản lý bằng Build Configurations trong Xcode.
+
+---
+
+## Backend Database Migrations (Local Dev)
+
+Sử dụng golang-migrate dạng container để áp dụng migration vào Postgres chạy bằng Docker, tránh lỗi auth trên host.
+
+1) Khởi động Postgres:
+```bash
+cd docker
+docker compose up -d db
+```
+
+2) Áp dụng migrations (chia sẻ network với container DB):
+- Nếu đang ở thư mục repo root:
+```bash
+docker run --rm \
+  -v "$(pwd)/backend/migrations:/migrations" \
+  --network container:imageaiwrapper-db \
+  migrate/migrate:latest \
+  -path=/migrations \
+  -database "postgres://imageai:imageai_pass@localhost:5432/imageai_db?sslmode=disable" up
+```
+- Nếu đang ở thư mục docker:
+```bash
+docker run --rm \
+  -v "$(pwd)/../backend/migrations:/migrations" \
+  --network container:imageaiwrapper-db \
+  migrate/migrate:latest \
+  -path=/migrations \
+  -database "postgres://imageai:imageai_pass@localhost:5432/imageai_db?sslmode=disable" up
+```
+
+3) Kiểm tra bảng:
+```bash
+docker exec -e PGPASSWORD=imageai_pass -it imageaiwrapper-db \
+  psql -U imageai -d imageai_db -c "\dt"
+```
+
+4) (Tuỳ chọn) Rollback 1 bước:
+```bash
+docker run --rm \
+  -v "$(pwd)/backend/migrations:/migrations" \
+  --network container:imageaiwrapper-db \
+  migrate/migrate:latest \
+  -path=/migrations \
+  -database "postgres://imageai:imageai_pass@localhost:5432/imageai_db?sslmode=disable" down 1
+```
+
+Notes:
+- Host `migrate` có thể fail do SCRAM; ưu tiên cách containerized như trên.
+
+---
+
+## Backend Build/Run (Docker, Go 1.25 toolchain)
+
+Dockerfile backend đã nâng cấp lên Go 1.25 để phù hợp `go.mod (>= 1.25.2)`.
+
+Build & chạy backend:
+```bash
+cd docker
+docker compose up -d --build backend
+```
+
+Xem log:
+```bash
+docker logs --tail 200 imageaiwrapper-backend
+```
+
+---
+
+## Register User Persistence (Postgres)
+
+API `/v1/users/register` nay đã persist profile vào bảng `user_profiles` (email unique, name, avatar_url).
+
+Test nhanh:
+```bash
+curl -X POST http://localhost:8080/v1/users/register \
+  -H "Authorization: Bearer test" \
+  -H "Content-Type: application/json" \
+  --data '{"name":"Full Name","email":"user@example.com","avatar_url":""}'
+```
+
+Xác minh DB:
+```bash
+docker exec -e PGPASSWORD=imageai_pass -it imageaiwrapper-db \
+  psql -U imageai -d imageai_db -c \
+  "SELECT id,email,name,avatar_url,created_at,updated_at FROM user_profiles ORDER BY id DESC LIMIT 10;"
+```
+
+---
+
+## iOS API Client Logging
+
+App iOS sử dụng `APIClient` in chi tiết:
+- Request: METHOD + URL, headers (Authorization/cookies được REDACTED), body JSON (pretty).
+- Response: status code, headers (redaction), body JSON (pretty), duration ms.
+
+Tích hợp ở `UserRepository`:
+- Dùng `APIRequest.json(...)` tạo request.
+- Gọi `client.send(..., authToken: <Firebase ID token>)`.
+- Map 401 → `.unauthorized` để ViewModel refresh token.
+
+Lưu ý:
+- Đảm bảo `AppConfig.backendBaseURL` trỏ đúng backend (http://localhost:8080 cho Simulator).
+- Logger mặc định bật ở DEBUG; có thể tắt/bật: `client.logger.enabled = true/false`.

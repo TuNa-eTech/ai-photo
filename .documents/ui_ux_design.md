@@ -88,4 +88,4 @@ Tài liệu này phác thảo các màn hình chính và luồng tương tác ng
 ## 4. Luồng xác thực
 
 - **Khi mở ứng dụng:** Nếu người dùng chưa đăng nhập, một màn hình modal sẽ hiện lên yêu cầu đăng nhập/đăng ký.
-- **Màn hình Login/Register:** Cung cấp các tùy chọn đăng nhập bằng Email/Password, Apple, Google.
+- **Màn hình Login/Register:** Cung cấp các tùy chọn đăng nhập bằng Apple và Google.

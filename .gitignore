@@ -1,0 +1,4 @@
+.gemini/
+build/
+.box-testing/sandbox/env.yaml
+.gemini/settings.json
