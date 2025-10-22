@@ -60,13 +60,13 @@ export default function Login() {
     >
       <Stack spacing={3} alignItems="center" sx={{ width: 360, maxWidth: '100%' }}>
         <Typography variant="h4" component="h1">
-          Admin Sign In
+          CMS Sign In
         </Typography>
 
         {isDevAuth ? (
           <>
             <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-              Development login with default email/password from Docker env.
+              Development login for CMS with default email/password from Docker env.
             </Typography>
             {error ? <Alert severity="error" sx={{ width: '100%' }}>{error}</Alert> : null}
             <Stack component="form" spacing={2} sx={{ width: '100%' }} onSubmit={handleDevLogin}>
@@ -93,7 +93,7 @@ export default function Login() {
         ) : (
           <>
             <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', maxWidth: 420 }}>
-              Sign in with your Google account to access the admin dashboard.
+              Sign in with your Google account to access the CMS dashboard.
             </Typography>
             <Button
               variant="contained"

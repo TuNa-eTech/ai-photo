@@ -1,7 +1,15 @@
-# Minimal runtime image without builder stage (avoids pulling golang base)
+# Minimal runtime image with CA certificates for outbound TLS (Firebase Admin SDK)
 # Requires a prebuilt static Linux binary at build/imageai-backend
 
+# Stage to fetch CA certs
+FROM alpine:3.20 AS certs
+RUN apk add --no-cache ca-certificates && update-ca-certificates
+
+# Final minimal image
 FROM scratch
+
+# Add CA certs so TLS to Google endpoints works
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # App binary
 COPY build/imageai-backend /imageai-backend

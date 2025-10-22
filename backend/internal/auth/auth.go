@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -50,9 +51,14 @@ func (fa *FirebaseAuth) AuthMiddleware(next http.Handler) http.Handler {
 			http.Error(w, `{"error": "Unauthorized. Invalid, expired, or missing Firebase authentication token."}`, http.StatusUnauthorized)
 			return
 		}
-		idToken := strings.TrimPrefix(authHeader, "Bearer ")
+		idToken := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+		if idToken == "" {
+			http.Error(w, `{"error": "Unauthorized. Invalid, expired, or missing Firebase authentication token."}`, http.StatusUnauthorized)
+			return
+		}
 		token, err := fa.Client.VerifyIDToken(fa.Ctx, idToken)
 		if err != nil {
+			log.Printf("AuthMiddleware: VerifyIDToken failed: %v", err)
 			http.Error(w, `{"error": "Unauthorized. Invalid, expired, or missing Firebase authentication token."}`, http.StatusUnauthorized)
 			return
 		}

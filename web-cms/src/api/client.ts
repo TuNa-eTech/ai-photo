@@ -21,7 +21,7 @@ api.interceptors.request.use(async (config) => {
   }
 
   // Firebase auth (default)
-  const token = await getIdToken();
+  const token = await getIdToken(true);
   if (token) {
     config.headers = config.headers ?? {};
     (config.headers as Record<string, string>).Authorization = `Bearer ${token}`;

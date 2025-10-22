@@ -1,163 +1,80 @@
-# Tasks
-
-Documentation of repetitive tasks and their workflows. Keep entries concise, actionable, and updated with dates.
-
-Last updated: 2025-10-22
-
-## Web Admin Phase 1 (Scaffold + Auth + List + Detail)
-Last performed: 2025-10-21
-
-Files to modify/create:
-- /web_admin/** (scaffolded Vite React TS app)
-- /.implementation_plan/web-admin-plan.md (status checklist)
-- /.documents/web_admin.md (admin scope/spec)
-- /.documents/api_specification.md (references swagger and envelope)
-- /.documents/project_architecture.md (system overview)
-- /.documents/ui_ux_design.md (iOS Liquid Glass + Admin list UX)
-
-Steps:
-1. Scaffold project
-   - pnpm create vite@latest web_admin -- --template react-ts
-   - cd web_admin
-   - pnpm add react-router-dom @tanstack/react-query axios @mui/material @mui/icons-material @emotion/react @emotion/styled firebase
-   - pnpm add -D typescript eslint prettier vitest @testing-library/react @testing-library/user-event jsdom msw @types/node @types/react @types/react-dom
-2. Configure lint/test
-   - Add ESLint/Prettier configs
-   - Add vitest config (jsdom), setup-tests.ts, MSW handlers
-3. Auth
-   - src/auth/firebase.ts (initializeApp/getAuth)
-   - src/auth/useAuth.ts (auth state + idToken retrieval)
-   - src/auth/ProtectedRoute.tsx
-4. API client
-   - src/api/client.ts (Axios, Bearer injection, 401 refresh, envelope unwrap)
-   - src/types/envelope.ts and src/types/template.ts (from swagger/openapi.yaml)
-   - src/api/templates.ts (getTemplates(params))
-5. Routing
-   - src/router/routes.tsx (protected routes /templates, /templates/:id, /login)
-6. Pages and components
-   - src/pages/Login.tsx (Google sign-in)
-   - src/pages/Templates/TemplatesList.tsx (filters q/tags/sort, table, pagination limit/offset)
-   - src/pages/Templates/TemplateDetail.tsx (read-only)
-   - src/components/DataTable.tsx (generic table)
-   - src/components/Filters/TemplatesFilters.tsx
-7. CORS
-   - Ensure backend allows http://localhost:5173 and Authorization header
-8. Tests
-   - MSW handler for GET /v1/templates (EnvelopeTemplatesList)
-   - RTL tests for TemplatesList and ProtectedRoute
-9. Docs
-   - Update .implementation_plan/web-admin-plan.md progress
-   - Keep .documents files synchronized
-
-Important considerations / gotchas:
-- Debounce search (q) before refetch; maintain limit/offset on param changes
-- tags passed as CSV; keep consistent encoding
-- Single 401 refresh-and-retry via Firebase SDK, avoid infinite loops
-- Envelope: check success and data presence; throw with error.message on APIError
-- Accessibility: ensure focus and keyboard nav for MUI table and filters
-- Do not commit .env.local (contains Firebase keys); provide .env.local.example instead
-
-Example snippet (Axios envelope unwrap):
-```ts
-const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL });
-
-api.interceptors.request.use(async (config) => {
-  const token = await getIdToken();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
-export async function getTemplates(params: GetTemplatesParams) {
-  const res = await api.get('/v1/templates', { params });
-  const env = res.data as Envelope<TemplatesList>;
-  if (!env.success || !env.data) throw new Error(env.error?.message ?? 'API error');
-  return env.data.templates;
-}
-```
-
----
-
-## Templates CRUD + Assets Upload (Create + Edit)
+## Improve Template Thumbnail Upload UX
 Last performed: 2025-10-22
 
-Files to modify/create (key):
-- Backend
-  - `backend/internal/models/models.go` (TemplateAdmin, TemplateAssetAdmin, DTOs)
-  - `backend/internal/database/admin_templates.go` (CRUD + publish guard)
-  - `backend/internal/database/admin_assets.go` (list/insert/update/delete)
-  - `backend/internal/api/admin_templates.go` (handlers; route to assets subpaths)
-  - `backend/internal/api/admin_assets.go` (multipart upload, list, update, delete)
-  - `backend/internal/storage/storage.go` (AssetsDir/BaseURL/SaveTemplateAssetFile)
-  - `backend/cmd/api/main.go` (static `/assets` serving)
-  - `docker/docker-compose.yml` (ASSETS_DIR=/assets, ASSETS_BASE_URL=/assets; mount `../backend/assets:/assets`)
-  - `swagger/openapi.yaml` (assets paths + schemas; CRUD already present)
-- Frontend
-  - `web_admin/src/types/admin.ts` (TemplateAdmin, Create/Update DTOs, TemplateAssetAdmin)
-  - `web_admin/src/api/admin/templates.ts` (CRUD + assets API + hooks)
-  - `web_admin/src/pages/Admin/AdminTemplates.tsx` (Thumb column, actions)
-  - `web_admin/src/pages/Admin/TemplateFormDrawer.tsx` (Create+Edit with uploads)
-- Docs
-  - `.documents/web_admin_dashboard.md` (updated)
-  - `.implementation_plan/templates-crud-plan.md` (updated)
+Goal:
+- Fix upload UX for template assets in Web Admin: correct loading states, consistent notifications, minimal client-side validation, and avoid stale slug when creating drafts.
 
-Workflow (step-by-step):
-1. Backend prepare
-   - Add models for `TemplateAssetAdmin`
-   - Implement DB operations: `ListTemplateAssets`, `InsertTemplateAsset`, `UpdateTemplateAsset` (demote others on thumbnail), `DeleteTemplateAsset`
-   - Implement HTTP handlers:
-     - GET `/v1/admin/templates/{slug}/assets`
-     - POST `/v1/admin/templates/{slug}/assets` (multipart: `file` png/jpeg ≤ ~12MB, `kind` in thumbnail|preview)
-     - PUT `/v1/admin/templates/{slug}/assets/{id}` (update kind/sort; ensure single thumbnail)
-     - DELETE `/v1/admin/templates/{slug}/assets/{id}`
-   - Serve static `/assets/*` and mount volume
-   - Ensure publish guard requires existing thumbnail → 422 `validation_error` with fields ["thumbnail_url"]
-2. Swagger update
-   - Add assets endpoints + `TemplateAssetAdmin`, `EnvelopeTemplateAsset(s)` schemas
-3. Frontend CRUD API + UI
-   - CRUD functions + hooks for templates
-   - Assets functions + hooks: list/upload/update/delete
-   - Admin list table shows 48x48 Thumb via `thumbnail_url`
-4. Create Drawer uploads
-   - Provide “Upload Thumbnail/Preview” in Create
-   - On first upload, auto-create draft template using current Slug/Name/Status/Visibility/Tags to obtain `slug`
-   - Upload file; if thumbnail, update `thumbnail_url` in form and preview
-   - Submit “Create” to finalize
-5. Edit Drawer uploads
-   - Provide “Upload Thumbnail/Preview”
-   - Preview Gallery lists preview assets; actions: “Make Thumbnail”, “Delete”
-6. Docker dev
-   - `docker compose up -d` for db/backend/web
-   - Rebuild backend: build static binary → compose build → up
-7. Verification (curl quick tests)
-   ```bash
-   # Login dev
-   TOKEN=$(curl -s -X POST -H 'Content-Type: application/json' -d '{"email":"admin@example.com","password":"admin123"}' http://localhost:8080/v1/dev/login | jq -r '.data.token')
+Files touched:
+- web_admin/src/api/admin/templates.ts
+- web_admin/src/pages/Admin/TemplateFormDrawer.tsx
 
-   # Create template
-   SLUG=demo-$(date +%s)
-   curl -s -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-     -d "{\"slug\":\"$SLUG\",\"name\":\"Demo\",\"status\":\"draft\",\"visibility\":\"public\"}" \
-     http://localhost:8080/v1/admin/templates | jq '.'
+Changes implemented (A, B, G, C):
+- [x] A: Proper pending/disable state using React Query mutation with slug at mutate-time
+  - Refactor `useUploadTemplateAssetMutation` signature to accept slug per mutate call:
+    - Before: `useUploadTemplateAssetMutation(slug: string)` fixed at hook-creation time
+    - After:  `useUploadTemplateAssetMutation()` and call `mutateAsync({ slug, kind, file })`
+  - Prevents stale slug in create mode after auto-draft creation.
+  - Buttons disabled during pending; label shows “Uploading…”.
 
-   # Upload preview
-   curl -s -H "Authorization: Bearer $TOKEN" -F kind=preview -F file=@backend/processed/processed_test_img.png \
-     http://localhost:8080/v1/admin/templates/$SLUG/assets | jq '.'
+- [x] B: Copy/tooltip updates
+  - `Thumbnail URL` helperText updated to:
+    - “Enter a public image URL or upload below. Recommended: square 1:1, ≥ 512px, ≤ 1MB (PNG/JPG).”
+  - Upload buttons include tooltips describing recommended sizes.
 
-   # Promote to thumbnail
-   AID=$(curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8080/v1/admin/templates/$SLUG/assets | jq -r '.data[] | select(.kind=="preview") | .id' | head -n1)
-   curl -s -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-     -X PUT -d '{"kind":"thumbnail"}' http://localhost:8080/v1/admin/templates/$SLUG/assets/$AID | jq '.'
+- [x] G: Local Snackbar success/error in form
+  - Added local `Snackbar/Alert` in `TemplateFormDrawer`.
+  - Success: “Uploaded successfully”.
+  - Error: API message or fallback “Upload failed”.
 
-   # Publish
-   curl -s -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8080/v1/admin/templates/$SLUG/publish | jq '.'
-   ```
+- [x] C: Client-side validation (size, type, dimensions)
+  - Max size ~1MB for both thumbnail and preview.
+  - Thumbnail: near 1:1 (tolerance 10%), min 512x512.
+  - Preview: shortest side ≥ 512px.
+  - Blocks upload with clear Snackbar messages if invalid.
+
+Rationale:
+- Improve reliability and user feedback during uploads.
+- Prevent double-click duplicate uploads and stale state issues.
+- Establish clear quality guidelines for images to ensure consistent UI.
+
+Steps to reproduce and verify:
+1) Create mode
+   - Open New Template, type Name (auto-slug), try Upload Thumbnail with a valid square ≥ 512px ≤ 1MB:
+     - Expect: Button disabled while uploading, label shows “Uploading…”, on success Snackbar, `thumbnail_url` auto-filled, assets refetched.
+   - Try invalid file (e.g., large size or non-square small image):
+     - Expect: Upload blocked with Snackbar error; no request made.
+
+2) Edit mode
+   - Upload Preview images (valid constraints).
+     - Expect: Pending state + success Snackbar, `Preview Gallery` updates after refetch.
+   - Use “Make Thumbnail” on a preview:
+     - Expect: `thumbnail_url` set to that preview URL, gallery refetched (existing behavior preserved).
+
 Important notes / gotchas:
-- Create upload requires `slug`; handle by auto-draft creation on first upload.
-- Enforce single thumbnail by demoting others to preview during promote.
-- For production, replace local `/assets` with S3/CDN; keep `ASSETS_BASE_URL` abstraction.
-- CORS: ensure `http://localhost:5173` and headers `Authorization,Content-Type` allowed.
-- DevAuth is for local only; use Firebase Admin verification in production.
+- Do not set Content-Type manually for multipart; browser sets boundary.
+- Keep axios/form-data as is; optionally add onUploadProgress in client if progress bar needed.
+- Asset kinds:
+  - `thumbnail` (single, 1:1) — used for admin list avatar.
+  - `preview` (multiple) — for gallery and showcasing.
+  - `cover` — currently unused; hide or drop until future requirement.
 
-Follow-up testing (to add):
-- MSW/RTL tests for create-draft-on-first-upload, gallery actions (promote/delete), and publish validation error (422).
-- Backend table-driven tests for content type, payload size, and promote uniqueness.
+Diff summary (high-level):
+- api/admin/templates.ts:
+  - Changed `useUploadTemplateAssetMutation(slug)` to `useUploadTemplateAssetMutation()` and `mutate({ slug, kind, file })`.
+  - Invalidate queries using `variables.slug` from mutate.
+- pages/Admin/TemplateFormDrawer.tsx:
+  - Replace direct `uploadTemplateAsset` call with `uploadMut.mutateAsync({ slug, kind, file })`.
+  - Add local Snackbar, helper text, tooltips.
+  - Add client-side validation for size/dimensions.
+  - Buttons disabled during `uploadMut.isPending`.
+
+Rollback plan:
+- Revert the hook signature back to `useUploadTemplateAssetMutation(slug)` and adjust call sites.
+- Remove Snackbar/validation blocks and restore previous helper text.
+- Ensure to re-run the app to verify no stale imports remain.
+
+Future enhancements (optional):
+- Show Preview Gallery in create mode once a draft slug exists.
+- Add drag-and-drop area for uploads.
+- Add progress bar via axios onUploadProgress.
+- Optional client-side compression/cropping for thumbnails.

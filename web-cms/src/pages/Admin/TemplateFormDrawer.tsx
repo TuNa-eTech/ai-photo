@@ -8,11 +8,13 @@ import {
   Button,
   Typography,
   Divider,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useTemplateAssetsQuery, useUploadTemplateAssetMutation, useUpdateTemplateAssetMutation, useDeleteTemplateAssetMutation, createAdminTemplate, uploadTemplateAsset } from '../../api/admin/templates';
+import { useTemplateAssetsQuery, useUploadTemplateAssetMutation, useUpdateTemplateAssetMutation, useDeleteTemplateAssetMutation, createAdminTemplate } from '../../api/admin/templates';
 import type { CreateTemplateInput, TemplateAdmin, UpdateTemplateInput, TemplateAssetAdmin } from '../../types/admin';
 
 type Mode = 'create' | 'edit';
@@ -70,9 +72,15 @@ const TemplateFormDrawer: React.FC<TemplateFormDrawerProps> = ({ open, mode, ini
 
   // Assets hooks (only enabled in edit mode)
   const { data: assets = [], refetch: refetchAssets } = useTemplateAssetsQuery(slugForEdit);
-  const uploadMut = useUploadTemplateAssetMutation(slugForEdit);
+  const uploadMut = useUploadTemplateAssetMutation();
   const makeThumbMut = useUpdateTemplateAssetMutation(slugForEdit);
   const deleteAssetMut = useDeleteTemplateAssetMutation(slugForEdit);
+
+  const [snack, setSnack] = React.useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
 
   const defaultValuesCreate: CreateForm = useMemo(
     () => ({
@@ -139,6 +147,23 @@ const TemplateFormDrawer: React.FC<TemplateFormDrawerProps> = ({ open, mode, ini
     setValue('slug' as any, e.target.value, { shouldValidate: true });
   };
 
+  // Helpers for image validation
+  async function getImageDims(file: File): Promise<{ width: number; height: number }> {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = (e) => {
+        URL.revokeObjectURL(url);
+        reject(e);
+      };
+      img.src = url;
+    });
+  }
+
   // Upload handlers (edit mode only)
   const thumbFileRef = React.useRef<HTMLInputElement | null>(null);
   const previewFileRef = React.useRef<HTMLInputElement | null>(null);
@@ -146,6 +171,29 @@ const TemplateFormDrawer: React.FC<TemplateFormDrawerProps> = ({ open, mode, ini
   async function handleUpload(kind: 'thumbnail' | 'preview', file: File | null) {
     if (!file) return;
     try {
+      // Basic client-side validation
+      const maxSize = 1_000_000; // ~1MB
+      if (file.size > maxSize) {
+        setSnack({ open: true, message: 'File too large. Max 1MB.', severity: 'error' });
+        return;
+      }
+      const { width, height } = await getImageDims(file);
+      if (kind === 'thumbnail') {
+        const min = 512;
+        const ratio = width / height;
+        const nearSquare = Math.abs(1 - ratio) <= 0.1;
+        if (width < min || height < min || !nearSquare) {
+          setSnack({ open: true, message: 'Thumbnail should be square ~1:1 and ≥ 512x512.', severity: 'error' });
+          return;
+        }
+      } else {
+        const shortSide = Math.min(width, height);
+        if (shortSide < 512) {
+          setSnack({ open: true, message: 'Preview image should be at least 512px on the shortest side.', severity: 'error' });
+          return;
+        }
+      }
+
       let effectiveSlug = slugForEdit;
 
       // In Create mode, ensure a draft exists before uploading
@@ -158,8 +206,7 @@ const TemplateFormDrawer: React.FC<TemplateFormDrawerProps> = ({ open, mode, ini
         const tags = tagsCSV ? tagsCSV.split(',').map((s) => s.trim()).filter(Boolean) : [];
 
         if (!slugVal2) {
-          // eslint-disable-next-line no-console
-          console.error('Slug is required before uploading');
+          setSnack({ open: true, message: 'Slug is required before uploading.', severity: 'error' });
           return;
         }
 
@@ -172,7 +219,7 @@ const TemplateFormDrawer: React.FC<TemplateFormDrawerProps> = ({ open, mode, ini
             visibility: visibilityVal,
             tags,
           });
-        } catch (err: any) {
+        } catch (_err) {
           // If conflict (already created elsewhere), ignore and continue
         }
         setCreatedSlug(slugVal2);
@@ -181,15 +228,17 @@ const TemplateFormDrawer: React.FC<TemplateFormDrawerProps> = ({ open, mode, ini
 
       if (!effectiveSlug) return;
 
-      // Upload using explicit slug (avoids stale hook param)
-      const uploaded = await uploadTemplateAsset(effectiveSlug, kind, file);
+      // Upload using explicit slug (avoids stale hook param) and show pending state
+      const uploaded = await uploadMut.mutateAsync({ slug: effectiveSlug, kind, file });
       if (kind === 'thumbnail') {
         setValue('thumbnail_url' as any, uploaded.url, { shouldValidate: true, shouldDirty: true });
       }
       await refetchAssets();
-    } catch (e) {
+      setSnack({ open: true, message: 'Uploaded successfully', severity: 'success' });
+    } catch (e: any) {
       // eslint-disable-next-line no-console
       console.error(e);
+      setSnack({ open: true, message: e?.message || 'Upload failed', severity: 'error' });
     }
   }
 
@@ -309,7 +358,7 @@ const TemplateFormDrawer: React.FC<TemplateFormDrawerProps> = ({ open, mode, ini
           <TextField
             label="Thumbnail URL"
             {...register('thumbnail_url' as any)}
-            helperText={(errors as any).thumbnail_url?.message || 'Enter a public image URL (or upload below in Edit mode)'}
+            helperText={(errors as any).thumbnail_url?.message || 'Enter a public image URL or upload below. Recommended: square 1:1, ≥ 512px, ≤ 1MB (PNG/JPG).'}
             error={Boolean((errors as any).thumbnail_url)}
             placeholder="https://example.com/path/to/image.jpg"
             fullWidth
@@ -330,10 +379,10 @@ const TemplateFormDrawer: React.FC<TemplateFormDrawerProps> = ({ open, mode, ini
                 hidden
                 onChange={(e) => handleUpload('preview', e.target.files?.[0] ?? null)}
               />
-              <Button variant="outlined" size="small" onClick={() => onClickUpload('thumbnail')} disabled={uploadMut.isPending}>
+              <Button variant="outlined" size="small" title="Recommended: square 1:1, ≥ 512px, ≤ 1MB (PNG/JPG)" onClick={() => onClickUpload('thumbnail')} disabled={uploadMut.isPending}>
                 {uploadMut.isPending ? 'Uploading…' : 'Upload Thumbnail'}
               </Button>
-              <Button variant="text" size="small" onClick={() => onClickUpload('preview')} disabled={uploadMut.isPending}>
+              <Button variant="text" size="small" title="At least 512px on the shortest side, ≤ 1MB" onClick={() => onClickUpload('preview')} disabled={uploadMut.isPending}>
                 Upload Preview
               </Button>
             </Stack>
@@ -428,6 +477,23 @@ const TemplateFormDrawer: React.FC<TemplateFormDrawerProps> = ({ open, mode, ini
             </Button>
           </Stack>
         </Stack>
+
+        <Snackbar
+          open={snack.open}
+          autoHideDuration={3000}
+          onClose={() => setSnack((s) => ({ ...s, open: false }))}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert
+            onClose={() => setSnack((s) => ({ ...s, open: false }))}
+            severity={snack.severity}
+            variant="filled"
+            sx={{ width: '100%' }}
+          >
+            {snack.message}
+          </Alert>
+        </Snackbar>
+
       </Box>
     </Drawer>
   );

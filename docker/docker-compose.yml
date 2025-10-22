@@ -26,8 +26,8 @@ services:
       DB_PASSWORD: imageai_pass
       DB_NAME: imageai_db
       TEMPLATE_SOURCE: db
-      # CORS for web_admin dev (used by backend if CORS middleware reads these)
-      CORS_ALLOWED_ORIGINS: http://localhost:5173
+      # CORS for web_admin dev/preview (used by backend if CORS middleware reads these)
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:4173
       CORS_ALLOWED_HEADERS: Authorization,Content-Type
       FIREBASE_SERVICE_ACCOUNT: /secrets/firebase-admin.json
       # Set a comma-separated list or use Firebase custom claim 'admin'
@@ -55,9 +55,9 @@ services:
 
   # Optional: run web_admin in Docker for dev (Vite with HMR)
   # The app will be available at http://localhost:5173
-  web:
+  web_cms:
     image: node:20-alpine
-    container_name: imageaiwrapper-web
+    container_name: imageaiwrapper-web-cms
     working_dir: /app
     environment:
       CI: "true"
@@ -65,11 +65,35 @@ services:
       VITE_API_BASE_URL: http://localhost:8080
       VITE_DEV_AUTH: "1"
     volumes:
-      - ../web_admin:/app
+      - ../web-cms:/app
       - /app/node_modules
     command: sh -c "corepack enable && corepack prepare pnpm@10.18.3 --activate || true; pnpm install --no-frozen-lockfile; pnpm dev --host 0.0.0.0"
     ports:
       - "5173:5173"
+    depends_on:
+      - backend
+
+  # Production-like build & preview for web_admin (served by Vite preview)
+  # The app will be available at http://localhost:4173
+  web_cms_preview:
+    image: node:20-alpine
+    container_name: imageaiwrapper-web-cms-preview
+    working_dir: /app
+    environment:
+      CI: "true"
+      # Prefer reading from .env.local in the mounted volume.
+      # You can override envs here if needed, e.g. VITE_DEV_AUTH=0
+    volumes:
+      - ../web-cms:/app
+      - /app/node_modules
+    command: >
+      sh -c "corepack enable &&
+             corepack prepare pnpm@10.18.3 --activate || true;
+             pnpm install --no-frozen-lockfile;
+             pnpm build;
+             pnpm preview --host 0.0.0.0"
+    ports:
+      - "4173:4173"
     depends_on:
       - backend
 

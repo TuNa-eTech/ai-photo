@@ -175,15 +175,16 @@ export function useTemplateAssetsQuery(slug: string) {
   });
 }
 
-export function useUploadTemplateAssetMutation(slug: string) {
+export function useUploadTemplateAssetMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ kind, file }: { kind: 'thumbnail' | 'cover' | 'preview'; file: File }) =>
+    mutationFn: ({ slug, kind, file }: { slug: string; kind: 'thumbnail' | 'cover' | 'preview'; file: File }) =>
       uploadTemplateAsset(slug, kind, file),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin-template-assets', slug] });
+    onSuccess: (_data, variables) => {
+      const s = variables.slug;
+      qc.invalidateQueries({ queryKey: ['admin-template-assets', s] });
       qc.invalidateQueries({ queryKey: ['admin-templates'] });
-      qc.invalidateQueries({ queryKey: ['admin-template', slug] });
+      qc.invalidateQueries({ queryKey: ['admin-template', s] });
     },
   });
 }
