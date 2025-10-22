@@ -1,121 +1,189 @@
-# Technology & Tooling
+# Tech
 
-_This file documents the technologies used, development setup, technical constraints, dependencies, and tool usage patterns._
+Technologies, development setup, constraints, dependencies, and tool usage patterns.
 
-## Technologies Used
-- Frontend (iOS):
-  - Swift, SwiftUI, MVVM, async/await, @Observable ViewModels, MainActor where appropriate
-  - Protocol-driven: APIClientProtocol, repository pattern for testability
-  - Firebase SDK (Google/Apple login, ID token)
-  - Unit tests for ViewModels and business logic (XCTest); UI tests for critical flows
-- Backend (Go):
-  - Go >= 1.25 (Docker toolchain uses golang:1.25-alpine to satisfy go.mod >= 1.25.2)
-  - Firebase Admin SDK (todo: verify ID tokens server-side)
-  - PostgreSQL for persistence (user_profiles)
-  - golang-migrate for schema migrations
-  - pgx stdlib driver for database/sql connectivity
-  - Simple file storage for images under backend/ and backend/processed/
-- AI:
-  - Google Gemini (manual HTTP integration planned/partial for image processing)
+Last updated: 2025-10-22
+
+## Stacks and Frameworks
+
+- iOS
+  - Language/Runtime: Swift, SwiftUI (Observation framework: `@Observable`)
+  - Auth: Firebase Auth (Google/Apple)
+  - Storage: Keychain for persisting ID token
+  - Networking: URLSession-based APIClient with envelope decoding, 401 retry via token provider
+  - Build: Xcode project `AIPhotoApp.xcodeproj`
+  - Tests: XCTest (unit/UI)
+
+- Backend
+  - Language: Go 1.25+
+  - Database: Postgres 15
+  - Runtime: Docker Compose (db + backend), static binary (`FROM scratch`)
+  - API: REST, envelope response pattern (success/data/error/meta)
+  - Auth: Firebase ID token (JWT) via Authorization: Bearer
+  - Migrations: SQL files under `backend/migrations` (0001…0006)
+  - Documentation: OpenAPI 3.1 at `swagger/openapi.yaml`
+  - Tests: `go test ./...`, table-driven tests in `internal/*`
+
+- Web Admin
+  - Tooling: Vite + React + TypeScript
+  - Routing: React Router
+  - Data fetching: TanStack Query
+  - HTTP: Axios with interceptors (Bearer injection, 401 refresh & retry-once)
+  - UI: Material UI (MUI) (+ icons, emotion)
+  - Forms/Validation: React Hook Form + Zod
+  - Auth: Firebase Web SDK (Google sign-in) or DevAuth for local dev
+  - Tests: Vitest + React Testing Library + MSW
+  - Lint/Format: ESLint + Prettier
+  - Env: `.env.local` with `VITE_API_BASE_URL` and `VITE_FIREBASE_*`
+
+## API Conventions
+
+- Envelope response
+  - success: boolean
+  - data: typed payload (e.g., `TemplatesList { templates: Template[] }`)
+  - error: `{ code, message, details? }`
+  - meta: `{ requestId, timestamp }` (+ optional pagination metadata later)
+
+- Auth
+  - Clients attach `Authorization: Bearer <Firebase ID token>`
+  - Backend validates token; 401 for invalid/expired tokens
+  - Clients (iOS/Web) implement 401 refresh-and-retry logic (single retry)
+
+## Notable Endpoints (current)
+
+Public (iOS)
+- GET `/v1/templates`
+  - Query params: `limit`, `offset`, `q`, `tags` (CSV), `sort` (newest|popular|name)
+  - Fields in Template: `id`, `name`, `thumbnail_url?`, `published_at?`, `usage_count?`
+- POST `/v1/users/register`
+- POST `/v1/images/process`
+
+Admin (Web)
+- Templates CRUD:
+  - GET `/v1/admin/templates`
+  - GET `/v1/admin/templates/{slug}`
+  - POST `/v1/admin/templates`
+  - PUT `/v1/admin/templates/{slug}`
+  - DELETE `/v1/admin/templates/{slug}`
+  - POST `/v1/admin/templates/{slug}/publish`
+  - POST `/v1/admin/templates/{slug}/unpublish`
+- Assets:
+  - GET `/v1/admin/templates/{slug}/assets`
+  - POST `/v1/admin/templates/{slug}/assets` (multipart; `file`=png|jpeg; `kind`=thumbnail|preview)
+  - PUT `/v1/admin/templates/{slug}/assets/{id}` (change `kind`/`sort_order`; enforce single thumbnail)
+  - DELETE `/v1/admin/templates/{slug}/assets/{id}`
+- Static:
+  - `/assets/templates/{slug}/{filename}` (public URLs served by backend)
+
+See `swagger/openapi.yaml` for the authoritative spec and examples.
+
+## Database and Migrations
+
+- Postgres 15
+- Migrations:
+  - 0004: templates/versioning
+  - 0005: tags/categories/assets (`template_assets`)
+  - 0006: `usage_count` on templates
+- Listing joins `template_assets (kind='thumbnail')`, applies filters (q/tags) and sort.
+- Assets table stores `id`, `template_id`, `kind ('thumbnail'|'preview')`, `url`, `sort_order`, `created_at`.
 
 ## Development Setup
-- iOS:
-  1) Open `AIPhotoApp/AIPhotoApp.xcodeproj` in Xcode.
-  2) Select simulator (e.g., iPhone 17) and Run.
-  3) Ensure `AppConfig.backendBaseURL` points to the backend (http://localhost:8080 for Simulator).
-  4) API requests use APIClient with detailed logging; logs appear in Xcode console.
 
-- Backend (local without Docker):
-  1) Install Go >= 1.25.
-  2) Set required env vars (see “Environment Variables”).
-  3) Run the correct entrypoint:
-     - `cd backend && go run ./cmd/api/main.go`
-     - or build: `cd backend && go build -o app ./cmd/api/main.go && ./app`
-     Note: Do not run a stray `main.go` at backend root; use `./cmd/api/main.go`.
-  4) PostgreSQL must be available; run migrations before starting features that depend on schema (see “Migrations”).
-
-- Backend (Docker + Docker Compose):
-  1) Start Postgres:
-     - `cd docker && docker compose up -d db`
-  2) Apply migrations using containerized golang-migrate (recommended for local):
-     - `docker run --rm -v "$(pwd)/backend/migrations:/migrations" --network container:imageaiwrapper-db migrate/migrate:latest -path=/migrations -database "postgres://imageai:imageai_pass@localhost:5432/imageai_db?sslmode=disable" up`
-  3) Build/Run backend:
-     - `cd docker && docker compose up -d --build backend`
-  4) Verify backend logs:
-     - `docker logs --tail 200 imageaiwrapper-backend`
-  5) Verify DB:
-     - `docker exec -e PGPASSWORD=imageai_pass -it imageaiwrapper-db psql -U imageai -d imageai_db -c "SELECT id,email,name,avatar_url,created_at,updated_at FROM user_profiles ORDER BY id DESC LIMIT 10;"`
-
-## Environment Variables
-- Backend (read by app or Docker Compose):
-  - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE` (defaults: db, 5432, imageai, imageai_pass, imageai_db, disable)
-  - `DATABASE_URL` (optional) overrides individual DB_* vars, e.g. `postgres://user:pass@host:5432/db?sslmode=disable`
-  - `PORT` (default 8080)
-  - `FIREBASE_SERVICE_ACCOUNT` (required in production; not enforced in current local stub)
-  - `GEMINI_API_KEY` (if integrating Gemini in backend)
-- Docker Compose sets DB env for backend service:
-  - See `docker/docker-compose.yml` for DB container and backend environment.
-
-## Migrations
-- Files live in `backend/migrations/` and follow `*.up.sql` naming.
-- Local host vs container:
-  - Preferred (local dev): run golang-migrate in a container sharing the DB container network namespace:
+- Backend
+  - Run with Docker Compose (db + backend)
+  - Serve static:
+    - `/processed/*` from `/processed`
+    - `/assets/*` from `/assets` (uploads)
+  - Env:
+    - `FIREBASE_SERVICE_ACCOUNT=/secrets/firebase-admin.json` (prod)
+    - `ALLOW_INSECURE_ADMIN=1` (dev fallback; DO NOT USE IN PROD)
+    - `DEV_AUTH_ENABLED=1`, `DEV_ADMIN_EMAIL`, `DEV_ADMIN_PASSWORD` (DevAuth for local)
+    - `CORS_ALLOWED_ORIGINS=http://localhost:5173`
+    - `CORS_ALLOWED_HEADERS=Authorization,Content-Type`
+    - `ASSETS_DIR=/assets`
+    - `ASSETS_BASE_URL=/assets`
+  - Volumes (docker):
+    - `../backend/assets:/assets`
+    - `../backend/processed:/processed`
+  - Build (local binary for runtime image):
     ```
-    docker run --rm -v "$(pwd)/backend/migrations:/migrations" \
-      --network container:imageaiwrapper-db \
-      migrate/migrate:latest \
-      -path=/migrations \
-      -database "postgres://imageai:imageai_pass@localhost:5432/imageai_db?sslmode=disable" up
+    cd backend
+    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o build/imageai-backend ./cmd/api
     ```
-  - Makefile target (host) uses `localhost` but may fail due to auth/SCRAM; use the containerized approach above for reliability.
-- Example:
-  - 0001_create_users_table.up.sql (legacy, auth-oriented)
-  - 0002_create_user_profiles_table.up.sql (current profile storage used by `/v1/users/register`)
-- Creating a migration:
-  - `migrate create -ext sql -dir backend/migrations -seq create_<name>`
+  - Tests:
+    - `cd backend && go test ./...`
+    - Coverage: `go test -cover ./...`
 
-## Dependencies
-- iOS:
-  - Firebase iOS SDK (Google/Apple login, ID token)
+- Web Admin
+  - Dev server: Vite `http://localhost:5173`
+  - Env `.env.local`:
+    ```
+    VITE_API_BASE_URL=http://localhost:8080
+    VITE_DEV_AUTH=1
+    VITE_FIREBASE_API_KEY=...
+    VITE_FIREBASE_AUTH_DOMAIN=...
+    VITE_FIREBASE_PROJECT_ID=...
+    VITE_FIREBASE_APP_ID=...
+    ```
+  - Upload flows:
+    - Create Drawer: Upload Thumbnail/Preview available; first upload auto-creates a draft (using current Slug/Name/Status/Visibility/Tags) then uploads; thumbnail upload auto-sets `thumbnail_url`.
+    - Edit Drawer: Upload Thumbnail/Preview; Preview Gallery with Make Thumbnail, Delete.
+  - Testing:
+    - `pnpm vitest`
+    - MSW handlers for admin endpoints + assets
+    - RTL for CRUD and upload behaviors
+
+- iOS
+  - Open `AIPhotoApp/AIPhotoApp.xcodeproj`
+  - Tests (see `.clinerules/RUN_TESTS.md`):
+    ```
+    cd app_ios
+    xcodebuild test \
+      -scheme imageaiwrapper \
+      -destination 'platform=iOS Simulator,name=iPhone 17' \
+      -parallel-testing-enabled NO | xcpretty
+    ```
+
+## Constraints and Policies
+
+- Documentation-driven development
+  - `.documents` is the source of truth; Swagger must match behavior
+- Plan-driven implementation
+  - Each feature has a plan under `.implementation_plan/` with checklist
+- TDD
+  - Write failing tests before implementation or alongside; mock external services in CI
+- Security and CORS
+  - Firebase JWT verification on backend (prod); DevAuth only for local dev
+  - CORS: allow `http://localhost:5173` with `Authorization, Content-Type`
+  - iOS ATS exceptions for `http://localhost` during development only
+
+## Tooling and Commands (reference)
+
+- Go
+  - `go mod tidy`
+  - `go test ./...`
+  - `go build ./cmd/api`
+- Docker
+  - `docker compose up -d`
+  - `docker compose build --no-cache`
+  - Logs: `docker compose logs --tail=100 backend|web`
+- Node (web admin)
+  - Package manager: `pnpm`
+  - Test: `pnpm vitest`
+
+## Observability and Logging
+
+- Include `meta.requestId` in logs for correlation
+- Prefer structured JSON logs in backend
+- Consider OpenTelemetry for tracing/metrics later
+
+## Known Gaps / Next Steps
+
 - Backend:
-  - `firebase.google.com/go/v4` (Admin SDK) [todo: integrate token verification in register handler]
-  - `google.golang.org/api/option` (if using Google APIs)
-  - `github.com/jackc/pgx/v5/stdlib` (Postgres driver via database/sql)
-  - `github.com/joho/godotenv` (for local env loading, if used)
-  - `github.com/golang-migrate/migrate/v4/cmd/migrate` (CLI) or dockerized `migrate/migrate`
+  - Extend tests for assets endpoints + publish validation
+  - Consider pagination metadata in `meta`
+  - Production storage: switch `/assets` to S3/CDN; keep `ASSETS_BASE_URL` abstraction
 
-## Tool Usage Patterns
-- iOS logging:
-  - APIClient prints:
-    - “➡️ API Request: METHOD URL”
-    - Headers (sensitive fields redacted)
-    - Request body (pretty JSON)
-    - “⬅️ API Response: STATUS METHOD URL (xx.x ms)”
-    - Response headers (redacted sensitive)
-    - Response body (pretty JSON)
-  - Toggle logging:
-    - `var client = APIClient(); client.logger.enabled = true/false` (enabled by default in DEBUG)
-- Backend run (Docker):
-  - `cd docker && docker compose up -d db`
-  - Apply migrations (containerized)
-  - `cd docker && docker compose up -d --build backend`
-- Integration check (register user):
-  - `curl -X POST http://localhost:8080/v1/users/register -H "Authorization: Bearer <token-or-stub>" -H "Content-Type: application/json" -d '{"name":"Full Name","email":"user@example.com","avatar_url":""}'`
-  - Verify DB row exists in `user_profiles`.
-
-## Technical Constraints
-- iOS-only client.
-- Authentication is via Firebase Auth; backend does not implement classic login.
-- `/v1/users/register` is for storing/updating user profile, not for authentication.
-- Postgres is the source of truth for profile persistence; images persisted to disk for dev.
-- Keep Go toolchain >= 1.25 to satisfy go.mod and Dockerfile.
-- Future:
-  - Implement Firebase ID token verification server-side in register handler.
-  - Consider consolidating earlier `users` table with `user_profiles` or keep separated (auth vs profile) and document in OpenAPI.
-
-## Reference Commands (Quick Runbook)
-- Start DB: `cd docker && docker compose up -d db`
-- Migrate: see “Migrations” (containerized migrate command)
-- Rebuild backend: `cd docker && docker compose up -d --build backend`
-- Verify DB: psql SELECT from `user_profiles`
-- From iOS simulator, test Google/Apple login → app will auto-call register → check Xcode console logs and DB row.
+- Web Admin:
+  - Expand tests for create-draft-on-first-upload, gallery actions, and publish error states
+  - Add drag/drop reorder for previews (update `sort_order`)

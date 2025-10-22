@@ -1,40 +1,70 @@
-# Project Context
+# Context
 
-_This file tracks the current work focus, recent changes, and next steps. Keep it concise and factual._
+Short, factual snapshot of the current project state.
 
-## Current Work Focus
-- [x] Tích hợp lớp common APIClient (Swift) để in log API/method/headers/body/response, hỗ trợ Bearer token.
-- [x] Refactor UserRepository (iOS) sử dụng APIClient để mọi call tự động in log và xử lý lỗi chuẩn.
-- [x] Khắc phục cảnh báo AutoLayout bàn phím trong ProfileCompletionView (defer focus bằng DispatchQueue.main.async).
-- [x] Bổ sung lưu trữ profile user vào Postgres trong backend:
-  - Thêm migration `0002_create_user_profiles_table.up.sql`
-  - Thêm `database.UpsertUserProfile(ctx, email, name, avatarURL)` dùng pgx/stdlib
-  - Sửa `RegisterUserHandler` để gọi Upsert trước khi trả response
-- [x] Cập nhật Dockerfile backend lên Go 1.25 để phù hợp yêu cầu `go.mod (>=1.25.2)`.
-- [x] Áp dụng migrate qua container `migrate/migrate` (network namespace của DB container) và verify DB.
-- [x] Triển khai chuẩn API response dạng envelope (success/data/error/meta) và RequestID middleware (X-Request-ID).
-- [x] Refactor handlers dùng helpers OK/BadRequest/… để thống nhất response.
-- [x] Test API qua sandbox `.box-testing/sandbox/env.yaml` (idToken/email/name) và verify DB cập nhật.
-- [ ] TODO: Hoàn thiện các API thực tế trong ViewModel (ví dụ fetchTemplates, process image flow từ app).
+Last updated: 2025-10-22
+
+## Current Focus
+- Web Admin (React + Vite + TS):
+  - Phase 2 completed for Templates management: full CRUD + publish/unpublish and image assets upload.
+  - Upload available in BOTH Create and Edit:
+    - Create: first upload auto-creates a draft (using current slug/name/status/visibility/tags), then uploads file to assets; thumbnail upload auto-fills `thumbnail_url`.
+    - Edit: upload thumbnail/preview, preview gallery, make-thumbnail, delete.
+  - Admin list shows Thumb (48x48), filters (q/tags/status/visibility/sort), pagination; actions include Edit/Delete and bulk Publish/Unpublish/Delete.
+
+- Backend (Go + Postgres):
+  - Admin endpoints implemented (envelope pattern):
+    - GET/POST/PUT/DELETE /v1/admin/templates
+    - GET /v1/admin/templates/{slug}
+    - POST /v1/admin/templates/{slug}/publish
+    - POST /v1/admin/templates/{slug}/unpublish
+  - Assets endpoints implemented + static serving:
+    - GET /v1/admin/templates/{slug}/assets
+    - POST /v1/admin/templates/{slug}/assets (multipart, png/jpeg, ~12MB)
+    - PUT /v1/admin/templates/{slug}/assets/{id} (kind/sort_order; unique thumbnail enforced)
+    - DELETE /v1/admin/templates/{slug}/assets/{id}
+    - Static /assets served from Docker volume (../backend/assets:/assets)
+  - Publish requires existing thumbnail; returns 422 validation error if missing.
+
+- iOS (SwiftUI):
+  - Phase 1 remains stable: Home screen, GET /v1/templates with envelope handle + 401 retry.
+  - No changes required for Phase 2 admin features.
 
 ## Recent Changes
-- [x] iOS: Thêm `Utilities/Networking/APIClient.swift` (logger, redaction, pretty JSON).
-- [x] iOS: `UserRepository` chuyển sang `APIClientProtocol`, mapping lỗi 401 -> .unauthorized.
-- [x] iOS: `ProfileCompletionView` bỏ `.toolbar(.hidden, for: .keyboard)` (không hỗ trợ), defer focus để tránh xung đột constraint inputView/accessoryView.
-- [x] Backend: Thêm `backend/internal/database/postgres.go` (pgx stdlib, DSN từ env, UpsertUserProfile).
-- [x] Backend: Sửa `RegisterUserHandler` để persist vào Postgres (bảng `user_profiles`).
-- [x] Backend: Thêm migration `0002_create_user_profiles_table.up.sql`.
-- [x] Backend: Cập nhật `backend/Dockerfile` dùng `golang:1.25-alpine` và rebuild.
-- [x] Migrate DB và xác nhận dữ liệu:
-  - Gọi `POST /v1/users/register` → 200
-  - `SELECT ... FROM user_profiles` → thấy bản ghi `anhtu.it.se@gmail.com | Phone Anh Tu`.
-- [x] Cập nhật documentation: hướng dẫn migrate, rebuild docker backend, verify DB.
-- [x] Chuẩn hóa API response (envelope) + RequestID middleware; refactor handlers; test thực tế với env.yaml.
+- Implemented DB layer for `template_assets` (list/insert/update/delete); uniqueness on thumbnail promote.
+- Added storage helpers (ASSETS_DIR/ASSETS_BASE_URL; file save).
+- Wired static /assets in backend mux and Docker volume mount.
+- Extended Swagger: assets endpoints + TemplateAssetAdmin schemas.
+- Frontend:
+  - API module and hooks for assets (list/upload/update/delete).
+  - TemplateFormDrawer updated to support upload in Create + Edit.
+  - Admin list Thumb column rendering from `thumbnail_url`.
+- Docker:
+  - backend env: ASSETS_DIR=/assets, ASSETS_BASE_URL=/assets, DEV auth envs
+  - volumes: ../backend/assets:/assets
 
 ## Next Steps
-- [ ] iOS: Hoàn thiện các API khác (fetch templates, process image) dùng APIClient; thêm unit/UI tests tương ứng.
-- [ ] Backend: Bổ sung verify Firebase ID token bằng Firebase Admin SDK trong `RegisterUserHandler`.
-- [ ] Đồng bộ schema: Xem xét hợp nhất `users` và `user_profiles` (hoặc duy trì mục đích riêng, cập nhật OpenAPI).
-- [ ] Viết integration test cho `/v1/users/register` (Go) để verify DB upsert.
-- [ ] Cập nhật OpenAPI (swagger/openapi.yaml) cho `user_profiles` nếu cần.
-- [ ] Tài liệu hóa quy trình migrate và verify DB trong `.documents/workflow.md` (đã bổ sung – tiếp tục duy trì).
+- Tests:
+  - Frontend: MSW handlers + RTL tests for upload flows (create-draft-on-upload, make-thumbnail, delete).
+  - Backend: table-driven tests for assets handlers; integration for publish guard.
+- Optional:
+  - Reorder previews (drag/drop) → update `sort_order`.
+  - Switch to Firebase Admin verification in prod; keep DevAuth in dev only.
+  - Add envelope pagination metadata (meta.total/hasMore/nextOffset) if needed.
+
+## Risks / Considerations
+- File storage is local in dev; for prod consider S3/CDN. Abstract via `ASSETS_BASE_URL`.
+- Enforce CORS for http://localhost:5173 with Authorization, Content-Type.
+- Ensure admin-only endpoints protected in prod (Firebase Admin).
+
+## References
+- Swagger: swagger/openapi.yaml (assets + admin endpoints)
+- Backend code:
+  - internal/api/admin_templates.go, internal/api/admin_assets.go
+  - internal/database/admin_templates.go, internal/database/admin_assets.go
+  - internal/storage/storage.go
+  - cmd/api/main.go (static /assets)
+- Frontend code:
+  - web_admin/src/api/admin/templates.ts
+  - web_admin/src/pages/Admin/AdminTemplates.tsx
+  - web_admin/src/pages/Admin/TemplateFormDrawer.tsx

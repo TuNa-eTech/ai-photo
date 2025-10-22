@@ -116,7 +116,7 @@ struct AuthLandingView: View {
 }
 
  // MARK: - Placeholder home screen after authentication
-struct TemplatesHomeView: View {
+struct LegacyTemplatesHomePlaceholderView: View {
     let model: AuthViewModel
 
     var body: some View {

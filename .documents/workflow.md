@@ -1,198 +1,51 @@
-# Tài liệu Quy trình Phát triển & Triển khai
+# Workflow — Backend Dev & Ops Runbook
 
-Tài liệu này định nghĩa các quy trình chuẩn cho việc phát triển, kiểm thử và triển khai dự án AI Image Stylist.
+Trạng thái: Draft  
+Phiên bản: 1.0  
+Cập nhật: 2025-10-20
 
-## 1. Quản lý mã nguồn (Git)
-
-### **1.1. Chiến lược Branch**
-
-Dự án sẽ tuân theo mô hình GitFlow đơn giản hóa:
-
-- **`main`:**
-  - Đây là nhánh chính, luôn ở trạng thái sẵn sàng để phát hành (production-ready).
-  - Chỉ được merge code từ nhánh `develop` sau khi đã kiểm thử kỹ lưỡng.
-  - Không ai được commit trực tiếp lên `main`.
-
-- **`develop`:**
-  - Nhánh tích hợp chính cho các tính năng mới.
-  - Tất cả các nhánh `feature` sẽ được merge vào đây.
-  - Đây là nơi thực hiện các hoạt động kiểm thử tích hợp.
-
-- **`feature/<feature-name>`:**
-  - Mỗi tính năng mới (ví dụ: `feature/user-profile`, `feature/image-comparison-slider`) phải được phát triển trên một nhánh riêng, được tạo từ `develop`.
-  - Tên nhánh cần rõ ràng, mô tả ngắn gọn tính năng.
-  - Sau khi hoàn thành, nhánh này sẽ được merge trở lại `develop` thông qua một Pull Request.
-
-### **1.2. Pull Request (PR) & Code Review**
-
-- Mọi thay đổi muốn merge vào `develop` hoặc `main` đều phải thông qua một Pull Request.
-- Mỗi PR cần ít nhất một người khác trong team review và chấp thuận (approve).
-- **Nội dung PR cần có:**
-  - Mô tả rõ ràng những gì đã thay đổi và tại sao.
-  - Liên kết đến các task/issue liên quan (nếu có).
+Tài liệu này hướng dẫn chạy, migrate, seed, build, và verify backend. Áp dụng cho môi trường local Docker Compose.
 
 ---
 
-## 4. Test-Driven Development (TDD) Guidelines
+## 1) Thành phần & biến môi trường
 
-### 4.1. TDD Principles
+- Services:
+  - db: Postgres 15 (container name: `imageaiwrapper-db`)
+  - backend: Go service (container name: `imageaiwrapper-backend`)
+- Biến quan trọng:
+  - DB_HOST=db, DB_PORT=5432, DB_USER=imageai, DB_PASSWORD=imageai_pass, DB_NAME=imageai_db
+  - TEMPLATE_SOURCE=db|file (db khuyến nghị)
+  - (Optional) FIREBASE_SERVICE_ACCOUNT=/path/to/service-account.json
 
-- All new features and bugfixes must be developed using TDD: write tests before writing implementation code.
-- Tests must be automated and run as part of the CI/CD pipeline.
-- Code is not considered "done" until all relevant tests pass.
+Docker Compose đã set `TEMPLATE_SOURCE=db` ở `docker/docker-compose.yml`.
 
-### 4.2. Required Test Types
+---
 
-- **iOS (Swift/SwiftUI):**
-  - Unit tests for all business logic, ViewModels, and utility classes (using XCTest or the project's chosen test framework).
-  - UI tests for critical user flows (using XCTest UI testing).
-- **Backend (Go):**
-  - Unit tests for all handlers, middleware, and business logic (using Go's built-in `testing` package).
-  - Integration tests for API endpoints and database interactions.
+## 2) Khởi động & dừng hệ thống
 
-### 4.3. TDD Workflow
-
-#### iOS Example
-
-1. Write a failing unit test for a new ViewModel method in `app_ios/imageaiwrapperTests/`.
-2. Implement the minimum code to make the test pass.
-3. Refactor code for clarity/efficiency.
-4. Repeat for UI tests in `app_ios/imageaiwrapperUITests/` for new screens or flows.
-
-**Sample Swift Unit Test:**
-```swift
-import XCTest
-@testable import imageaiwrapper
-
-final class HomeViewModelTests: XCTestCase {
-    func testTemplateListLoads() {
-        let vm = HomeViewModel()
-        vm.loadTemplates()
-        XCTAssertFalse(vm.templates.isEmpty)
-    }
-}
+Down/Up toàn bộ với build lại:
+```bash
+cd docker
+docker compose down --remove-orphans
+docker compose up -d --build
+docker compose ps
+docker logs --tail 100 imageaiwrapper-backend
 ```
 
-#### Go Backend Example
-
-1. Write a failing test in a new or existing `*_test.go` file.
-2. Implement the minimum code to pass the test.
-3. Refactor as needed.
-4. Repeat for all new handlers, middleware, and business logic.
-
-**Sample Go Unit Test:**
-```go
-package auth
-
-import "testing"
-
-func TestVerifyIDToken_InvalidToken(t *testing.T) {
-    _, err := VerifyIDToken("invalid-token")
-    if err == nil {
-        t.Fatal("expected error for invalid token")
-    }
-}
-```
-
-### 4.4. PR/Test Requirements
-
-- Every PR must include tests for new/changed code.
-- PRs without tests will not be approved unless justified in the PR description.
-- All tests must pass in CI before merging.
-
-### 4.5. Test Coverage
-
-- Aim for high coverage of business logic and critical flows.
-- Use code coverage tools (Xcode for iOS, `go test -cover` for Go) to monitor and improve coverage.
+Gỡ warning “version is obsolete”: có thể xoá dòng `version: "3.8"` khỏi docker-compose (không ảnh hưởng chức năng).
 
 ---
 
-## 2. CI/CD (Tích hợp và Triển khai liên tục)
+## 3) Migrations (containerized golang-migrate)
 
-Để đảm bảo chất lượng và tự động hóa, dự án sẽ sử dụng GitHub Actions.
-
-### **2.1. Workflow cho Backend (Go Service)**
-
-- **Trigger:** Khi một Pull Request được merge vào nhánh `develop` và có sự thay đổi trong thư mục `backend/`.
-- **Các bước (Jobs):**
-  1.  **Build & Test:**
-      - Build ứng dụng Go.
-      - Chạy unit test.
-  2.  **Build Docker Image:** Xây dựng một Docker image cho backend service.
-  3.  **Deploy to Staging:** Tự động triển khai Docker image lên môi trường Staging.
-- **Triển khai lên Production:** Việc triển khai lên môi trường Production sẽ được thực hiện thủ công sau khi đã xác nhận tính năng hoạt động ổn định trên Staging.
-
-### **2.2. Workflow cho Frontend (iOS App)**
-
-- **Trigger:** Khi một Pull Request được merge vào nhánh `develop`.
-- **Các bước (Jobs):**
-  1.  **Build & Test:**
-      - Build ứng dụng iOS.
-      - Chạy Unit Tests và UI Tests trên một simulator.
-- **Phân phối (Deployment):** Việc build và phân phối phiên bản mới cho TestFlight/App Store sẽ được thực hiện thủ công từ Xcode hoặc qua một workflow riêng được trigger bằng tay.
-
----
-
-## 3. Quản lý Môi trường
-
-Dự án sẽ có ít nhất 2 môi trường backend riêng biệt:
-
----
-
-## Hướng dẫn chạy Backend (Go)
-
-**Để chạy backend đúng entrypoint:**
-- Sử dụng lệnh:
-  ```
-  go run ./cmd/api/main.go
-  ```
-  hoặc build từ đúng source:
-  ```
-  go build -o app ./cmd/api/main.go
-  ./app
-  ```
-- **Không chạy** `go run ./cmd/api/main.go` ở thư mục backend root, vì file này không đăng ký đầy đủ các API handler.
-
-**Lý do:**  
-- File entrypoint chuẩn là `backend/cmd/api/main.go`. Nếu chạy nhầm file `backend/main.go`, API sẽ không hoạt động đúng (truy cập `/` sẽ trả về 404).
-
-**Kiểm tra:**  
-
-1.  **Staging/Development:**
-    - Dùng cho việc phát triển và kiểm thử các tính năng mới.
-    - Sử dụng một môi trường riêng với dữ liệu giả (mock data).
-    - API keys và URLs cho môi trường này sẽ được lưu trong một file cấu hình riêng của ứng dụng iOS (ví dụ: `Staging.xcconfig`).
-
-2.  **Production:**
-    - Môi trường cho người dùng cuối.
-    - Dữ liệu thật, được backup thường xuyên.
-    - API keys và URLs được lưu trong file `Production.xcconfig` và không được commit vào Git (sẽ được inject vào lúc build).
-
-Việc chuyển đổi giữa các môi trường trong ứng dụng iOS sẽ được quản lý bằng Build Configurations trong Xcode.
-
----
-
-## Backend Database Migrations (Local Dev)
-
-Sử dụng golang-migrate dạng container để áp dụng migration vào Postgres chạy bằng Docker, tránh lỗi auth trên host.
-
-1) Khởi động Postgres:
+Chạy DB:
 ```bash
 cd docker
 docker compose up -d db
 ```
 
-2) Áp dụng migrations (chia sẻ network với container DB):
-- Nếu đang ở thư mục repo root:
-```bash
-docker run --rm \
-  -v "$(pwd)/backend/migrations:/migrations" \
-  --network container:imageaiwrapper-db \
-  migrate/migrate:latest \
-  -path=/migrations \
-  -database "postgres://imageai:imageai_pass@localhost:5432/imageai_db?sslmode=disable" up
-```
-- Nếu đang ở thư mục docker:
+Áp dụng migrations (map vào namespace container DB):
 ```bash
 docker run --rm \
   -v "$(pwd)/../backend/migrations:/migrations" \
@@ -202,76 +55,144 @@ docker run --rm \
   -database "postgres://imageai:imageai_pass@localhost:5432/imageai_db?sslmode=disable" up
 ```
 
-3) Kiểm tra bảng:
+Kiểm tra bảng:
 ```bash
 docker exec -e PGPASSWORD=imageai_pass -it imageaiwrapper-db \
   psql -U imageai -d imageai_db -c "\dt"
 ```
 
-4) (Tuỳ chọn) Rollback 1 bước:
+---
+
+## 4) Seed Templates
+
+Nguồn JSON: `backend/templates.json`
+
+A) Seed bằng seed tool (chạy từ host):
 ```bash
-docker run --rm \
-  -v "$(pwd)/backend/migrations:/migrations" \
-  --network container:imageaiwrapper-db \
-  migrate/migrate:latest \
-  -path=/migrations \
-  -database "postgres://imageai:imageai_pass@localhost:5432/imageai_db?sslmode=disable" down 1
+cd backend
+go build -o seed-templates ./cmd/seed-templates
+DATABASE_URL="postgres://imageai:imageai_pass@127.0.0.1:5432/imageai_db?sslmode=disable" \
+  ./seed-templates -file templates.json -publish=true -visibility=public
 ```
 
-Notes:
-- Host `migrate` có thể fail do SCRAM; ưu tiên cách containerized như trên.
+B) Seed nhanh bằng psql DO block:
+```bash
+cd docker
+docker exec -i -e PGPASSWORD=imageai_pass imageaiwrapper-db psql -U imageai -d imageai_db <<'SQL'
+-- (DO block import 2 templates example/cartoon, set current_version_id)
+DO $$
+DECLARE
+  t1 uuid; v1 uuid;
+  t2 uuid; v2 uuid;
+BEGIN
+  INSERT INTO templates (slug, name, description, status, visibility, model_provider, model_name, created_at, updated_at, published_at)
+  VALUES ('example','Example Template',NULL,'published','public','gemini','gemini-1.5-pro', NOW(), NOW(), NOW())
+  ON CONFLICT (slug) DO UPDATE SET
+    name = EXCLUDED.name,
+    visibility = EXCLUDED.visibility,
+    model_provider = EXCLUDED.model_provider,
+    model_name = EXCLUDED.model_name,
+    status = EXCLUDED.status,
+    updated_at = NOW(),
+    published_at = COALESCE(EXCLUDED.published_at, templates.published_at)
+  RETURNING id INTO t1;
+
+  INSERT INTO template_versions (template_id, version, prompt_template, negative_prompt, prompt_variables, model_parameters, input_requirements, output_mime, created_at)
+  VALUES (t1, 1, 'Apply artistic style', NULL, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'image/png', NOW())
+  ON CONFLICT (template_id, version) DO UPDATE SET
+    prompt_template = EXCLUDED.prompt_template
+  RETURNING id INTO v1;
+
+  UPDATE templates SET current_version_id = v1, updated_at = NOW() WHERE id = t1;
+
+  INSERT INTO templates (slug, name, description, status, visibility, model_provider, model_name, created_at, updated_at, published_at)
+  VALUES ('cartoon','Cartoon Style',NULL,'published','public','gemini','gemini-1.5-pro', NOW(), NOW(), NOW())
+  ON CONFLICT (slug) DO UPDATE SET
+    name = EXCLUDED.name,
+    visibility = EXCLUDED.visibility,
+    model_provider = EXCLUDED.model_provider,
+    model_name = EXCLUDED.model_name,
+    status = EXCLUDED.status,
+    updated_at = NOW(),
+    published_at = COALESCE(EXCLUDED.published_at, templates.published_at)
+  RETURNING id INTO t2;
+
+  INSERT INTO template_versions (template_id, version, prompt_template, negative_prompt, prompt_variables, model_parameters, input_requirements, output_mime, created_at)
+  VALUES (t2, 1, 'Transform the image into a vibrant cartoon illustration', NULL, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'image/png', NOW())
+  ON CONFLICT (template_id, version) DO UPDATE SET
+    prompt_template = EXCLUDED.prompt_template
+  RETURNING id INTO v2;
+
+  UPDATE templates SET current_version_id = v2, updated_at = NOW() WHERE id = t2;
+END $$;
+SQL
+```
+
+Kiểm tra dữ liệu:
+```bash
+docker exec -e PGPASSWORD=imageai_pass -it imageaiwrapper-db \
+  psql -U imageai -d imageai_db -c \
+  "SELECT slug,name,(current_version_id IS NOT NULL) AS has_current FROM templates ORDER BY published_at DESC NULLS LAST, created_at DESC LIMIT 10;"
+```
 
 ---
 
-## Backend Build/Run (Docker, Go 1.25 toolchain)
+## 5) Build & Deploy backend container (runtime image)
 
-Dockerfile backend đã nâng cấp lên Go 1.25 để phù hợp `go.mod (>= 1.25.2)`.
+Do Docker Hub có thể 503 khi pull golang, dùng runtime image `FROM scratch`:
 
-Build & chạy backend:
+1) Build static binary cho Linux:
+```bash
+cd backend
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/imageai-backend ./cmd/api
+```
+
+2) Build & up container runtime:
 ```bash
 cd docker
 docker compose up -d --build backend
 ```
 
-Xem log:
+3) Logs & status:
 ```bash
-docker logs --tail 200 imageaiwrapper-backend
+docker compose ps
+docker logs --tail 100 imageaiwrapper-backend
 ```
 
 ---
 
-## Register User Persistence (Postgres)
+## 6) Verify API
 
-API `/v1/users/register` nay đã persist profile vào bảng `user_profiles` (email unique, name, avatar_url).
-
-Test nhanh:
+List templates (envelope):
 ```bash
-curl -X POST http://localhost:8080/v1/users/register \
-  -H "Authorization: Bearer test" \
-  -H "Content-Type: application/json" \
-  --data '{"name":"Full Name","email":"user@example.com","avatar_url":""}'
+curl -s http://localhost:8080/v1/templates | jq .
 ```
 
-Xác minh DB:
-```bash
-docker exec -e PGPASSWORD=imageai_pass -it imageaiwrapper-db \
-  psql -U imageai -d imageai_db -c \
-  "SELECT id,email,name,avatar_url,created_at,updated_at FROM user_profiles ORDER BY id DESC LIMIT 10;"
+Kết quả kỳ vọng:
+```json
+{
+  "success": true,
+  "data": {
+    "templates": [
+      { "id": "example", "name": "Example Template" },
+      { "id": "cartoon", "name": "Cartoon Style" }
+    ]
+  },
+  "meta": { "requestId": "...", "timestamp": "..." }
+}
 ```
+
+Nếu bật Firebase Admin (bảo vệ): thêm header Authorization Bearer `<idToken>`.
 
 ---
 
-## iOS API Client Logging
+## 7) Troubleshooting nhanh
 
-App iOS sử dụng `APIClient` in chi tiết:
-- Request: METHOD + URL, headers (Authorization/cookies được REDACTED), body JSON (pretty).
-- Response: status code, headers (redaction), body JSON (pretty), duration ms.
-
-Tích hợp ở `UserRepository`:
-- Dùng `APIRequest.json(...)` tạo request.
-- Gọi `client.send(..., authToken: <Firebase ID token>)`.
-- Map 401 → `.unauthorized` để ViewModel refresh token.
-
-Lưu ý:
-- Đảm bảo `AppConfig.backendBaseURL` trỏ đúng backend (http://localhost:8080 cho Simulator).
-- Logger mặc định bật ở DEBUG; có thể tắt/bật: `client.logger.enabled = true/false`.
+- Cannot pull golang:1.25-alpine (503):
+  - Dùng `Dockerfile.runtime` + static binary như trên.
+- Seed tool nhận “password authentication failed”:
+  - Kiểm tra `DATABASE_URL` (127.0.0.1 vs ::1 vs localhost)
+  - Hoặc seed bằng DO block psql trong DB container.
+- /v1/templates trả rỗng:
+  - Chưa seed DB hoặc `TEMPLATE_SOURCE` chưa là `db`.
+  - Kiểm tra logs backend & SELECT từ Postgres.

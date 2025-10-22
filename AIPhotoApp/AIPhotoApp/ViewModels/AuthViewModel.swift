@@ -212,6 +212,11 @@ final class AuthViewModel {
         }
     }
 
+    // MARK: - Token refresh (public)
+    func fetchFreshIDToken() async throws -> String {
+        try await authService.fetchFirebaseIDToken(forceRefresh: true)
+    }
+
     // MARK: - Helpers
 
     @MainActor

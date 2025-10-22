@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -47,4 +49,59 @@ func generateRequestID() string {
 		return time.Now().UTC().Format("20060102T150405.000000000Z07")
 	}
 	return hex.EncodeToString(b[:])
+}
+
+// CORSMiddleware applies CORS headers based on environment configuration and handles preflight requests.
+// Env:
+// - CORS_ALLOWED_ORIGINS: comma-separated list of origins (e.g., http://localhost:5173,https://admin.example.com). Default: *
+// - CORS_ALLOWED_HEADERS: comma-separated list of allowed headers. Default: Authorization, Content-Type
+// - CORS_ALLOWED_METHODS: comma-separated list of methods. Default: GET, POST, PUT, DELETE, OPTIONS
+func CORSMiddleware(next http.Handler) http.Handler {
+	originsEnv := strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS"))
+	allowedOrigins := map[string]struct{}{}
+	if originsEnv == "" || originsEnv == "*" {
+		// empty map means wildcard
+	} else {
+		for _, o := range strings.Split(originsEnv, ",") {
+			if s := strings.TrimSpace(o); s != "" {
+				allowedOrigins[s] = struct{}{}
+			}
+		}
+	}
+
+	allowedHeaders := os.Getenv("CORS_ALLOWED_HEADERS")
+	if strings.TrimSpace(allowedHeaders) == "" {
+		allowedHeaders = "Authorization, Content-Type"
+	}
+	allowedMethods := os.Getenv("CORS_ALLOWED_METHODS")
+	if strings.TrimSpace(allowedMethods) == "" {
+		allowedMethods = "GET, POST, PUT, DELETE, OPTIONS"
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+
+		// Set Access-Control-Allow-Origin
+		if len(allowedOrigins) == 0 {
+			// wildcard
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		} else if origin != "" {
+			if _, ok := allowedOrigins[origin]; ok {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Set("Vary", "Origin")
+			}
+		}
+
+		// Always set these for CORS-capable responses
+		w.Header().Set("Access-Control-Allow-Headers", allowedHeaders)
+		w.Header().Set("Access-Control-Allow-Methods", allowedMethods)
+
+		// Handle preflight
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }

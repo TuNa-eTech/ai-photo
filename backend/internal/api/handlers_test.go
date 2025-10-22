@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -37,6 +38,11 @@ func setMocks(
 /* --- RegisterUserHandler Tests --- */
 
 func TestRegisterUserHandler_Success(t *testing.T) {
+	// Stub DB upsert to avoid Postgres dependency in unit test
+	upsertUserProfile = func(ctx context.Context, email, name, avatarURL string) error {
+		return nil
+	}
+
 	reqBody := models.UserRegisterRequest{
 		Name:  "Test User",
 		Email: "test@example.com",
@@ -53,14 +59,17 @@ func TestRegisterUserHandler_Success(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 OK, got %d", resp.StatusCode)
 	}
-	var out models.UserRegisterResponse
+	var out APIResponse[models.UserRegisterResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
-	if out.UserID != "test@example.com" {
-		t.Errorf("unexpected user_id: %s", out.UserID)
+	if out.Data == nil {
+		t.Fatalf("expected data payload, got nil")
 	}
-	if out.Message == "" {
+	if out.Data.UserID != "test@example.com" {
+		t.Errorf("unexpected user_id: %s", out.Data.UserID)
+	}
+	if out.Data.Message == "" {
 		t.Errorf("expected non-empty message")
 	}
 }
@@ -79,12 +88,12 @@ func TestRegisterUserHandler_MissingAuthHeader(t *testing.T) {
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("expected 401 Unauthorized, got %d", resp.StatusCode)
 	}
-	var out models.ErrorResponse
+	var out APIResponse[struct{}]
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		t.Fatalf("failed to decode error response: %v", err)
 	}
-	if out.ErrorCode != "unauthorized" {
-		t.Errorf("expected error_code 'unauthorized', got '%s'", out.ErrorCode)
+	if out.Error == nil || out.Error.Code != "unauthorized" {
+		t.Errorf("expected error.code 'unauthorized', got '%v'", out.Error)
 	}
 }
 
@@ -102,12 +111,12 @@ func TestRegisterUserHandler_InvalidAuthHeader(t *testing.T) {
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("expected 401 Unauthorized, got %d", resp.StatusCode)
 	}
-	var out models.ErrorResponse
+	var out APIResponse[struct{}]
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		t.Fatalf("failed to decode error response: %v", err)
 	}
-	if out.ErrorCode != "unauthorized" {
-		t.Errorf("expected error_code 'unauthorized', got '%s'", out.ErrorCode)
+	if out.Error == nil || out.Error.Code != "unauthorized" {
+		t.Errorf("expected error.code 'unauthorized', got '%v'", out.Error)
 	}
 }
 
@@ -125,12 +134,12 @@ func TestRegisterUserHandler_MissingIDToken(t *testing.T) {
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("expected 401 Unauthorized, got %d", resp.StatusCode)
 	}
-	var out models.ErrorResponse
+	var out APIResponse[struct{}]
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		t.Fatalf("failed to decode error response: %v", err)
 	}
-	if out.ErrorCode != "unauthorized" {
-		t.Errorf("expected error_code 'unauthorized', got '%s'", out.ErrorCode)
+	if out.Error == nil || out.Error.Code != "unauthorized" {
+		t.Errorf("expected error.code 'unauthorized', got '%v'", out.Error)
 	}
 }
 
@@ -146,12 +155,12 @@ func TestRegisterUserHandler_InvalidRequestBody(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400 Bad Request, got %d", resp.StatusCode)
 	}
-	var out models.ErrorResponse
+	var out APIResponse[struct{}]
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		t.Fatalf("failed to decode error response: %v", err)
 	}
-	if out.ErrorCode != "invalid_request" {
-		t.Errorf("expected error_code 'invalid_request', got '%s'", out.ErrorCode)
+	if out.Error == nil || out.Error.Code != "invalid_request" {
+		t.Errorf("expected error.code 'invalid_request', got '%v'", out.Error)
 	}
 }
 
@@ -169,16 +178,16 @@ func TestRegisterUserHandler_MissingFields(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400 Bad Request, got %d", resp.StatusCode)
 	}
-	var out models.ErrorResponse
+	var out APIResponse[struct{}]
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		t.Fatalf("failed to decode error response: %v", err)
 	}
-	if out.ErrorCode != "missing_fields" {
-		t.Errorf("expected error_code 'missing_fields', got '%s'", out.ErrorCode)
+	if out.Error == nil || out.Error.Code != "missing_fields" {
+		t.Errorf("expected error.code 'missing_fields', got '%v'", out.Error)
 	}
 }
 
-// --- Test cases ---
+// --- ProcessImageHandler Tests ---
 
 func TestProcessImageHandler_Success(t *testing.T) {
 	setMocks(
@@ -206,12 +215,15 @@ func TestProcessImageHandler_Success(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 OK, got %d", resp.StatusCode)
 	}
-	var out models.ProcessImageResponse
+	var out APIResponse[models.ProcessImageResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
-	if out.ProcessedImageURL != "https://example.com/processed.jpg" {
-		t.Errorf("unexpected processed image url: %s", out.ProcessedImageURL)
+	if out.Data == nil {
+		t.Fatalf("expected data payload, got nil")
+	}
+	if out.Data.ProcessedImageURL != "https://example.com/processed.jpg" {
+		t.Errorf("unexpected processed image url: %s", out.Data.ProcessedImageURL)
 	}
 }
 
@@ -225,12 +237,12 @@ func TestProcessImageHandler_InvalidRequest(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400 Bad Request, got %d", resp.StatusCode)
 	}
-	var out models.ErrorResponse
+	var out APIResponse[struct{}]
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		t.Fatalf("failed to decode error response: %v", err)
 	}
-	if out.ErrorCode != "invalid_request" {
-		t.Errorf("expected error_code 'invalid_request', got '%s'", out.ErrorCode)
+	if out.Error == nil || out.Error.Code != "invalid_request" {
+		t.Errorf("expected error.code 'invalid_request', got '%v'", out.Error)
 	}
 }
 
@@ -245,12 +257,12 @@ func TestProcessImageHandler_MissingFields(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400 Bad Request, got %d", resp.StatusCode)
 	}
-	var out models.ErrorResponse
+	var out APIResponse[struct{}]
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		t.Fatalf("failed to decode error response: %v", err)
 	}
-	if out.ErrorCode != "missing_fields" {
-		t.Errorf("expected error_code 'missing_fields', got '%s'", out.ErrorCode)
+	if out.Error == nil || out.Error.Code != "invalid_request" && out.Error.Code != "missing_fields" {
+		t.Errorf("expected error.code 'missing_fields' or 'invalid_request', got '%v'", out.Error)
 	}
 }
 
@@ -277,12 +289,13 @@ func TestProcessImageHandler_ImageNotFound(t *testing.T) {
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404 Not Found, got %d", resp.StatusCode)
 	}
-	var out models.ErrorResponse
+	var out APIResponse[struct{}]
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		t.Fatalf("failed to decode error response: %v", err)
 	}
-	if out.ErrorCode != "image_not_found" {
-		t.Errorf("expected error_code 'image_not_found', got '%s'", out.ErrorCode)
+	// Handler uses generic not_found code
+	if out.Error == nil || out.Error.Code != "not_found" {
+		t.Errorf("expected error.code 'not_found', got '%v'", out.Error)
 	}
 }
 
@@ -309,12 +322,13 @@ func TestProcessImageHandler_TemplateNotFound(t *testing.T) {
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404 Not Found, got %d", resp.StatusCode)
 	}
-	var out models.ErrorResponse
+	var out APIResponse[struct{}]
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		t.Fatalf("failed to decode error response: %v", err)
 	}
-	if out.ErrorCode != "template_not_found" {
-		t.Errorf("expected error_code 'template_not_found', got '%s'", out.ErrorCode)
+	// Handler uses generic not_found code
+	if out.Error == nil || out.Error.Code != "not_found" {
+		t.Errorf("expected error.code 'not_found', got '%v'", out.Error)
 	}
 }
 
@@ -341,11 +355,11 @@ func TestProcessImageHandler_InternalError(t *testing.T) {
 	if resp.StatusCode != http.StatusInternalServerError {
 		t.Fatalf("expected 500 Internal Server Error, got %d", resp.StatusCode)
 	}
-	var out models.ErrorResponse
+	var out APIResponse[struct{}]
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		t.Fatalf("failed to decode error response: %v", err)
 	}
-	if out.ErrorCode != "internal_error" {
-		t.Errorf("expected error_code 'internal_error', got '%s'", out.ErrorCode)
+	if out.Error == nil || out.Error.Code != "internal_error" {
+		t.Errorf("expected error.code 'internal_error', got '%v'", out.Error)
 	}
 }

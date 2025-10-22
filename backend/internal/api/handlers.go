@@ -3,6 +3,8 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 
 	"imageaiwrapper-backend/internal/auth"
@@ -14,9 +16,10 @@ import (
 
 // --- Dependency injection for testability ---
 var (
-	imageExists     = storage.ImageExists
-	getTemplateByID = database.GetTemplateByID
-	processImage    = image.ProcessImage
+	imageExists       = storage.ImageExists
+	getTemplateByID   = database.GetTemplateByID
+	processImage      = image.ProcessImage
+	upsertUserProfile = database.UpsertUserProfile
 )
 
 // ProcessImageHandler handles the /v1/images/process endpoint.
@@ -96,7 +99,7 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	userID := emailToUse
 
 	// Persist user profile to Postgres (user_profiles) using email as unique key.
-	if err := database.UpsertUserProfile(r.Context(), emailToUse, req.Name, req.AvatarURL); err != nil {
+	if err := upsertUserProfile(r.Context(), emailToUse, req.Name, req.AvatarURL); err != nil {
 		ServerError(w, r, "failed to persist user profile")
 		return
 	}
@@ -104,4 +107,66 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 		UserID:  userID,
 		Message: "User registered/updated successfully.",
 	})
+}
+
+// ListTemplatesHandler handles GET /v1/templates for browsing public templates (no prompt exposure).
+func ListTemplatesHandler(w http.ResponseWriter, r *http.Request) {
+	// Parse query params
+	qp := r.URL.Query()
+	limit, _ := strconv.Atoi(qp.Get("limit"))
+	offset, _ := strconv.Atoi(qp.Get("offset"))
+	q := qp.Get("q")
+	tags := qp.Get("tags") // CSV of tag slugs
+	sort := qp.Get("sort") // newest | popular | name
+
+	source := os.Getenv("TEMPLATE_SOURCE")
+
+	// Execute query based on source
+	if strings.EqualFold(source, "db") {
+		items, err := database.ListPublishedTemplatesAdvanced(r.Context(), database.TemplateQuery{
+			Limit:   limit,
+			Offset:  offset,
+			Q:       q,
+			TagsCSV: tags,
+			Sort:    sort,
+		})
+		if err != nil {
+			ServerError(w, r, "failed to list templates")
+			return
+		}
+		OK(w, r, models.TemplatesList{Templates: items})
+		return
+	}
+
+	// File-source fallback (basic filter on q only)
+	items, err := database.ListPublishedTemplatesFromFileAdvanced(limit, offset, q, tags, sort)
+	if err != nil {
+		ServerError(w, r, "failed to list templates")
+		return
+	}
+	OK(w, r, models.TemplatesList{Templates: items})
+}
+
+// DebugProcessedHandler returns list of files under /processed and whether processed_test_img.png exists.
+func DebugProcessedHandler(w http.ResponseWriter, r *http.Request) {
+	dir := "/processed"
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		NotFound(w, r, "processed directory not found")
+		return
+	}
+	names := make([]string, 0, len(entries))
+	exists := false
+	for _, e := range entries {
+		name := e.Name()
+		names = append(names, name)
+		if name == "processed_test_img.png" {
+			exists = true
+		}
+	}
+	resp := map[string]any{
+		"exists": exists,
+		"files":  names,
+	}
+	OK(w, r, resp)
 }

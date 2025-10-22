@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	firebase "firebase.google.com/go/v4"
@@ -65,4 +66,48 @@ func (fa *FirebaseAuth) AuthMiddleware(next http.Handler) http.Handler {
 func GetFirebaseUser(r *http.Request) (*firebaseauth.Token, bool) {
 	token, ok := r.Context().Value("firebaseUser").(*firebaseauth.Token)
 	return token, ok
+}
+
+// AdminOnly returns a middleware that ensures the authenticated user has admin privileges.
+// Admin is determined by either:
+// 1) A custom claim on the Firebase token (boolean) with key ADMIN_CLAIM_KEY (default "admin")
+// 2) OR the user's email is present in ADMIN_EMAILS (comma-separated list)
+func (fa *FirebaseAuth) AdminOnly(next http.Handler) http.Handler {
+	claimKey := strings.TrimSpace(os.Getenv("ADMIN_CLAIM_KEY"))
+	if claimKey == "" {
+		claimKey = "admin"
+	}
+	adminEmailsCSV := strings.TrimSpace(os.Getenv("ADMIN_EMAILS"))
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token, ok := GetFirebaseUser(r)
+		if !ok || token == nil {
+			http.Error(w, `{"error": "Unauthorized. Invalid, expired, or missing Firebase authentication token."}`, http.StatusUnauthorized)
+			return
+		}
+
+		// Check claim
+		if token.Claims != nil {
+			if v, ok := token.Claims[claimKey]; ok {
+				if b, ok := v.(bool); ok && b {
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+		}
+
+		// Check email whitelist
+		if adminEmailsCSV != "" && token.Claims != nil {
+			if email, ok := token.Claims["email"].(string); ok && email != "" {
+				for _, e := range strings.Split(adminEmailsCSV, ",") {
+					if strings.EqualFold(strings.TrimSpace(e), strings.TrimSpace(email)) {
+						next.ServeHTTP(w, r)
+						return
+					}
+				}
+			}
+		}
+
+		http.Error(w, `{"error": "Forbidden. Admin privileges required."}`, http.StatusForbidden)
+	})
 }

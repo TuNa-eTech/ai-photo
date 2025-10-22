@@ -1,111 +1,160 @@
 # Architecture
 
-_This file documents the system architecture, source code paths, key technical decisions, design patterns, and component relationships._
+Authoritative snapshot of the current system architecture, components, and critical paths.
 
-## System Architecture
-- The project follows a client-server architecture.
-- Client: Native iOS app built with SwiftUI using MVVM. Networking goes through a reusable API client with detailed logging (APIClient), interface-driven via protocols for testability.
-- Server: Go backend (entrypoint: backend/cmd/api/main.go), Dockerized for local/dev. Persists user profiles to PostgreSQL.
-- Authentication: Client-side login with Firebase Auth (Google/Apple). Backend will verify Firebase ID tokens (todo) and currently accepts Bearer for register API stub. No classic backend login/password.
-- Data persistence:
-  - user_profiles table in Postgres for storing/updating a user’s profile (email unique, name, avatar_url).
-  - processed images saved to disk (backend/processed/).
-  - AI templates managed via JSON file (templates.json) and helper functions.
-- Observability/Debug:
-  - iOS APIClient prints request and response details (method, URL, headers with redaction, pretty JSON body, status, duration).
-  - Backend provides simple logging middleware and Dockerized flow.
+Last updated: 2025-10-22
+
+## System Overview
+
+- Platform components:
+  - iOS App (SwiftUI + Observation)
+  - Backend API (Go 1.25+, Postgres 15)
+  - Web Admin (React + Vite + TypeScript) — IMPLEMENTED
+- Cross-cutting:
+  - Authentication: Firebase Auth (Google/Apple) → client obtains ID token → Authorization: Bearer {idToken}
+  - Envelope response pattern: { success, data?, error?, meta{ requestId, timestamp } }
+
+## High-level Diagram
 
 ```mermaid
-flowchart LR
-  subgraph iOS App (SwiftUI)
-    V[View] --> VM[AuthViewModel]
-    VM --> UR[UserRepository]
-    UR --> AC[APIClient]
+graph TD
+  subgraph Clients
+    iOS[iOS App (SwiftUI)]
+    Admin[Web Admin (React + Vite)]
   end
 
-  AC -- HTTP/JSON --> API[/Go Backend/]
-  API --> H1[RegisterUserHandler]
-  API --> H2[ProcessImageHandler]
+  subgraph Auth
+    Firebase[Firebase Auth]
+  end
 
-  H1 --> DB[(PostgreSQL)]
-  H2 --> FS[(File Storage)]
-  H2 --> TPL[templates.json]
-  H2 --> AI[Gemini API]
+  subgraph Backend
+    API[(Go API)]
+    AssetsFS[/Static /assets/ volume/]
+    PG[(Postgres 15)]
+  end
 
-  classDef client fill:#eef,stroke:#99f
-  classDef server fill:#efe,stroke:#9f9
-  classDef storage fill:#ffe,stroke:#cc0
-  class iOS App (SwiftUI) client
-  class API,H1,H2 server
-  class DB,FS,TPL storage
+  iOS -->|Bearer ID Token| API
+  Admin -->|Bearer ID Token| API
+  iOS --> Firebase
+  Admin --> Firebase
+  API --> PG
+  API -->|serve static| AssetsFS
 ```
 
 ## Source Code Paths
-- iOS app:
-  - AIPhotoApp/AIPhotoApp/ (SwiftUI app; Views, ViewModels, Services, Utilities, Repositories)
-  - AIPhotoApp/AIPhotoApp/Utilities/Networking/APIClient.swift (common API client with logging)
-- Backend:
-  - backend/cmd/api/main.go (server entrypoint, route wiring)
-  - backend/internal/api/handlers.go (HTTP handlers)
-  - backend/internal/database/postgres.go (Postgres connection + UpsertUserProfile)
-  - backend/internal/models/models.go (DTOs, domain structs)
-  - backend/internal/image/image.go (image processing stub/logic)
-  - backend/internal/storage/storage.go (file storage helpers)
-  - backend/migrations/ (SQL migrations)
-  - docker/docker-compose.yml (db + backend services)
-  - backend/Dockerfile (multi-stage build; Go 1.25)
+
+- iOS
+  - Views: `AIPhotoApp/AIPhotoApp/Views/...`
+  - ViewModels: `AIPhotoApp/AIPhotoApp/ViewModels/...`
+  - Networking: `AIPhotoApp/AIPhotoApp/Utilities/Networking/APIClient.swift`
+  - Repositories: `AIPhotoApp/AIPhotoApp/Repositories/...`
+  - Models/DTOs: `AIPhotoApp/AIPhotoApp/Models/DTOs/...`
+
+- Backend
+  - API handlers/middleware: `backend/internal/api/`
+    - `handlers.go`, `middleware.go`, `routes.go`
+    - Admin Templates CRUD: `admin_templates.go`
+    - Admin Assets: `admin_assets.go` (list/upload/update/delete)
+  - Data access: `backend/internal/database/`
+    - `postgres.go`, `database.go`
+    - Admin templates queries + publish guard: `admin_templates.go`
+    - Template assets: `admin_assets.go`
+  - Storage helpers: `backend/internal/storage/storage.go`
+    - `AssetsDir()`, `AssetsBaseURL()`, `SaveTemplateAssetFile()`
+  - Domain models: `backend/internal/models/models.go`
+    - `TemplateAdmin`, `AdminTemplatesList`, `TemplateAssetAdmin`, Create/Update inputs
+  - Entry points: `backend/cmd/api/main.go` (serves `/processed/` and `/assets/`)
+  - Migrations: `backend/migrations/ (0001…0006)`
+
+- Web Admin
+  - API client: `web_admin/src/api/client.ts` (Axios + envelope unwrap + Bearer + 401 retry)
+  - Admin API: `web_admin/src/api/admin/templates.ts`
+    - CRUD + publish/unpublish
+    - Assets: `listTemplateAssets`, `uploadTemplateAsset`, `updateTemplateAsset`, `deleteTemplateAsset`
+  - Types: `web_admin/src/types/admin.ts` (`TemplateAdmin`, `TemplateAssetAdmin`, DTOs)
+  - UI:
+    - List page: `web_admin/src/pages/Admin/AdminTemplates.tsx`
+    - Drawer form: `web_admin/src/pages/Admin/TemplateFormDrawer.tsx` (Create + Edit with uploads)
+  - Auth: `web_admin/src/auth/*` (Firebase + ProtectedRoute)
+
+- API Documentation
+  - `swagger/openapi.yaml` (OpenAPI 3.1; includes assets endpoints & schemas)
 
 ## Key Technical Decisions
-- MVVM + interface-driven UI on iOS. APIClientProtocol enables easy mocking in tests.
-- Centralized networking with APIClient that logs requests and responses; headers like Authorization are redacted in logs.
-- No backend login/password flows; Firebase Auth handles identity. Backend will verify ID tokens (todo).
-- Postgres selected for persistence of user profiles; migrations managed by golang-migrate.
-- Dockerized local dev for backend and Postgres; iOS uses simulator hitting host localhost:8080.
-- Keep image processing artifacts on disk for simplicity in dev; can move to object storage (S3/GCS/MinIO) later.
 
-## Design Patterns in Use
-- MVVM (iOS) with @Observable ViewModels.
-- Repository pattern for backend integration (UserRepository).
-- Protocol-driven development (e.g., APIClientProtocol).
-- Middleware for HTTP logging/instrumentation on backend.
+- Authentication via Firebase ID token (JWT) sent as Bearer header to backend.
+- Envelope response format for consistency and observability.
+- Web Admin uses TanStack Query for server state, Axios with interceptors, MUI for UI.
+- Assets storage in dev: local Docker volume mounted at `/assets`, publicly served at `/assets/*`.
+- Admin Assets upload requires `slug`; Create flow supports early upload by auto-creating a draft.
 
-## Component Relationships & Critical Paths
-1. Authentication (client):
-   - User signs in with Google/Apple; Firebase returns ID token.
-   - AuthViewModel stores session; pre-fills profile name/email.
-2. Register user profile:
-   - iOS calls POST /v1/users/register with Authorization: Bearer <idToken> and JSON body {name,email,avatar_url}.
-   - Backend handler parses, and now persists via database.UpsertUserProfile(...) into user_profiles table.
-   - On success returns JSON {user_id,message}; iOS logs both request/response.
-3. Process image:
-   - iOS will (todo) call /v1/images/process with template_id and image_path.
-   - Backend validates inputs, checks template and file existence, processes via Gemini, writes processed file to backend/processed/, returns processed_image_url.
-4. Templates:
-   - Managed by templates.json via database helpers (GetTemplateByID).
+## Design Patterns
 
-## Recent Architectural Changes
-- iOS:
-  - Added APIClient with detailed logging and redaction.
-  - Refactored UserRepository to use APIClientProtocol (401 maps to .unauthorized).
-  - ProfileCompletionView: defer focus to avoid accessory/inputView constraint conflicts; removed unsupported keyboard toolbar hiding.
 - Backend:
-  - Added Postgres helper (pgx stdlib) in backend/internal/database/postgres.go.
-  - Created migration 0002_create_user_profiles_table.up.sql and applied via containerized golang-migrate.
-  - RegisterUserHandler now persists user profile into Postgres (user_profiles) before responding.
-  - Backend Dockerfile updated to golang:1.25-alpine to satisfy go.mod go >= 1.25.2.
+  - Handlers → database layer separation.
+  - Context propagation for request-scoped values.
+  - Table-/envelope-oriented responses with consistent error mapping (422 for validation).
+  - Unique thumbnail enforcement by demoting other thumbnails to preview on promote.
+
+- iOS:
+  - MVVM-ish with Observation; Repository for network.
+  - 401 refresh-and-retry via token provider.
+
+- Web Admin:
+  - React Router protected routes.
+  - TanStack Query hooks per resource; mutations invalidate relevant queries.
+  - React Hook Form + Zod for validation.
+
+## Critical Implementation Paths
+
+- GET /v1/templates (public listing for iOS)
+  1) Client composes query: `limit`, `offset`, `q`, `tags` (CSV), `sort`.
+  2) Sends Authorization: Bearer.
+  3) Backend joins `template_assets(kind='thumbnail')`, applies filters/sort.
+  4) Returns `EnvelopeTemplatesList`.
+
+- Admin Templates CRUD (web_admin)
+  - List: `GET /v1/admin/templates`
+  - Create: `POST /v1/admin/templates`
+  - Detail: `GET /v1/admin/templates/{slug}`
+  - Update: `PUT /v1/admin/templates/{slug}`
+  - Delete: `DELETE /v1/admin/templates/{slug}`
+  - Publish / Unpublish: `POST /v1/admin/templates/{slug}/publish|unpublish` (publish requires thumbnail; else 422)
+
+- Admin Assets
+  - List: `GET /v1/admin/templates/{slug}/assets`
+  - Upload: `POST /v1/admin/templates/{slug}/assets` (multipart; png/jpeg; `kind=thumbnail|preview`)
+  - Update: `PUT /v1/admin/templates/{slug}/assets/{id}` (change kind/sort; unique thumbnail)
+  - Delete: `DELETE /v1/admin/templates/{slug}/assets/{id}`
+  - Static serving: `/assets/templates/{slug}/{filename}` via `main.go` + Docker volume
+
+## Observability
+
+- `meta.requestId` and `meta.timestamp` added to all envelopes.
+- Recommend correlating requestId in backend logs.
+- Pagination metadata (total/hasMore/nextOffset) can be added later in `meta`.
 
 ## Data Model Notes
-- user_profiles:
-  - id SERIAL PRIMARY KEY
-  - email VARCHAR(255) UNIQUE NOT NULL
-  - name VARCHAR(255) NOT NULL
-  - avatar_url TEXT NULL
-  - created_at TIMESTAMP DEFAULT NOW()
-  - updated_at TIMESTAMP DEFAULT NOW()
-- Note: A separate users table exists from an earlier migration (with password_hash) but is not used by current Firebase-based flow. Consider consolidating/repurposing later with a clear separation of auth vs profile.
 
-## Open Items / Next Steps (Architecture)
-- Backend: Implement real Firebase ID token verification in RegisterUserHandler (Firebase Admin SDK).
-- Consider consolidating user tables or documenting the separation (auth vs profile) in OpenAPI and code.
-- Add integration tests for register flow (assert DB upsert).
-- Expand observability (structured logs, metrics, traces) and add error handling for DB/network issues.
+- `templates`:
+  - Core fields include `id/slug`, `name`, `published_at`, `usage_count`, `visibility`, `status`.
+- `template_assets`:
+  - `id`, `template_id`, `kind ('thumbnail'|'preview')`, `url`, `sort_order`, `created_at`.
+  - Promote preview to thumbnail demotes existing thumbnails to preview.
+
+## Deployment / Docker
+
+- Services: db, backend, web (optional), pgadmin.
+- Backend env:
+  - `ASSETS_DIR=/assets`, `ASSETS_BASE_URL=/assets`
+  - Dev auth toggles: `DEV_AUTH_ENABLED=1`, `DEV_ADMIN_EMAIL`, `DEV_ADMIN_PASSWORD`
+  - CORS: `CORS_ALLOWED_ORIGINS=http://localhost:5173`, `CORS_ALLOWED_HEADERS=Authorization,Content-Type`
+- Volumes:
+  - `../backend/assets:/assets` (uploads)
+  - `../backend/processed:/processed` (sample outputs)
+
+## Risks / Considerations
+
+- Local file storage vs production (S3/CDN) — abstract via `AssetsBaseURL()`.
+- Ensure CORS headers are correct for Vite dev.
+- Protect admin endpoints with Firebase Admin in production; DevAuth only for dev.

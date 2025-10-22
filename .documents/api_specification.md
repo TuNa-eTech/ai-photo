@@ -1,174 +1,187 @@
-# Tài liệu Đặc tả API - AI Image Stylist
+# API Specification (Documentation-Driven)
 
-Tài liệu này đặc tả chi tiết các API endpoint được sử dụng trong dự án.
+Last updated: 2025-10-21
 
----
+Authoritative contract for backend APIs. This document complements and references the canonical OpenAPI file: `swagger/openapi.yaml` (OpenAPI 3.1).
 
-## Lưu ý về xác thực
+Sources of truth:
+- swagger/openapi.yaml
+- .documents/project_architecture.md
+- .documents/web_admin.md
 
-- **Backend KHÔNG cung cấp API login.**
-- **Toàn bộ xác thực (Google/Apple) được thực hiện qua Firebase Auth trên client (iOS app).**
-- **Backend chỉ xác thực Firebase ID token (JWT) gửi từ client qua header `Authorization: Bearer <firebase-id-token>`.**
-- Nếu cần lưu thông tin profile user, sử dụng API register (mô tả bên dưới).
+## Authentication
 
----
+- All protected endpoints require Firebase ID Token (JWT) in the HTTP header:
+  - Authorization: Bearer <idToken>
+- 401 is returned when the token is missing/invalid/expired.
+- Clients should implement a single refresh-and-retry flow.
 
-## 1. API: `process-image`
+## CORS (development)
 
-Đây là API chính để xử lý ảnh, được gọi từ ứng dụng client (SwiftUI).
+- Allow origin: http://localhost:5173 (Vite dev server)
+- Allowed methods: GET, POST (extend as needed)
+- Allowed headers: Authorization, Content-Type
+- Do not allow credentials by default for this admin app.
 
-- **Endpoint:** `/v1/images/process`
-- **Method:** `POST`
-- **Authentication:** Bắt buộc. Yêu cầu có header `Authorization` chứa Firebase ID token (JWT) do Firebase cấp.
-  - `Authorization: Bearer <firebase-id-token>`
-  - Backend sẽ xác thực token này bằng Firebase Admin SDK (service account).
+## Envelope Response Pattern
 
----
+All responses follow the envelope structure:
 
-### **Request**
-
-- **Headers:**
-  - `Content-Type: application/json`
-
-- **Body Schema (JSON):**
-
-  ```json
-  {
-    "template_id": "string",
-    "image_path": "string"
+```json
+{
+  "success": true,
+  "data": { /* typed payload, e.g., TemplatesList */ },
+  "error": {
+    "code": "string",
+    "message": "string",
+    "details": { "any": "object" }
+  },
+  "meta": {
+    "requestId": "string",
+    "timestamp": "ISO-8601 date-time"
   }
-  ```
+}
+```
 
-- **Mô tả các trường:**
-  - `template_id` (bắt buộc): `id` của template được chọn.
-  - `image_path` (bắt buộc): Đường dẫn (path) của ảnh gốc đã được upload.
+- success: boolean
+- data: present when success=true
+- error: present when success=false
+- meta: always present; includes requestId and timestamp
+- Future: pagination metadata may be added to meta (e.g., total, hasMore, nextOffset)
 
----
+## Schemas (excerpt)
 
-### **Responses**
+- Template
+  - id: string
+  - name: string
+  - thumbnail_url?: uri
+  - published_at?: date-time (ISO-8601)
+  - usage_count?: integer (>= 0)
 
-#### **200 OK - Success**
+- TemplatesList
+  - templates: Template[]
 
-- **Mô tả:** Trả về khi ảnh được xử lý thành công.
-- **Body Schema (JSON):**
+- ProcessImageSuccess
+  - processed_image_url: uri
 
-  ```json
-  {
-    "processed_image_url": "string"
+- Envelope variants (see swagger/openapi.yaml):
+  - EnvelopeTemplatesList
+  - EnvelopeProcessImageSuccess
+  - EnvelopeUserRegisterSuccess
+  - EnvelopeError
+
+## Endpoints
+
+### GET /v1/templates
+
+List published templates with advanced filtering/sorting.
+
+Query parameters:
+- limit: integer (default: 20, min: 1)
+- offset: integer (default: 0, min: 0)
+- q: string (search by name/slug, ILIKE)
+- tags: string (CSV of tag slugs, e.g., "anime,portrait")
+- sort: string enum ["newest", "popular", "name"] (default: "newest")
+
+Authentication:
+- Requires Authorization: Bearer <idToken>
+
+200 Response (EnvelopeTemplatesList):
+```json
+{
+  "success": true,
+  "data": {
+    "templates": [
+      {
+        "id": "anime-style",
+        "name": "Phong cách Anime",
+        "thumbnail_url": "https://your-storage/templates/anime-style-thumb.jpg",
+        "published_at": "2025-10-20T07:30:00Z",
+        "usage_count": 120345
+      }
+    ]
+  },
+  "meta": {
+    "requestId": "8f9a1b2c3d4e5f6a",
+    "timestamp": "2025-10-20T07:30:00Z"
   }
-  ```
-  - `processed_image_url`: URL công khai (public URL) của ảnh kết quả.
+}
+```
 
----
-
-#### **400 Bad Request - Lỗi Dữ liệu đầu vào**
-
-- **Mô tả:** Trả về khi request body không hợp lệ (thiếu trường, sai kiểu dữ liệu).
-- **Body Schema (JSON):**
-
-  ```json
-  {
-    "error": "Invalid request body. template_id and image_path are required."
+401 Response (EnvelopeError):
+```json
+{
+  "success": false,
+  "error": {
+    "code": "unauthorized",
+    "message": "Token không hợp lệ hoặc thiếu"
+  },
+  "meta": {
+    "requestId": "abc123",
+    "timestamp": "2025-10-20T07:30:00Z"
   }
-  ```
+}
+```
 
----
+Notes:
+- Backend SQL joins `template_assets` where `kind='thumbnail'` to populate `thumbnail_url`.
+- Sorting:
+  - newest → published_at DESC (fallback to created_at if applicable)
+  - popular → usage_count DESC
+  - name → name ASC
 
-#### **401 Unauthorized - Lỗi Xác thực**
+### POST /v1/users/register
 
-- **Mô tả:** Trả về khi Firebase ID token không hợp lệ, hết hạn, hoặc bị thiếu.
-- **Body Schema (JSON):**
+Create/update user profile (profile-only, not login).
 
-  ```json
-  {
-    "error": "Unauthorized. Invalid, expired, or missing Firebase authentication token."
-  }
-  ```
+Security:
+- bearerAuth required
 
----
+Request body schema: UserRegisterRequest
+200 Response: EnvelopeUserRegisterSuccess
+Errors: 400 (validation), 401 (auth), 500 (server error)
 
-#### **404 Not Found - Không tìm thấy**
+See swagger/openapi.yaml for exact schemas and examples.
 
-- **Mô tả:** Trả về khi `template_id` hoặc `image_path` không tồn tại trong hệ thống.
-- **Body Schema (JSON):**
+### POST /v1/images/process
 
-  ```json
-  {
-    "error": "Template or image not found."
-  }
-  ```
+Process an image with a selected template.
 
----
+Security:
+- bearerAuth required
 
-#### **500 Internal Server Error - Lỗi Server**
+Request body schema: ProcessImageRequest
+- template_id: string
+- image_path: string (path to uploaded source image)
 
-- **Mô tả:** Trả về khi có lỗi xảy ra ở phía server (ví dụ: gọi API của Gemini thất bại, không thể lưu file...).
-- **Body Schema (JSON):**
+200 Response: EnvelopeProcessImageSuccess
+- processed_image_url: string (uri)
 
-  ```json
-  {
-    "error": "An internal server error occurred while processing the image."
-  }
-  ```
+Errors:
+- 400 invalid input
+- 401 unauthorized
+- 404 not found (template/image)
+- 500 server error
 
----
+See swagger/openapi.yaml for the canonical definitions and examples.
 
-## 2. API: `register-user`
+## Pagination Metadata (Future)
 
-API này dùng để đăng ký hoặc cập nhật thông tin profile user trên backend. Không xử lý xác thực đăng nhập, chỉ lưu thông tin profile.
+For improved UX in admin and iOS, consider extending meta with:
+```json
+"meta": {
+  "requestId": "string",
+  "timestamp": "ISO-8601",
+  "total": 123,
+  "hasMore": true,
+  "nextOffset": 40
+}
+```
 
-- **Endpoint:** `/v1/users/register`
-- **Method:** `POST`
-- **Authentication:** Bắt buộc. Yêu cầu header `Authorization: Bearer <firebase-id-token>`
-- **Headers:**
-  - `Content-Type: application/json`
-- **Body Schema (JSON):**
-  ```json
-  {
-    "name": "string",
-    "email": "string",
-    "avatar_url": "string"
-  }
-  ```
-  - `name` (bắt buộc): Tên hiển thị của user.
-  - `email` (bắt buộc): Email user (nên lấy từ Firebase).
-  - `avatar_url` (tùy chọn): Link ảnh đại diện.
+Clients (iOS/Web) should be ready to consume these fields if added in a backward-compatible manner.
 
-### **Responses**
+## Error Handling Guidance
 
-#### **200 OK - Success**
-- **Mô tả:** Đăng ký/cập nhật profile thành công.
-- **Body Schema (JSON):**
-  ```json
-  {
-    "user_id": "string",
-    "message": "User registered/updated successfully."
-  }
-  ```
-
-#### **400 Bad Request**
-- **Mô tả:** Thiếu trường bắt buộc hoặc dữ liệu không hợp lệ.
-- **Body Schema (JSON):**
-  ```json
-  {
-    "error": "Invalid request body. name and email are required."
-  }
-  ```
-
-#### **401 Unauthorized**
-- **Mô tả:** Token không hợp lệ, hết hạn, hoặc thiếu.
-- **Body Schema (JSON):**
-  ```json
-  {
-    "error": "Unauthorized. Invalid, expired, or missing Firebase authentication token."
-  }
-  ```
-
-#### **500 Internal Server Error**
-- **Mô tả:** Lỗi server khi lưu thông tin user.
-- **Body Schema (JSON):**
-  ```json
-  {
-    "error": "An internal server error occurred while registering the user."
-  }
-  ```
+- On non-2xx HTTP statuses, clients should parse EnvelopeError and display `error.message`.
+- For 401, clients perform a single token refresh via Firebase SDK, then retry the request once.
+- On repeated failure, surface the error to the user with actionable context.
