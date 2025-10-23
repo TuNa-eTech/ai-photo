@@ -2,7 +2,7 @@
 
 Authoritative snapshot of the current system architecture, components, and critical paths.
 
-Last updated: 2025-10-22
+Last updated: 2025-10-23
 
 ## System Overview
 
@@ -66,16 +66,14 @@ graph TD
   - Entry points: `backend/cmd/api/main.go` (serves `/processed/` and `/assets/`)
   - Migrations: `backend/migrations/ (0001…0006)`
 
-- Web Admin
-  - API client: `web_admin/src/api/client.ts` (Axios + envelope unwrap + Bearer + 401 retry)
-  - Admin API: `web_admin/src/api/admin/templates.ts`
-    - CRUD + publish/unpublish
-    - Assets: `listTemplateAssets`, `uploadTemplateAsset`, `updateTemplateAsset`, `deleteTemplateAsset`
-  - Types: `web_admin/src/types/admin.ts` (`TemplateAdmin`, `TemplateAssetAdmin`, DTOs)
+- Web Admin (Web CMS)
+  - API client: `web-cms/src/api/client.ts` (Axios + envelope unwrap + Bearer + 401 retry)
+  - Public templates API: `web-cms/src/api/templates.ts`
+  - Admin API: `web-cms/src/api/admin/*` (CRUD + publish/unpublish + assets)
+  - Types: `web-cms/src/types/{admin.ts, template.ts, envelope.ts}`
   - UI:
-    - List page: `web_admin/src/pages/Admin/AdminTemplates.tsx`
-    - Drawer form: `web_admin/src/pages/Admin/TemplateFormDrawer.tsx` (Create + Edit with uploads)
-  - Auth: `web_admin/src/auth/*` (Firebase + ProtectedRoute)
+    - Pages: `web-cms/src/pages/Admin/*`, `web-cms/src/pages/Templates/*`
+  - Auth: `web-cms/src/auth/*` (Firebase + ProtectedRoute)
 
 - API Documentation
   - `swagger/openapi.yaml` (OpenAPI 3.1; includes assets endpoints & schemas)
@@ -84,7 +82,7 @@ graph TD
 
 - Authentication via Firebase ID token (JWT) sent as Bearer header to backend.
 - Envelope response format for consistency and observability.
-- Web Admin uses TanStack Query for server state, Axios with interceptors, MUI for UI.
+- Web CMS uses TanStack Query for server state, Axios with interceptors, MUI for UI.
 - Assets storage in dev: local Docker volume mounted at `/assets`, publicly served at `/assets/*`.
 - Admin Assets upload requires `slug`; Create flow supports early upload by auto-creating a draft.
 
@@ -100,7 +98,7 @@ graph TD
   - MVVM-ish with Observation; Repository for network.
   - 401 refresh-and-retry via token provider.
 
-- Web Admin:
+- Web CMS:
   - React Router protected routes.
   - TanStack Query hooks per resource; mutations invalidate relevant queries.
   - React Hook Form + Zod for validation.
@@ -113,7 +111,7 @@ graph TD
   3) Backend joins `template_assets(kind='thumbnail')`, applies filters/sort.
   4) Returns `EnvelopeTemplatesList`.
 
-- Admin Templates CRUD (web_admin)
+- Admin Templates CRUD (web-cms)
   - List: `GET /v1/admin/templates`
   - Create: `POST /v1/admin/templates`
   - Detail: `GET /v1/admin/templates/{slug}`

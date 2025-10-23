@@ -1,3 +1,7 @@
+---
+Status: Legacy (superseded by platform-guides/web-cms.md and auth/login-register.md, auth/refresh-logout.md)
+Updated: 2025-10-23
+---
 # Use Case: Authentication (Google/Apple Login via Firebase Auth)
 
 ## 1. Overview

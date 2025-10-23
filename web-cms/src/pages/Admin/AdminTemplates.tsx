@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
-  Stack,
   Typography,
-  Button,
   TextField,
   MenuItem,
+  Stack,
   Table,
   TableHead,
   TableRow,
@@ -19,6 +18,7 @@ import {
   Snackbar,
   Alert,
   Divider,
+  Skeleton,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -28,7 +28,9 @@ import UnpublishedIcon from '@mui/icons-material/Unpublished';
 import { useAdminTemplatesQuery, useCreateTemplateMutation, useDeleteTemplateMutation, usePublishTemplateMutation, useUnpublishTemplateMutation, useUpdateTemplateMutation } from '../../api/admin/templates';
 import type { AdminTemplatesParams, CreateTemplateInput, TemplateAdmin, UpdateTemplateInput } from '../../types/admin';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import EmptyState from '../../components/EmptyState';
 import TemplateFormDrawer from './TemplateFormDrawer';
+import TemplateFilters from './TemplateFilters';
 import { formatRelative, formatCompactNumber } from '../../utils/format';
 
 const statusOptions = ['all', 'draft', 'published', 'archived'] as const;
@@ -109,6 +111,18 @@ const AdminTemplates: React.FC = () => {
     setDrawerMode('create');
     setDrawerOpen(true);
   };
+
+  const handleEditRow = (item: TemplateAdmin) => {
+    setEditing(item);
+    setDrawerMode('edit');
+    setDrawerOpen(true);
+  };
+
+  const askDeleteRow = (slug: string) => {
+    setSelected([slug]);
+    askAction('delete');
+  };
+
   const handleEdit = () => {
     if (selected.length !== 1) return;
     const item = templates.find((t) => t.slug === selected[0]);
@@ -162,59 +176,25 @@ const AdminTemplates: React.FC = () => {
 
   return (
     <Box sx={{ p: 2 }}>
-      <Typography variant="h5" sx={{ mb: 2 }}>
-        Templates (Admin)
+      <Typography variant="h4" sx={{ mb: 2 }}>
+        Templates
       </Typography>
 
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 2 }}>
-        <TextField
-          label="Search"
-          placeholder="name or slug..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          size="small"
-        />
-        <TextField label="Status" value={status} onChange={(e) => setStatus(e.target.value as any)} size="small" select>
-          {statusOptions.map((s) => (
-            <MenuItem key={s} value={s}>
-              {s}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          label="Visibility"
-          value={visibility}
-          onChange={(e) => setVisibility(e.target.value as any)}
-          size="small"
-          select
-        >
-          {visibilityOptions.map((v) => (
-            <MenuItem key={v} value={v}>
-              {v}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField label="Sort" value={sort} onChange={(e) => setSort(e.target.value as any)} size="small" select>
-          {sortOptions.map((s) => (
-            <MenuItem key={s} value={s}>
-              {s}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          label="Tags (CSV)"
-          placeholder="anime,portrait"
-          value={tagsCSV}
-          onChange={(e) => setTagsCSV(e.target.value)}
-          size="small"
-        />
-        <Box flex={1} />
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreate}>
-          New Template
-        </Button>
-      </Stack>
+      <TemplateFilters
+        q={q}
+        setQ={setQ}
+        status={status}
+        setStatus={setStatus}
+        visibility={visibility}
+        setVisibility={setVisibility}
+        sort={sort}
+        setSort={setSort}
+        tagsCSV={tagsCSV}
+        setTagsCSV={setTagsCSV}
+        onCreate={handleCreate}
+      />
 
-      <Toolbar disableGutters variant="dense" sx={{ mb: 1 }}>
+      <Toolbar disableGutters variant="dense" sx={{ mt: 2, mb: 1 }}>
         <Tooltip title="Edit">
           <span>
             <IconButton onClick={handleEdit} disabled={selected.length !== 1}>
@@ -261,48 +241,131 @@ const AdminTemplates: React.FC = () => {
             <TableCell>Updated</TableCell>
             <TableCell align="right">Usage</TableCell>
             <TableCell>Tags</TableCell>
+            <TableCell align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {templates.map((t) => (
-            <TableRow key={t.slug} hover selected={isSelected(t.slug)} onClick={() => toggleRow(t.slug)}>
-              <TableCell padding="checkbox">
-                <Checkbox checked={isSelected(t.slug)} />
-              </TableCell>
-              <TableCell>
-                {t.thumbnail_url ? (
-                  // eslint-disable-next-line jsx-a11y/alt-text
-                  <img
-                    src={t.thumbnail_url}
-                    style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', border: '1px solid #eee' }}
-                  />
-                ) : (
-                  <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: '#f5f5f5', border: '1px solid #eee' }} />
-                )}
-              </TableCell>
-              <TableCell>{t.slug}</TableCell>
-              <TableCell>{t.name}</TableCell>
-              <TableCell>
-                <Chip size="small" label={t.status} color={t.status === 'published' ? 'success' : t.status === 'archived' ? 'default' : 'warning'} />
-              </TableCell>
-              <TableCell>
-                <Chip size="small" label={t.visibility} />
-              </TableCell>
-              <TableCell>{t.published_at ? formatRelative(t.published_at) : '-'}</TableCell>
-              <TableCell>{t.updated_at ? formatRelative(t.updated_at) : '-'}</TableCell>
-              <TableCell align="right">{typeof t.usage_count === 'number' ? formatCompactNumber(t.usage_count) : '-'}</TableCell>
-              <TableCell>
-                {(t.tags ?? []).slice(0, 3).map((tag) => (
-                  <Chip key={tag} label={tag} size="small" sx={{ mr: 0.5 }} />
-                ))}
-                {(t.tags ?? []).length > 3 ? <Chip size="small" label={`+${(t.tags ?? []).length - 3}`} /> : null}
-              </TableCell>
-            </TableRow>
-          ))}
+          {isFetching
+            ? Array.from(new Array(5)).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell padding="checkbox">
+                    <Checkbox disabled />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton variant="rounded" width={48} height={48} />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton variant="text" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton variant="text" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton variant="text" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton variant="text" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton variant="text" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton variant="text" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton variant="text" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton variant="text" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton variant="text" />
+                  </TableCell>
+                </TableRow>
+              ))
+            : templates.map((t) => (
+                <TableRow key={t.slug} hover selected={isSelected(t.slug)} onClick={() => toggleRow(t.slug)}>
+                  <TableCell padding="checkbox">
+                    <Checkbox checked={isSelected(t.slug)} />
+                  </TableCell>
+                  <TableCell>
+                    {t.thumbnail_url ? (
+                      // eslint-disable-next-line jsx-a11y/alt-text
+                      <img
+                        src={t.thumbnail_url}
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 8,
+                          objectFit: 'cover',
+                          border: '1px solid #eee',
+                        }}
+                      />
+                    ) : (
+                      <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: '#f5f5f5', border: '1px solid #eee' }} />
+                    )}
+                  </TableCell>
+                  <TableCell>{t.slug}</TableCell>
+                  <TableCell>{t.name}</TableCell>
+                  <TableCell>
+                    <Chip
+                      size="small"
+                      label={t.status}
+                      color={t.status === 'published' ? 'success' : t.status === 'archived' ? 'default' : 'warning'}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip size="small" label={t.visibility} />
+                  </TableCell>
+                  <TableCell>{t.published_at ? formatRelative(t.published_at) : '-'}</TableCell>
+                  <TableCell>{t.updated_at ? formatRelative(t.updated_at) : '-'}</TableCell>
+                  <TableCell align="right">
+                    {typeof t.usage_count === 'number' ? formatCompactNumber(t.usage_count) : '-'}
+                  </TableCell>
+                  <TableCell>
+                    {(t.tags ?? []).slice(0, 3).map((tag) => (
+                      <Chip key={tag} label={tag} size="small" sx={{ mr: 0.5 }} />
+                    ))}
+                    {(t.tags ?? []).length > 3 ? <Chip size="small" label={`+${(t.tags ?? []).length - 3}`} /> : null}
+                  </TableCell>
+                  <TableCell align="right">
+                    <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                      <Tooltip title="Edit">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditRow(t);
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            askDeleteRow(t.slug);
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              ))}
           {templates.length === 0 && !isFetching ? (
             <TableRow>
-              <TableCell colSpan={9} align="center">
-                No templates found
+              <TableCell colSpan={11}>
+                <EmptyState
+                  title="No Templates Found"
+                  message="Create your first template to get started."
+                  actionText="New Template"
+                  onActionClick={handleCreate}
+                />
               </TableCell>
             </TableRow>
           ) : null}

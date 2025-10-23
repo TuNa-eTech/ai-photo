@@ -1,3 +1,7 @@
+---
+Status: Legacy (superseded by platform-guides/web-cms.md and api/standards.md)
+Updated: 2025-10-23
+---
 # API Specification (Documentation-Driven)
 
 Last updated: 2025-10-21
@@ -6,8 +10,8 @@ Authoritative contract for backend APIs. This document complements and reference
 
 Sources of truth:
 - swagger/openapi.yaml
-- .documents/project_architecture.md
-- .documents/web_admin.md
+- architecture/system-architecture.md
+- platform-guides/web-cms.md
 
 ## Authentication
 

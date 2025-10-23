@@ -154,4 +154,4 @@ Testing Guidelines
 - UI smoke test: tapping “Đăng xuất” returns to AuthLandingView.
 
 Related Documents
-- Login + Register: .documents/auth/flow-login-register.md
+- Login + Register: auth/login-register.md

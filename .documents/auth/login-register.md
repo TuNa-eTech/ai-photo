@@ -221,7 +221,7 @@ Troubleshooting
   - Inspect APIClient logs for HTTP status and response body
 
 Related Documents
-- Refresh Token + Logout: .documents/auth/flow-refresh-logout.md
+- Refresh Token + Logout: auth/refresh-logout.md
 
 Change Log
 - 2025-10-19: Initial draft created, documenting end-to-end flow, contracts, and troubleshooting.

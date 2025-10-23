@@ -231,7 +231,8 @@ const TemplateFormDrawer: React.FC<TemplateFormDrawerProps> = ({ open, mode, ini
       // Upload using explicit slug (avoids stale hook param) and show pending state
       const uploaded = await uploadMut.mutateAsync({ slug: effectiveSlug, kind, file });
       if (kind === 'thumbnail') {
-        setValue('thumbnail_url' as any, uploaded.url, { shouldValidate: true, shouldDirty: true });
+        const fullUrl = `${import.meta.env.VITE_API_BASE_URL}${uploaded.url}`;
+        setValue('thumbnail_url' as any, fullUrl, { shouldValidate: true, shouldDirty: true });
       }
       await refetchAssets();
       setSnack({ open: true, message: 'Uploaded successfully', severity: 'success' });

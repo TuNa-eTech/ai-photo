@@ -24,7 +24,7 @@ Last updated: 2025-10-22
   - Documentation: OpenAPI 3.1 at `swagger/openapi.yaml`
   - Tests: `go test ./...`, table-driven tests in `internal/*`
 
-- Web Admin
+- Web CMS
   - Tooling: Vite + React + TypeScript
   - Routing: React Router
   - Data fetching: TanStack Query
@@ -114,7 +114,7 @@ See `swagger/openapi.yaml` for the authoritative spec and examples.
     - `cd backend && go test ./...`
     - Coverage: `go test -cover ./...`
 
-- Web Admin
+- Web CMS
   - Dev server: Vite `http://localhost:5173`
   - Env `.env.local`:
     ```
@@ -177,6 +177,12 @@ See `swagger/openapi.yaml` for the authoritative spec and examples.
 - Prefer structured JSON logs in backend
 - Consider OpenTelemetry for tracing/metrics later
 
+## Documentation & Workflows
+- Docs index: .documents/README.md
+- Platform guide (Web CMS): .documents/platform-guides/web-cms.md
+- Template spec: .documents/features/template-spec.md
+- Run tests: .documents/workflows/run-tests.md
+
 ## Known Gaps / Next Steps
 
 - Backend:
@@ -184,6 +190,6 @@ See `swagger/openapi.yaml` for the authoritative spec and examples.
   - Consider pagination metadata in `meta`
   - Production storage: switch `/assets` to S3/CDN; keep `ASSETS_BASE_URL` abstraction
 
-- Web Admin:
+- Web CMS:
   - Expand tests for create-draft-on-first-upload, gallery actions, and publish error states
   - Add drag/drop reorder for previews (update `sort_order`)

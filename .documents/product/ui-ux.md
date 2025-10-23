@@ -4,10 +4,10 @@ Last updated: 2025-10-21
 
 This document defines the user interface and experience guidelines for:
 - iOS App (Liquid Glass Home)
-- Web Admin (Phase 1: Templates list and detail)
+- Web CMS (Phase 1: Templates list and detail)
 
 Sources of truth:
-- .documents/project_architecture.md
+- architecture/system-architecture.md
 - swagger/openapi.yaml
 - iOS code: AIPhotoApp/AIPhotoApp/Views and ViewModels
 

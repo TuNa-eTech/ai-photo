@@ -2,7 +2,7 @@
 
 Short, factual snapshot of the current project state.
 
-Last updated: 2025-10-22
+Last updated: 2025-10-23
 
 ## Current Focus
 - Web Admin (React + Vite + TS):
@@ -65,6 +65,6 @@ Last updated: 2025-10-22
   - internal/storage/storage.go
   - cmd/api/main.go (static /assets)
 - Frontend code:
-  - web_admin/src/api/admin/templates.ts
-  - web_admin/src/pages/Admin/AdminTemplates.tsx
-  - web_admin/src/pages/Admin/TemplateFormDrawer.tsx
+  - web-cms/src/api/admin/ (CRUD + assets)
+  - web-cms/src/pages/Admin/
+  - web-cms/src/pages/Templates/

@@ -2,12 +2,12 @@
 
 Why this project exists, the problems it solves, how it should work, and the user experience goals.
 
-Last updated: 2025-10-21
+Last updated: 2025-10-23
 
 ## Why this project exists
 - Provide an AI-powered image styling experience where users can browse curated templates and generate stylized photos easily.
 - Centralize template metadata and assets with a secure backend and an admin interface for curation and operations.
-- Maintain consistent API contracts (envelope pattern) across platforms (iOS, web admin).
+- Maintain consistent API contracts (envelope pattern) across platforms (iOS, web CMS).
 
 ## Problems it solves
 - Disconnected management of template metadata/assets.
@@ -25,7 +25,7 @@ Last updated: 2025-10-21
    - User selects a template, uploads an image, triggers POST /v1/images/process.
    - The backend fetches secret prompts, calls AI service, persists result, returns processed image URL in envelope.
 
-3) Curate templates (Web Admin)
+3) Curate templates (Web CMS)
    - Admin logs in via Firebase (Google).
    - Admin lists templates with filters (q/tags/sort) and pagination, views details.
    - Phase 2: Admin edits metadata (name, description, status, visibility), manages assets (thumbnail/cover/preview), tags, and versioning.
@@ -42,7 +42,7 @@ Last updated: 2025-10-21
 ## MVP scope (confirmed)
 - iOS: “Liquid Glass” Home UI/UX, GET /v1/templates integration with Bearer + 401 retry, base processing flow.
 - Backend: /v1/templates supports fields (thumbnail_url, published_at, usage_count) and params (limit, offset, q, tags, sort).
-- Web Admin Phase 1: Auth + templates list + detail (read-only).
+- Web CMS: Auth + Templates CRUD, publish/unpublish, assets management (thumbnail/preview), filters/sort/pagination (Phase 2 delivered).
 
 ## Future scope (Phase 2 proposals)
 - Admin CRUD endpoints:

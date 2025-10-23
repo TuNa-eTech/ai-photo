@@ -61,7 +61,7 @@ graph TD
   - `migrations` (0001…0006)
   - `cmd/api` entrypoint
 - Swagger: `swagger/openapi.yaml`
-- Web Admin (planned): `web_admin/*` (to be scaffolded)
+- Web Admin: `web-cms/*` (implemented; Phase 2 CRUD + assets)
 - Documentation: `.documents/*`
 - Memory Bank: `.memory-bank/*`
 - Plans: `.implementation_plan/*`

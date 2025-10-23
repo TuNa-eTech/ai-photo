@@ -78,3 +78,58 @@ Future enhancements (optional):
 - Add drag-and-drop area for uploads.
 - Add progress bar via axios onUploadProgress.
 - Optional client-side compression/cropping for thumbnails.
+
+## Standardize .documents
+Last performed: 2025-10-23
+
+Goal:
+- Reorganize and standardize the documentation under `.documents` to be concise, documentation-driven, and aligned with repository paths (web-cms).
+
+Files touched (moved/created/updated):
+- Moved/renamed:
+  - project_architecture.md → architecture/system-architecture.md
+  - data-model-templates.md → architecture/data-model/templates.md
+  - api-response-standard.md → api/standards.md
+  - api-user-register-sequence.mmd → api/sequences/user-register.mmd
+  - gemini-api-integration-backend.md → integrations/gemini-backend.md
+  - ios26-swiftui-features.md → platform-guides/ios.md
+  - usecase_process_image.md → features/image-processing.md
+  - template-spec.md → features/template-spec.md
+  - workflow.md → workflows/doc-driven.md
+  - api_specification.md → api/spec-legacy.md
+  - ui_ux_design.md → product/ui-ux.md
+  - ui_home_concept.md → product/ui-home-concept.md
+  - web_admin.md → platform-guides/web_admin.legacy.md
+  - web_admin_dashboard.md → platform-guides/web_admin_dashboard.legacy.md
+  - auth/flow-login-register.md → auth/login-register.md
+  - auth/flow-refresh-logout.md → auth/refresh-logout.md
+- Created:
+  - README.md (index + conventions + PR checklist)
+  - platform-guides/web-cms.md (canonical guide for Web CMS)
+  - workflows/run-tests.md (Go/iOS/Web CMS quick-start)
+  - templates/spec-template.md, templates/runbook-template.md, templates/rfc-template.md
+- Updated references:
+  - features/template-spec.md → use `architecture/data-model/templates.md`, `architecture/system-architecture.md`, `platform-guides/web-cms.md`, `workflows/doc-driven.md`, `api/standards.md`
+  - architecture/system-architecture.md → `web-cms/*` (implemented) thay vì `web_admin/* (planned)`
+  - product/ui-ux.md → “Web CMS” và link architecture/system-architecture.md
+  - api/spec-legacy.md, auth/usecase_auth.legacy.md → thêm Legacy header
+- Fixed cross-links in auth docs:
+  - login-register.md ↔ refresh-logout.md
+
+Steps implemented:
+- [x] Create directory structure and move/rename files
+- [x] Add canonical Web CMS guide and mark legacy docs
+- [x] Create README index and templates
+- [x] Update cross-document references to new paths
+- [x] Fix internal links in auth docs
+- [x] Verify no stray references to old paths (`project_architecture.md`, `data-model-templates.md`, `workflow.md`, `api-response-standard.md`, `web_admin`)
+
+Important notes:
+- Keep OpenAPI canonical at `swagger/openapi.yaml` (do not duplicate in .documents).
+- Use features/* specs as Acceptance source for PRs; keep payload details in Swagger.
+- Legacy docs retained with headers for historical context.
+
+Acceptance:
+- .documents contains standardized structure with updated references.
+- Search for old references returns 0 results.
+- Memory Bank updated to reflect “web-cms” and docs organization.
