@@ -2,4 +2,3 @@ build/
 .box-testing/sandbox/env.yaml
 .gemini/settings.json
 backend/assets/
-.gemini/settings.json
