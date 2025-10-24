@@ -55,7 +55,7 @@ Tài liệu hợp nhất mọi thông tin liên quan đến “Template” để
 - Filter:
   - `q`: match tên/slug (ILIKE)
   - `tags`: join theo bảng tags (nếu có), lọc các template có chứa tất cả tag đã gửi (hoặc OR — tùy yêu cầu, đề xuất rõ ràng trong implementation)
-- Backend: join `template_assets(kind='thumbnail')` để lấy `thumbnail_url`.
+- Backend: join `template_assets(kind='thumbnail')` để lấy `thumbnail_url` và trả về full absolute URL (ví dụ `http://localhost:8080/assets/...` hoặc `https://cdn.example.com/assets/...`), không dùng đường dẫn tương đối.
 
 Ví dụ Response:
 ```json
@@ -66,7 +66,7 @@ Ví dụ Response:
       {
         "id": "anime-style",
         "name": "Phong cách Anime",
-        "thumbnail_url": "/assets/templates/anime-style/thumb.png",
+        "thumbnail_url": "http://localhost:8080/assets/templates/anime-style/thumb.png",
         "published_at": "2025-10-20T07:30:00Z",
         "usage_count": 120345
       }
@@ -158,7 +158,7 @@ Quy tắc:
 - Sorting/Filtering:
   - Như phần API công khai & admin.
 - Storage:
-  - Dev: local volume `/assets`; Prod: cân nhắc S3/CDN. Duy trì `ASSETS_BASE_URL` để trừu tượng hoá.
+  - Dev: local volume `/assets`; Prod: cân nhắc S3/CDN. Duy trì `ASSETS_BASE_URL` là absolute URL để trừu tượng hoá và đảm bảo API trả full URL.
 
 
 ## 8) Data Model (PostgreSQL)
@@ -310,7 +310,7 @@ Authorization: Bearer <ID_TOKEN>
 ## 12) Lưu ý Triển khai & Cấu hình
 
 - Env Backend (dev):
-  - `ASSETS_DIR=/assets`, `ASSETS_BASE_URL=/assets`
+  - `ASSETS_DIR=/assets`, `ASSETS_BASE_URL=http://localhost:8080/assets` (Dev nên dùng absolute để API trả full URL)
   - Dev auth: `DEV_AUTH_ENABLED=1`, `DEV_ADMIN_EMAIL`, `DEV_ADMIN_PASSWORD`
   - CORS: `CORS_ALLOWED_ORIGINS=http://localhost:5173`, `CORS_ALLOWED_HEADERS=Authorization,Content-Type`
 - Docker Volumes:

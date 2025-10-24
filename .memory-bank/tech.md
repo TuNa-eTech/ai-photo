@@ -1,195 +1,113 @@
 # Tech
 
-Technologies, development setup, constraints, dependencies, and tool usage patterns.
+Last updated: 2025-10-24
 
-Last updated: 2025-10-22
+Technologies
+- Backend: Go (net/http), pgx (github.com/jackc/pgx/v5/stdlib), standard library.
+- Database: PostgreSQL 15 (Docker).
+- Auth:
+  - Production: Firebase Admin (service account JSON), AdminOnly middleware via custom claim or ADMIN_EMAILS whitelist.
+  - Local Dev: DevAuth (email/password) issuing a bearer token for admin endpoints.
+- Frontends:
+  - iOS: SwiftUI.
+  - Web CMS: Vite + React + TypeScript.
+- Containerization: Docker Compose (Postgres, Backend, optional Web CMS/Preview, pgAdmin).
+- Tooling: curl, jq, yq (for scripting), migrate CLI (optional), psql via docker exec/run.
 
-## Stacks and Frameworks
+Environment & Configuration
+- Backend entrypoints:
+  - backend/cmd/api/main.go (recommended runtime entry; production policy).
+  - backend/main.go (alt entry; ensure consistency with production policy).
+- Environment variables:
+  - Database:
+    - DATABASE_URL=postgres://imageai:…@host:5432/imageai_db?sslmode=disable (host-run)
+    - Or granular: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME (Dockerized backend).
+  - TEMPLATE_SOURCE=db to use Postgres (fallbacks to files for certain read-paths if not set).
+  - Firebase:
+    - FIREBASE_SERVICE_ACCOUNT (path to service account JSON).
+    - ADMIN_EMAILS (comma-separated emails for admin whitelist).
+  - Dev Auth (local only):
+    - DEV_AUTH_ENABLED=1
+    - DEV_ADMIN_EMAIL=admin@example.com
+    - DEV_ADMIN_PASSWORD=admin123
+  - CORS (if used): CORS_ALLOWED_ORIGINS, CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS.
+  - Assets:
+    - ASSETS_DIR, ASSETS_BASE_URL (used for storing template assets).
+- Ports:
+  - Backend container: 8080 (exposed).
+  - Host-run backend (dev): typically 8081 (to avoid 8080 conflict).
+  - Postgres container: 5432 exposed to host.
 
-- iOS
-  - Language/Runtime: Swift, SwiftUI (Observation framework: `@Observable`)
-  - Auth: Firebase Auth (Google/Apple)
-  - Storage: Keychain for persisting ID token
-  - Networking: URLSession-based APIClient with envelope decoding, 401 retry via token provider
-  - Build: Xcode project `AIPhotoApp.xcodeproj`
-  - Tests: XCTest (unit/UI)
+Local Development Setup
+- Recommended E2E path (stable):
+  1) docker compose up -d db backend
+  2) Obtain DevAuth token:
+     POST http://localhost:8080/v1/dev/login with body {"email":"admin@example.com","password":"admin123"}
+     Use Authorization: Bearer <token> for subsequent admin requests.
+  3) Run tests via .box-testing scripts:
+     - sh .box-testing/scripts/test_create_template.sh
+     - sh .box-testing/scripts/test_upload_template_asset.sh
+     Ensure .box-testing/sandbox/env.yaml contains:
+     - apiBaseUrl: http://localhost:8080
+     - idToken: Bearer <dev_token>
+- Optional host-run backend:
+  - go run cmd/api/main.go with PORT=8081
+  - Connect to DB container on host port 5432 using IPv4 DSN:
+    DATABASE_URL=postgres://imageai:imageai_pass@127.0.0.1:5432/imageai_db?sslmode=disable
+  - See Troubleshooting for DB auth issues.
 
-- Backend
-  - Language: Go 1.25+
-  - Database: Postgres 15
-  - Runtime: Docker Compose (db + backend), static binary (`FROM scratch`)
-  - API: REST, envelope response pattern (success/data/error/meta)
-  - Auth: Firebase ID token (JWT) via Authorization: Bearer
-  - Migrations: SQL files under `backend/migrations` (0001…0006)
-  - Documentation: OpenAPI 3.1 at `swagger/openapi.yaml`
-  - Tests: `go test ./...`, table-driven tests in `internal/*`
+Database & Migrations
+- Schema is defined in backend/migrations:
+  - 0004_create_templates_and_versions.up.sql
+  - 0005_create_template_taxonomy_and_assets.up.sql
+  - 0006_add_usage_count.up.sql
+- Migrate methods:
+  - Preferred in-container psql (robust across systems):
+    cat 0004 0005 0006 | docker exec -i imageaiwrapper-db psql -U imageai -d imageai_db -v ON_ERROR_STOP=1
+  - Makefile uses migrate CLI against host port (requires local psql/migrate installed and DB auth working).
+- Default credentials (Docker):
+  - POSTGRES_USER=imageai
+  - POSTGRES_PASSWORD=imageai_pass
+  - POSTGRES_DB=imageai_db
+  - pg_hba.conf defaults include host all all all scram-sha-256 + trust for local 127.0.0.1/::1 inside container.
 
-- Web CMS
-  - Tooling: Vite + React + TypeScript
-  - Routing: React Router
-  - Data fetching: TanStack Query
-  - HTTP: Axios with interceptors (Bearer injection, 401 refresh & retry-once)
-  - UI: Material UI (MUI) (+ icons, emotion)
-  - Forms/Validation: React Hook Form + Zod
-  - Auth: Firebase Web SDK (Google sign-in) or DevAuth for local dev
-  - Tests: Vitest + React Testing Library + MSW
-  - Lint/Format: ESLint + Prettier
-  - Env: `.env.local` with `VITE_API_BASE_URL` and `VITE_FIREBASE_*`
+Auth Patterns
+- Firebase Admin:
+  - AuthMiddleware verifies ID token, AdminOnly checks claim or ADMIN_EMAILS whitelist.
+  - Production policy requires FIREBASE_SERVICE_ACCOUNT and no insecure fallbacks.
+- DevAuth (local only):
+  - /v1/dev/login issues a bearer token stored in-memory (devTokens).
+  - DevAuthMiddleware validates bearer tokens for admin endpoints when enabled.
+  - Do not enable in production.
 
-## API Conventions
+Observability & Debugging (dev)
+- internal/api/middleware.go: RequestID, logging (status, duration, body snippet for errors).
+- Temporary dev logging added:
+  - internal/api/admin_templates.go: include cause in error envelope for create failures (remove/guard before prod).
+  - internal/database/postgres.go: log DSN (password masked) & ping errors (keep masked; guard before prod).
 
-- Envelope response
-  - success: boolean
-  - data: typed payload (e.g., `TemplatesList { templates: Template[] }`)
-  - error: `{ code, message, details? }`
-  - meta: `{ requestId, timestamp }` (+ optional pagination metadata later)
+Dependencies & Versions
+- Go Modules: backend/go.mod (pgx v5 driver via stdlib, joho/godotenv).
+- Docker images:
+  - postgres:15
+  - dpage/pgadmin4 (optional)
+  - node:20-alpine (for Web CMS dev & preview)
+  - backend runtime: scratch (static binary built to build/imageai-backend)
+- Frontend package manager: pnpm for Web CMS.
 
-- Auth
-  - Clients attach `Authorization: Bearer <Firebase ID token>`
-  - Backend validates token; 401 for invalid/expired tokens
-  - Clients (iOS/Web) implement 401 refresh-and-retry logic (single retry)
-
-## Notable Endpoints (current)
-
-Public (iOS)
-- GET `/v1/templates`
-  - Query params: `limit`, `offset`, `q`, `tags` (CSV), `sort` (newest|popular|name)
-  - Fields in Template: `id`, `name`, `thumbnail_url?`, `published_at?`, `usage_count?`
-- POST `/v1/users/register`
-- POST `/v1/images/process`
-
-Admin (Web)
-- Templates CRUD:
-  - GET `/v1/admin/templates`
-  - GET `/v1/admin/templates/{slug}`
-  - POST `/v1/admin/templates`
-  - PUT `/v1/admin/templates/{slug}`
-  - DELETE `/v1/admin/templates/{slug}`
-  - POST `/v1/admin/templates/{slug}/publish`
-  - POST `/v1/admin/templates/{slug}/unpublish`
-- Assets:
-  - GET `/v1/admin/templates/{slug}/assets`
-  - POST `/v1/admin/templates/{slug}/assets` (multipart; `file`=png|jpeg; `kind`=thumbnail|preview)
-  - PUT `/v1/admin/templates/{slug}/assets/{id}` (change `kind`/`sort_order`; enforce single thumbnail)
-  - DELETE `/v1/admin/templates/{slug}/assets/{id}`
-- Static:
-  - `/assets/templates/{slug}/{filename}` (public URLs served by backend)
-
-See `swagger/openapi.yaml` for the authoritative spec and examples.
-
-## Database and Migrations
-
-- Postgres 15
-- Migrations:
-  - 0004: templates/versioning
-  - 0005: tags/categories/assets (`template_assets`)
-  - 0006: `usage_count` on templates
-- Listing joins `template_assets (kind='thumbnail')`, applies filters (q/tags) and sort.
-- Assets table stores `id`, `template_id`, `kind ('thumbnail'|'preview')`, `url`, `sort_order`, `created_at`.
-
-## Development Setup
-
-- Backend
-  - Run with Docker Compose (db + backend)
-  - Serve static:
-    - `/processed/*` from `/processed`
-    - `/assets/*` from `/assets` (uploads)
-  - Env:
-    - `FIREBASE_SERVICE_ACCOUNT=/secrets/firebase-admin.json` (prod)
-    - `ALLOW_INSECURE_ADMIN=1` (dev fallback; DO NOT USE IN PROD)
-    - `DEV_AUTH_ENABLED=1`, `DEV_ADMIN_EMAIL`, `DEV_ADMIN_PASSWORD` (DevAuth for local)
-    - `CORS_ALLOWED_ORIGINS=http://localhost:5173`
-    - `CORS_ALLOWED_HEADERS=Authorization,Content-Type`
-    - `ASSETS_DIR=/assets`
-    - `ASSETS_BASE_URL=/assets`
-  - Volumes (docker):
-    - `../backend/assets:/assets`
-    - `../backend/processed:/processed`
-  - Build (local binary for runtime image):
-    ```
-    cd backend
-    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o build/imageai-backend ./cmd/api
-    ```
-  - Tests:
-    - `cd backend && go test ./...`
-    - Coverage: `go test -cover ./...`
-
-- Web CMS
-  - Dev server: Vite `http://localhost:5173`
-  - Env `.env.local`:
-    ```
-    VITE_API_BASE_URL=http://localhost:8080
-    VITE_DEV_AUTH=1
-    VITE_FIREBASE_API_KEY=...
-    VITE_FIREBASE_AUTH_DOMAIN=...
-    VITE_FIREBASE_PROJECT_ID=...
-    VITE_FIREBASE_APP_ID=...
-    ```
-  - Upload flows:
-    - Create Drawer: Upload Thumbnail/Preview available; first upload auto-creates a draft (using current Slug/Name/Status/Visibility/Tags) then uploads; thumbnail upload auto-sets `thumbnail_url`.
-    - Edit Drawer: Upload Thumbnail/Preview; Preview Gallery with Make Thumbnail, Delete.
-  - Testing:
-    - `pnpm vitest`
-    - MSW handlers for admin endpoints + assets
-    - RTL for CRUD and upload behaviors
-
-- iOS
-  - Open `AIPhotoApp/AIPhotoApp.xcodeproj`
-  - Tests (see `.clinerules/RUN_TESTS.md`):
-    ```
-    cd app_ios
-    xcodebuild test \
-      -scheme imageaiwrapper \
-      -destination 'platform=iOS Simulator,name=iPhone 17' \
-      -parallel-testing-enabled NO | xcpretty
-    ```
-
-## Constraints and Policies
-
-- Documentation-driven development
-  - `.documents` is the source of truth; Swagger must match behavior
-- Plan-driven implementation
-  - Each feature has a plan under `.implementation_plan/` with checklist
-- TDD
-  - Write failing tests before implementation or alongside; mock external services in CI
-- Security and CORS
-  - Firebase JWT verification on backend (prod); DevAuth only for local dev
-  - CORS: allow `http://localhost:5173` with `Authorization, Content-Type`
-  - iOS ATS exceptions for `http://localhost` during development only
-
-## Tooling and Commands (reference)
-
-- Go
-  - `go mod tidy`
-  - `go test ./...`
-  - `go build ./cmd/api`
-- Docker
-  - `docker compose up -d`
-  - `docker compose build --no-cache`
-  - Logs: `docker compose logs --tail=100 backend|web`
-- Node (web admin)
-  - Package manager: `pnpm`
-  - Test: `pnpm vitest`
-
-## Observability and Logging
-
-- Include `meta.requestId` in logs for correlation
-- Prefer structured JSON logs in backend
-- Consider OpenTelemetry for tracing/metrics later
-
-## Documentation & Workflows
-- Docs index: .documents/README.md
-- Platform guide (Web CMS): .documents/platform-guides/web-cms.md
-- Template spec: .documents/features/template-spec.md
-- Run tests: .documents/workflows/run-tests.md
-
-## Known Gaps / Next Steps
-
+Testing
 - Backend:
-  - Extend tests for assets endpoints + publish validation
-  - Consider pagination metadata in `meta`
-  - Production storage: switch `/assets` to S3/CDN; keep `ASSETS_BASE_URL` abstraction
-
+  - Unit/integration: go test ./... (see .clinerules/RUN_TESTS.md & .documents/workflows/run-tests.md).
+- iOS:
+  - Xcode (⌘U) or xcodebuild with -parallel-testing-enabled NO.
 - Web CMS:
-  - Expand tests for create-draft-on-first-upload, gallery actions, and publish error states
-  - Add drag/drop reorder for previews (update `sort_order`)
+  - pnpm vitest
+- E2E (admin):
+  - Preferred via Docker backend + DevAuth using .box-testing scripts.
+  - See .documents/workflows/run-tests.md → Admin API E2E (Docker + DevAuth).
+
+Constraints & Notes
+- Public template listing does not expose prompts; prompts live in server-side template_versions.
+- Publish requires thumbnail to be present (validation enforced).
+- Assets are persisted under ASSETS_DIR with BASE_URL mapping; ensure mount present in docker-compose.
+- Keep any debug-only logging out of production builds/deployments (security & noise considerations).

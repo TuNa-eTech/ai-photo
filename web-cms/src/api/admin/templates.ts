@@ -78,6 +78,14 @@ export function useAdminTemplatesQuery(params: AdminTemplatesParams = {}) {
   });
 }
 
+export function useAdminTemplateQuery(slug: string) {
+  return useQuery({
+    queryKey: ['admin-template', slug],
+    queryFn: () => getAdminTemplate(slug),
+    enabled: Boolean(slug),
+  });
+}
+
 export function useCreateTemplateMutation() {
   const qc = useQueryClient();
   return useMutation({

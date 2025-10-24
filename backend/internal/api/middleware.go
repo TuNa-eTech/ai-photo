@@ -1,8 +1,10 @@
 package api
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -12,6 +14,11 @@ import (
 
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		iw := &instrumentedWriter{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(iw, r)
+		dur := time.Since(start)
+
 		reqID := r.Header.Get("X-Request-ID")
 		if reqID == "" {
 			if v := r.Context().Value(ctxKeyRequestID); v != nil {
@@ -20,13 +27,56 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 				}
 			}
 		}
+
 		if reqID != "" {
-			log.Printf("[API] %s %s (requestId=%s)", r.Method, r.URL.Path, reqID)
+			log.Printf("[API] %d %s %s (requestId=%s, dur=%s, size=%d)", iw.status, r.Method, r.URL.Path, reqID, dur.String(), iw.size)
 		} else {
-			log.Printf("[API] %s %s", r.Method, r.URL.Path)
+			log.Printf("[API] %d %s %s (dur=%s, size=%d)", iw.status, r.Method, r.URL.Path, dur.String(), iw.size)
 		}
-		next.ServeHTTP(w, r)
+
+		// If error response, attempt to parse envelope and log error details
+		if iw.status >= 400 && iw.buf.Len() > 0 && strings.HasPrefix(iw.Header().Get("Content-Type"), "application/json") {
+			var env APIResponse[any]
+			if err := json.Unmarshal(iw.buf.Bytes(), &env); err == nil && env.Error != nil {
+				if env.Error.Details != nil {
+					detailBytes, _ := json.Marshal(env.Error.Details)
+					if len(detailBytes) > 1024 {
+						detailBytes = append(detailBytes[:1024], []byte("...")...)
+					}
+					log.Printf("[API][error] code=%s message=%s details=%s", env.Error.Code, env.Error.Message, string(detailBytes))
+				} else {
+					log.Printf("[API][error] code=%s message=%s", env.Error.Code, env.Error.Message)
+				}
+			}
+		}
 	})
+}
+
+// instrumentedWriter captures status, size, and a small copy of the response body for logging.
+type instrumentedWriter struct {
+	http.ResponseWriter
+	status int
+	size   int
+	buf    bytes.Buffer
+}
+
+func (w *instrumentedWriter) WriteHeader(code int) {
+	w.status = code
+	w.ResponseWriter.WriteHeader(code)
+}
+
+func (w *instrumentedWriter) Write(b []byte) (int, error) {
+	// keep up to 4KB of body for logging
+	if w.buf.Len() < 4096 {
+		n := 4096 - w.buf.Len()
+		if len(b) < n {
+			n = len(b)
+		}
+		_, _ = w.buf.Write(b[:n])
+	}
+	n, err := w.ResponseWriter.Write(b)
+	w.size += n
+	return n, err
 }
 
 // RequestIDMiddleware ensures each request has a request ID in header/context.

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { auth, onTokenChanged, signInWithGoogle, signOut, getIdToken } from './firebase';
+import { isDevAuth } from './devAuth';
 import type { User } from 'firebase/auth';
 
 type AuthContextValue = {
@@ -14,18 +15,33 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(auth.currentUser);
+  // In dev auth mode, do NOT touch Firebase objects. Provide a stable, non-throwing context.
+  const [user, setUser] = useState<User | null>(null);
   const [idToken, setIdToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Subscribe to token changes and auth state
   useEffect(() => {
+    if (isDevAuth) {
+      // Immediately mark loading as false; dev auth uses local token and ProtectedRoute
+      setLoading(false);
+      setUser(null);
+      setIdToken(null);
+      return;
+    }
+    // Firebase mode: subscribe to token changes
     const unsub = onTokenChanged(async (token) => {
-      setUser(auth.currentUser);
+      // auth is defined only in non-dev mode
+      setUser(auth ? auth.currentUser : null);
       setIdToken(token);
       setLoading(false);
     });
-    return () => unsub();
+    return () => {
+      try {
+        unsub();
+      } catch {
+        // ignore
+      }
+    };
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -34,14 +50,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       idToken,
       loading,
       async signIn() {
+        if (isDevAuth) {
+          // Dev auth login is handled in Login.tsx via devAuth; no Firebase popup here.
+          return;
+        }
         await signInWithGoogle();
         // token will be updated by onTokenChanged listener
       },
       async signOut() {
+        if (isDevAuth) {
+          // Dev auth logout handled in ProtectedRoute via clearDevToken
+          return;
+        }
         await signOut();
-        // state will be updated by onTokenChanged
       },
       async refreshToken(force = true) {
+        if (isDevAuth) {
+          setIdToken(null);
+          return null;
+        }
         const token = await getIdToken(force);
         setIdToken(token);
         return token;

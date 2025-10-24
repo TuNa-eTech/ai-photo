@@ -3,7 +3,9 @@ import ProtectedRoute from '../auth/ProtectedRoute';
 import Login from '../pages/Login';
 import TemplatesList from '../pages/Templates/TemplatesList';
 import TemplateDetail from '../pages/Templates/TemplateDetail';
-import AdminTemplates from '../pages/Admin/AdminTemplates';
+import AdminTemplatesList from '../pages/Admin/Templates/List';
+import AdminTemplateCreate from '../pages/Admin/Templates/Create';
+import AdminTemplateEdit from '../pages/Admin/Templates/Edit';
 
 export const router = createBrowserRouter([
   {
@@ -15,7 +17,7 @@ export const router = createBrowserRouter([
     children: [
       {
         path: '/',
-        element: <AdminTemplates />,
+        element: <AdminTemplatesList />,
       },
       {
         path: '/templates',
@@ -23,7 +25,15 @@ export const router = createBrowserRouter([
       },
       {
         path: '/admin/templates',
-        element: <AdminTemplates />,
+        element: <AdminTemplatesList />,
+      },
+      {
+        path: '/admin/templates/new',
+        element: <AdminTemplateCreate />,
+      },
+      {
+        path: '/admin/templates/:slug',
+        element: <AdminTemplateEdit />,
       },
       {
         path: '/templates/:id',

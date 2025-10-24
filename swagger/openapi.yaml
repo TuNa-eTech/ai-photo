@@ -1,69 +1,25 @@
-openapi: 3.1.0
+openapi: 3.0.3
 info:
-  title: AI Image Stylist API
+  title: AI Image Stylist API (Public - Templates Read Only)
   description: |
-    OpenAPI specification for the AI Image Stylist project.
-    This file is documentation-driven and reflects requirements from:
-      - .documents/api_specification.md
-      - .documents/project_architecture.md
-      - .documents/ui_ux_design.md
-  version: 1.0.0
+    Public OpenAPI specification for end-users.
+    Scope: Users can only GET templates information. No POST/PUT/DELETE exposed here.
+    Documentation-driven: see
+      - .documents/workflows/run-tests.md
+      - .documents/troubleshooting/db-auth.md
+  version: 1.0.1
 
 servers:
-  - url: https://<your-backend-api-url>
-    description: Backend API base URL
+  - url: http://localhost:8080
+    description: Backend API base URL (local/dev)
 
 paths:
-  /v1/users/register:
-    post:
-      summary: Đăng ký hoặc cập nhật thông tin profile user (profile only, không xác thực đăng nhập)
-      tags:
-        - User
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserRegisterRequest'
-      responses:
-        '200':
-          description: Đăng ký/cập nhật profile thành công (envelope)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeUserRegisterSuccess'
-              example:
-                success: true
-                data:
-                  user_id: "user@example.com"
-                  message: "User registered/updated successfully."
-                meta:
-                  requestId: "example-request-id"
-                  timestamp: "2025-10-20T07:30:00Z"
-        '400':
-          description: Thiếu trường bắt buộc hoặc dữ liệu không hợp lệ (envelope error)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-        '401':
-          description: Token không hợp lệ, hết hạn, hoặc thiếu (envelope error)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-        '500':
-          description: Lỗi server khi lưu thông tin user (envelope error)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-
   /v1/templates:
     get:
-      summary: Lấy danh sách template AI
+      summary: Lấy danh sách template AI (Public)
+      description: |
+        Trả về danh sách Templates cho người dùng cuối (public + published).
+        Lưu ý: Prompt không được trả về trong API công khai.
       tags:
         - Templates
       parameters:
@@ -112,13 +68,16 @@ paths:
                 success: true
                 data:
                   templates:
-                    - id: "example"
-                      name: "Example Template"
+                    - id: "anime-style"
+                      name: "Phong cách Anime"
+                      thumbnail_url: "https://example.com/templates/anime-thumb.jpg"
+                      published_at: "2025-10-20T07:30:00Z"
+                      usage_count: 120
                     - id: "cartoon"
                       name: "Cartoon Style"
                 meta:
                   requestId: "example-request-id"
-                  timestamp: "2025-10-20T07:30:00Z"
+                  timestamp: "2025-10-24T07:30:00Z"
         '401':
           description: Chưa xác thực (envelope error)
           content:
@@ -127,490 +86,9 @@ paths:
                 $ref: '#/components/schemas/EnvelopeError'
       security:
         - bearerAuth: []
-
-  /v1/images/process:
-    post:
-      summary: Xử lý ảnh với một template AI
-      description: |
-        Client gọi endpoint này sau khi đã upload ảnh lên.
-        Endpoint sẽ lấy prompt bí mật, gọi đến AI API, và lưu kết quả.
-      tags:
-        - Image Processing
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProcessImageRequest'
-      responses:
-        '200':
-          description: Xử lý ảnh thành công (envelope).
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeProcessImageSuccess'
-              example:
-                success: true
-                data:
-                  processed_image_url: "/processed/processed_test_img.png"
-                meta:
-                  requestId: "example-request-id"
-                  timestamp: "2025-10-20T07:30:00Z"
-        '400':
-          description: Dữ liệu đầu vào không hợp lệ (envelope error).
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-        '401':
-          description: Lỗi xác thực (JWT không hợp lệ hoặc bị thiếu) (envelope error).
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-        '404':
-          description: Không tìm thấy template hoặc ảnh gốc (envelope error).
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-        '500':
-          description: "Lỗi server. (envelope error)"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-
-  /v1/admin/templates:
-    get:
-      summary: Quản trị - danh sách templates
-      tags:
-        - Admin
-        - Templates
-      parameters:
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            minimum: 1
-            default: 20
-        - in: query
-          name: offset
-          schema:
-            type: integer
-            minimum: 0
-            default: 0
-        - in: query
-          name: q
-          schema:
-            type: string
-          description: Từ khoá tìm kiếm theo name/slug
-        - in: query
-          name: tags
-          schema:
-            type: string
-          description: Danh sách tag slug, phân tách bởi dấu phẩy (ví dụ "anime,portrait")
-        - in: query
-          name: status
-          schema:
-            type: string
-            enum: [draft, published, archived]
-        - in: query
-          name: visibility
-          schema:
-            type: string
-            enum: [public, private]
-        - in: query
-          name: sort
-          schema:
-            type: string
-            enum: [updated, newest, popular, name]
-            default: updated
-      responses:
-        '200':
-          description: Danh sách template admin (envelope)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeAdminTemplatesList'
-        '401':
-          description: Chưa xác thực (envelope error)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-      security:
-        - bearerAuth: []
-    post:
-      summary: Quản trị - tạo template
-      tags:
-        - Admin
-        - Templates
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TemplateAdminCreate'
-      responses:
-        '201':
-          description: Tạo template thành công (envelope)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeTemplateAdmin'
-        '400':
-          description: Dữ liệu không hợp lệ (envelope error)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-        '409':
-          description: Trùng slug (envelope error)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-
-  /v1/admin/templates/{slug}:
-    get:
-      summary: Quản trị - chi tiết template
-      tags:
-        - Admin
-        - Templates
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: slug
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Chi tiết template (envelope)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeTemplateAdmin'
-        '404':
-          description: Không tìm thấy (envelope error)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-        '422':
-          description: Thiếu thumbnail (validation_error)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-    put:
-      summary: Quản trị - cập nhật template
-      tags:
-        - Admin
-        - Templates
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: slug
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TemplateAdminUpdate'
-      responses:
-        '200':
-          description: Cập nhật thành công (envelope)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeTemplateAdmin'
-        '404':
-          description: Không tìm thấy (envelope error)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-    delete:
-      summary: Quản trị - xoá template
-      tags:
-        - Admin
-        - Templates
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: slug
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Xoá thành công (envelope success)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeSuccess'
-        '404':
-          description: Không tìm thấy (envelope error)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-
-  /v1/admin/templates/{slug}/publish:
-    post:
-      summary: Quản trị - publish template
-      tags:
-        - Admin
-        - Templates
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: slug
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Publish thành công (envelope)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeTemplateAdmin'
-        '404':
-          description: Không tìm thấy (envelope error)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-
-  /v1/admin/templates/{slug}/unpublish:
-    post:
-      summary: Quản trị - unpublish template
-      tags:
-        - Admin
-        - Templates
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: slug
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Unpublish thành công (envelope)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeTemplateAdmin'
-        '404':
-          description: Không tìm thấy (envelope error)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-
-  /v1/admin/templates/{slug}/assets:
-    get:
-      summary: Quản trị - danh sách assets của template
-      tags: [Admin, Templates, Assets]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - in: path
-          name: slug
-          required: true
-          schema: { type: string }
-      responses:
-        '200':
-          description: Danh sách assets (envelope)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeTemplateAssets'
-        '404':
-          description: Không tìm thấy template
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-    post:
-      summary: Quản trị - upload asset (multipart/form-data)
-      description: |
-        Tải lên ảnh cho template. Chỉ hỗ trợ image/png, image/jpeg. 
-        kind ∈ {thumbnail, cover, preview}. Kích thước tối đa ~12MB (DEV).
-      tags: [Admin, Templates, Assets]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - in: path
-          name: slug
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                kind:
-                  type: string
-                  enum: [thumbnail, cover, preview]
-                file:
-                  type: string
-                  format: binary
-              required: [kind, file]
-      responses:
-        '201':
-          description: Tạo asset thành công (envelope)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeTemplateAsset'
-        '400':
-          description: Sai định dạng yêu cầu (không phải multipart/form-data)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-        '413':
-          description: File quá lớn
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-        '415':
-          description: Loại file không hỗ trợ
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-        '404':
-          description: Không tìm thấy template
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-
-  /v1/admin/templates/{slug}/assets/{id}:
-    put:
-      summary: Quản trị - cập nhật asset (đổi kind hoặc sort_order)
-      tags: [Admin, Templates, Assets]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - in: path
-          name: slug
-          required: true
-          schema: { type: string }
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                kind:
-                  type: string
-                  enum: [thumbnail, cover, preview]
-                sort_order:
-                  type: integer
-      responses:
-        '200':
-          description: Cập nhật thành công (envelope)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeTemplateAsset'
-        '404':
-          description: Không tìm thấy asset hoặc template
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
-    delete:
-      summary: Quản trị - xoá asset
-      tags: [Admin, Templates, Assets]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - in: path
-          name: slug
-          required: true
-          schema: { type: string }
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      responses:
-        '200':
-          description: Xoá thành công (envelope success)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeSuccess'
-        '404':
-          description: Không tìm thấy asset hoặc template
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EnvelopeError'
 
 components:
   schemas:
-    UserRegisterRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          example: "Nguyen Van A"
-        email:
-          type: string
-          format: email
-          example: "user@example.com"
-        avatar_url:
-          type: string
-          format: uri
-          example: "https://your-storage/avatars/user123.jpg"
-      required:
-        - name
-        - email
-
-    UserRegisterSuccess:
-      type: object
-      properties:
-        user_id:
-          type: string
-          example: "user-uuid-1234"
-        message:
-          type: string
-          example: "User registered/updated successfully."
-
-    TemplatesList:
-      type: object
-      properties:
-        templates:
-          type: array
-          items:
-            $ref: '#/components/schemas/Template'
-      required:
-        - templates
-
     Template:
       type: object
       properties:
@@ -636,49 +114,29 @@ components:
         - id
         - name
 
-    ProcessImageRequest:
+    TemplatesList:
       type: object
       properties:
-        template_id:
-          type: string
-          description: ID của template được chọn.
-          example: "anime-style"
-        image_path:
-          type: string
-          description: Path của ảnh gốc đã được upload.
-          example: "user-uploads/uuid-1234/my-image.jpg"
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Template'
       required:
-        - template_id
-        - image_path
+        - templates
 
-    ProcessImageSuccess:
-      type: object
-      properties:
-        processed_image_url:
-          type: string
-          format: uri
-          description: URL công khai của ảnh đã được xử lý.
-          example: "/processed/processed_test_img.png"
-
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
-          description: Mô tả chi tiết về lỗi.
-          example: "Template or image not found."
     APIError:
       type: object
       properties:
         code:
           type: string
-          example: "not_found"
+          example: "unauthorized"
         message:
           type: string
-          example: "Template not found"
+          example: "Unauthorized. Invalid, expired, or missing token."
         details:
           type: object
           additionalProperties: true
+
     Meta:
       type: object
       properties:
@@ -688,31 +146,8 @@ components:
         timestamp:
           type: string
           format: date-time
-          example: "2025-10-20T07:30:00Z"
-    EnvelopeUserRegisterSuccess:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        data:
-          $ref: '#/components/schemas/UserRegisterSuccess'
-        error:
-          $ref: '#/components/schemas/APIError'
-        meta:
-          $ref: '#/components/schemas/Meta'
-    EnvelopeProcessImageSuccess:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        data:
-          $ref: '#/components/schemas/ProcessImageSuccess'
-        error:
-          $ref: '#/components/schemas/APIError'
-        meta:
-          $ref: '#/components/schemas/Meta'
+          example: "2025-10-24T07:30:00Z"
+
     EnvelopeTemplatesList:
       type: object
       properties:
@@ -725,6 +160,7 @@ components:
           $ref: '#/components/schemas/APIError'
         meta:
           $ref: '#/components/schemas/Meta'
+
     EnvelopeError:
       type: object
       properties:
@@ -736,195 +172,9 @@ components:
         meta:
           $ref: '#/components/schemas/Meta'
 
-    EnvelopeSuccess:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        data:
-          type: object
-          description: optional success payload
-
-    TemplateAdmin:
-      type: object
-      properties:
-        id:
-          type: string
-          example: "anime-style"
-        slug:
-          type: string
-          example: "anime-style"
-        name:
-          type: string
-          example: "Phong cách Anime"
-        description:
-          type: string
-        thumbnail_url:
-          type: string
-          format: uri
-        status:
-          type: string
-          enum: [draft, published, archived]
-        visibility:
-          type: string
-          enum: [public, private]
-        published_at:
-          type: string
-          format: date-time
-        usage_count:
-          type: integer
-        updated_at:
-          type: string
-          format: date-time
-        tags:
-          type: array
-          items:
-            type: string
-      required:
-        - slug
-        - name
-        - status
-        - visibility
-
-    AdminTemplatesList:
-      type: object
-      properties:
-        templates:
-          type: array
-          items:
-            $ref: '#/components/schemas/TemplateAdmin'
-      required:
-        - templates
-
-    TemplateAdminCreate:
-      type: object
-      properties:
-        slug:
-          type: string
-          pattern: "^[a-z0-9-]+$"
-        name:
-          type: string
-        description:
-          type: string
-        status:
-          type: string
-          enum: [draft, published, archived]
-        visibility:
-          type: string
-          enum: [public, private]
-        thumbnail_url:
-          type: string
-          format: uri
-        tags:
-          type: array
-          items:
-            type: string
-      required:
-        - slug
-        - name
-        - status
-        - visibility
-
-    TemplateAdminUpdate:
-      type: object
-      properties:
-        name:
-          type: string
-        description:
-          type: string
-        status:
-          type: string
-          enum: [draft, published, archived]
-        visibility:
-          type: string
-          enum: [public, private]
-        thumbnail_url:
-          type: string
-          format: uri
-        tags:
-          type: array
-          items:
-            type: string
-      required:
-        - name
-        - status
-        - visibility
-
-    EnvelopeTemplateAdmin:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        data:
-          $ref: '#/components/schemas/TemplateAdmin'
-        error:
-          $ref: '#/components/schemas/APIError'
-        meta:
-          $ref: '#/components/schemas/Meta'
-
-    EnvelopeAdminTemplatesList:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        data:
-          $ref: '#/components/schemas/AdminTemplatesList'
-        error:
-          $ref: '#/components/schemas/APIError'
-        meta:
-          $ref: '#/components/schemas/Meta'
-
-    TemplateAssetAdmin:
-      type: object
-      properties:
-        id:
-          type: string
-        url:
-          type: string
-          format: uri
-        kind:
-          type: string
-          enum: [thumbnail, cover, preview]
-        sort_order:
-          type: integer
-        created_at:
-          type: string
-          format: date-time
-
-    EnvelopeTemplateAsset:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        data:
-          $ref: '#/components/schemas/TemplateAssetAdmin'
-        error:
-          $ref: '#/components/schemas/APIError'
-        meta:
-          $ref: '#/components/schemas/Meta'
-
-    EnvelopeTemplateAssets:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/TemplateAssetAdmin'
-        error:
-          $ref: '#/components/schemas/APIError'
-        meta:
-          $ref: '#/components/schemas/Meta'
-
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: Firebase ID token được cấp sau khi người dùng đăng nhập Google/Apple qua Firebase Auth.
+      description: Firebase ID token (local có thể là DevAuth token).

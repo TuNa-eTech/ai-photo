@@ -1,158 +1,81 @@
 # Architecture
 
-Authoritative snapshot of the current system architecture, components, and critical paths.
+Last updated: 2025-10-24
 
-Last updated: 2025-10-23
+System overview
+- iOS app (SwiftUI) consumes public APIs for browsing templates and processing images.
+- Web CMS (Vite + React + TS) for admins to manage Templates and Assets.
+- Backend (Go) exposes:
+  - Public endpoints (templates listing, image processing).
+  - Admin endpoints (templates CRUD, assets, publish/unpublish).
+- PostgreSQL stores templates, versions, tags, assets, and metrics.
+- Local dev uses Docker Compose for Postgres and a runtime backend container. DevAuth can be enabled for admin endpoints in local.
 
-## System Overview
+Key code paths (backend)
+- Entrypoints:
+  - backend/cmd/api/main.go (runtime entry with Firebase auth in production policy).
+  - backend/main.go (alt entry; ensure consistent with production constraints).
+- HTTP layer:
+  - internal/api/routes.go (mux bindings).
+  - internal/api/admin_templates.go (Admin Templates CRUD, publish/unpublish).
+  - internal/api/admin_assets.go (Admin Template assets upload/list/update/delete).
+  - internal/api/middleware.go (logging, CORS, RequestID).
+  - internal/api/dev_auth.go (DevAuth for local-only admin auth via token).
+  - internal/api/responder.go (envelope responses & helpers).
+- Auth:
+  - internal/auth/auth.go (Firebase Admin, middleware, AdminOnly).
+- Data access:
+  - internal/database/postgres.go (pgx driver, DSN/envs, connection).
+  - internal/database/admin_templates.go (list/get/create/update/delete templates, tags, assets; publish/unpublish).
+  - internal/database/database.go (file-based fallbacks for templates/users in certain flows).
+- Models:
+  - internal/models/models.go (DTOs/types: CreateTemplateInput, TemplateAdmin, TemplateAssetAdmin, etc).
+- Image processing:
+  - internal/image/image.go (processing stub/integration area).
 
-- Platform components:
-  - iOS App (SwiftUI + Observation)
-  - Backend API (Go 1.25+, Postgres 15)
-  - Web Admin (React + Vite + TypeScript) — IMPLEMENTED
-- Cross-cutting:
-  - Authentication: Firebase Auth (Google/Apple) → client obtains ID token → Authorization: Bearer {idToken}
-  - Envelope response pattern: { success, data?, error?, meta{ requestId, timestamp } }
+Database schema (PostgreSQL)
+- Tables (see backend/migrations):
+  - templates (id UUID, slug UNIQUE, name, description, status [draft|published|archived], visibility [public|private], usage_count INT, current_version_id, timestamps).
+  - template_versions (template_id FK, version, prompt_template, parameters JSONB, etc).
+  - tags, template_tags (M:N).
+  - template_assets (id UUID, template_id FK, kind [thumbnail|cover|preview], url, sort_order).
+- Migrations in order:
+  - 0004_create_templates_and_versions.up.sql
+  - 0005_create_template_taxonomy_and_assets.up.sql
+  - 0006_add_usage_count.up.sql
 
-## High-level Diagram
+Local development patterns
+- Preferred E2E path: Dockerized backend container connects to DB via Docker network:
+  - DB_HOST=db, DB_USER=imageai, DB_PASSWORD=imageai_pass, DB_NAME=imageai_db.
+  - Admin auth via DevAuth (DEV_AUTH_ENABLED=1) → /v1/dev/login to obtain token for Authorization: Bearer <token>.
+- Host-run backend (go run on :8081) can be used but may hit DB auth issues to container Postgres; see Troubleshooting.
 
-```mermaid
-graph TD
-  subgraph Clients
-    iOS[iOS App (SwiftUI)]
-    Admin[Web Admin (React + Vite)]
-  end
+Admin Templates flow (high-level)
+- POST /v1/admin/templates → database.CreateAdminTemplate:
+  - INSERT into templates (slug, name, description, status, visibility).
+  - Upsert tags (tags table) and mapping (template_tags).
+  - Upsert thumbnail asset if provided (template_assets with kind=thumbnail).
+- POST /v1/admin/templates/{slug}/assets (multipart) → saves assets under /assets mount; updates DB.
+- POST /v1/admin/templates/{slug}/publish → requires thumbnail; sets status=published, published_at=NOW().
 
-  subgraph Auth
-    Firebase[Firebase Auth]
-  end
+Observability (dev)
+- Logging middleware records status, duration, and error envelopes.
+- Temporary debug logs (dev-only):
+  - internal/api/admin_templates.go adds cause in error details to surface DB failures during local debug.
+  - internal/database/postgres.go logs DSN (masked) and ping errors for connection diagnosis.
+- Remove/guard these logs before production.
 
-  subgraph Backend
-    API[(Go API)]
-    AssetsFS[/Static /assets/ volume/]
-    PG[(Postgres 15)]
-  end
+Containers
+- docker/docker-compose.yml:
+  - services:
+    - db (postgres:15) exposed on host 5432 with persistent volume.
+    - backend (runtime image built from build/imageai-backend, port 8080) with envs for DB and DevAuth.
+    - web_cms and web_cms_preview (optional dev HMR/preview).
+    - pgadmin (optional).
+- backend/Dockerfile.runtime (scratch + CA certs + static binary).
 
-  iOS -->|Bearer ID Token| API
-  Admin -->|Bearer ID Token| API
-  iOS --> Firebase
-  Admin --> Firebase
-  API --> PG
-  API -->|serve static| AssetsFS
-```
-
-## Source Code Paths
-
-- iOS
-  - Views: `AIPhotoApp/AIPhotoApp/Views/...`
-  - ViewModels: `AIPhotoApp/AIPhotoApp/ViewModels/...`
-  - Networking: `AIPhotoApp/AIPhotoApp/Utilities/Networking/APIClient.swift`
-  - Repositories: `AIPhotoApp/AIPhotoApp/Repositories/...`
-  - Models/DTOs: `AIPhotoApp/AIPhotoApp/Models/DTOs/...`
-
-- Backend
-  - API handlers/middleware: `backend/internal/api/`
-    - `handlers.go`, `middleware.go`, `routes.go`
-    - Admin Templates CRUD: `admin_templates.go`
-    - Admin Assets: `admin_assets.go` (list/upload/update/delete)
-  - Data access: `backend/internal/database/`
-    - `postgres.go`, `database.go`
-    - Admin templates queries + publish guard: `admin_templates.go`
-    - Template assets: `admin_assets.go`
-  - Storage helpers: `backend/internal/storage/storage.go`
-    - `AssetsDir()`, `AssetsBaseURL()`, `SaveTemplateAssetFile()`
-  - Domain models: `backend/internal/models/models.go`
-    - `TemplateAdmin`, `AdminTemplatesList`, `TemplateAssetAdmin`, Create/Update inputs
-  - Entry points: `backend/cmd/api/main.go` (serves `/processed/` and `/assets/`)
-  - Migrations: `backend/migrations/ (0001…0006)`
-
-- Web Admin (Web CMS)
-  - API client: `web-cms/src/api/client.ts` (Axios + envelope unwrap + Bearer + 401 retry)
-  - Public templates API: `web-cms/src/api/templates.ts`
-  - Admin API: `web-cms/src/api/admin/*` (CRUD + publish/unpublish + assets)
-  - Types: `web-cms/src/types/{admin.ts, template.ts, envelope.ts}`
-  - UI:
-    - Pages: `web-cms/src/pages/Admin/*`, `web-cms/src/pages/Templates/*`
-  - Auth: `web-cms/src/auth/*` (Firebase + ProtectedRoute)
-
-- API Documentation
-  - `swagger/openapi.yaml` (OpenAPI 3.1; includes assets endpoints & schemas)
-
-## Key Technical Decisions
-
-- Authentication via Firebase ID token (JWT) sent as Bearer header to backend.
-- Envelope response format for consistency and observability.
-- Web CMS uses TanStack Query for server state, Axios with interceptors, MUI for UI.
-- Assets storage in dev: local Docker volume mounted at `/assets`, publicly served at `/assets/*`.
-- Admin Assets upload requires `slug`; Create flow supports early upload by auto-creating a draft.
-
-## Design Patterns
-
-- Backend:
-  - Handlers → database layer separation.
-  - Context propagation for request-scoped values.
-  - Table-/envelope-oriented responses with consistent error mapping (422 for validation).
-  - Unique thumbnail enforcement by demoting other thumbnails to preview on promote.
-
-- iOS:
-  - MVVM-ish with Observation; Repository for network.
-  - 401 refresh-and-retry via token provider.
-
-- Web CMS:
-  - React Router protected routes.
-  - TanStack Query hooks per resource; mutations invalidate relevant queries.
-  - React Hook Form + Zod for validation.
-
-## Critical Implementation Paths
-
-- GET /v1/templates (public listing for iOS)
-  1) Client composes query: `limit`, `offset`, `q`, `tags` (CSV), `sort`.
-  2) Sends Authorization: Bearer.
-  3) Backend joins `template_assets(kind='thumbnail')`, applies filters/sort.
-  4) Returns `EnvelopeTemplatesList`.
-
-- Admin Templates CRUD (web-cms)
-  - List: `GET /v1/admin/templates`
-  - Create: `POST /v1/admin/templates`
-  - Detail: `GET /v1/admin/templates/{slug}`
-  - Update: `PUT /v1/admin/templates/{slug}`
-  - Delete: `DELETE /v1/admin/templates/{slug}`
-  - Publish / Unpublish: `POST /v1/admin/templates/{slug}/publish|unpublish` (publish requires thumbnail; else 422)
-
-- Admin Assets
-  - List: `GET /v1/admin/templates/{slug}/assets`
-  - Upload: `POST /v1/admin/templates/{slug}/assets` (multipart; png/jpeg; `kind=thumbnail|preview`)
-  - Update: `PUT /v1/admin/templates/{slug}/assets/{id}` (change kind/sort; unique thumbnail)
-  - Delete: `DELETE /v1/admin/templates/{slug}/assets/{id}`
-  - Static serving: `/assets/templates/{slug}/{filename}` via `main.go` + Docker volume
-
-## Observability
-
-- `meta.requestId` and `meta.timestamp` added to all envelopes.
-- Recommend correlating requestId in backend logs.
-- Pagination metadata (total/hasMore/nextOffset) can be added later in `meta`.
-
-## Data Model Notes
-
-- `templates`:
-  - Core fields include `id/slug`, `name`, `published_at`, `usage_count`, `visibility`, `status`.
-- `template_assets`:
-  - `id`, `template_id`, `kind ('thumbnail'|'preview')`, `url`, `sort_order`, `created_at`.
-  - Promote preview to thumbnail demotes existing thumbnails to preview.
-
-## Deployment / Docker
-
-- Services: db, backend, web (optional), pgadmin.
-- Backend env:
-  - `ASSETS_DIR=/assets`, `ASSETS_BASE_URL=/assets`
-  - Dev auth toggles: `DEV_AUTH_ENABLED=1`, `DEV_ADMIN_EMAIL`, `DEV_ADMIN_PASSWORD`
-  - CORS: `CORS_ALLOWED_ORIGINS=http://localhost:5173`, `CORS_ALLOWED_HEADERS=Authorization,Content-Type`
-- Volumes:
-  - `../backend/assets:/assets` (uploads)
-  - `../backend/processed:/processed` (sample outputs)
-
-## Risks / Considerations
-
-- Local file storage vs production (S3/CDN) — abstract via `AssetsBaseURL()`.
-- Ensure CORS headers are correct for Vite dev.
-- Protect admin endpoints with Firebase Admin in production; DevAuth only for dev.
+References
+- .documents/workflows/run-tests.md → Admin API E2E (Docker + DevAuth).
+- .documents/troubleshooting/db-auth.md → DB auth issues and fixes.
+- backend/internal/database/admin_templates.go → SQL details.
+- backend/internal/api/admin_templates.go → request handling and validation.

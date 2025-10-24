@@ -1,4 +1,4 @@
-// main.go
+// main.go (production-safe entrypoint)
 package main
 
 import (
@@ -17,21 +17,21 @@ import (
 func main() {
 	fmt.Println("ImageAIWraper backend is starting...")
 
-	// Load .env file if present (for local development)
+	// Load .env file if present (for local development convenience)
 	_ = godotenv.Load()
 
-	// Load configuration from environment variables
+	// Load configuration from environment variables (requires FIREBASE_SERVICE_ACCOUNT)
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Check if service account file exists
+	// Ensure Firebase service account file exists
 	if _, err := os.Stat(cfg.FirebaseServiceAccount); os.IsNotExist(err) {
 		log.Fatalf("Firebase service account file not found: %s", cfg.FirebaseServiceAccount)
 	}
 
-	// Initialize Firebase Auth
+	// Initialize Firebase Auth (required; no dev/insecure fallbacks)
 	firebaseAuth, err := auth.NewFirebaseAuth(cfg.FirebaseServiceAccount)
 	if err != nil {
 		log.Fatalf("Failed to initialize Firebase Auth: %v", err)
@@ -43,16 +43,13 @@ func main() {
 	// Set up HTTP server and routes
 	mux := http.NewServeMux()
 
-	disableAuth := os.Getenv("DISABLE_AUTH")
-	if disableAuth == "true" {
-		fmt.Println("WARNING: Firebase Auth is DISABLED for local development.")
-		mux.Handle("/v1/images/process", importedHandler)
-		mux.Handle("/v1/users/register", http.HandlerFunc(api.RegisterUserHandler))
-	} else {
-		mux.Handle("/v1/images/process", firebaseAuth.AuthMiddleware(importedHandler))
-		mux.Handle("/v1/users/register", http.HandlerFunc(api.RegisterUserHandler))
-	}
+	// Production policy:
+	// - Keep /v1/images/process public (unchanged)
+	// - Protect /v1/users/register with Firebase Auth
+	mux.Handle("/v1/images/process", importedHandler)
+	mux.Handle("/v1/users/register", firebaseAuth.AuthMiddleware(http.HandlerFunc(api.RegisterUserHandler)))
 
+	// Start server
 	fmt.Printf("Server listening on port %s\n", cfg.Port)
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, mux))
 }

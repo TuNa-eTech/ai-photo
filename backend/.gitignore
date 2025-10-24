@@ -19,4 +19,5 @@ vendor/
 go.work
 go.work.sum
 .env
+.env.local
 firebase-adminsdk.json

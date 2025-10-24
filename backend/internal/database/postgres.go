@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
+	"net/url"
 	"os"
 	"sync"
 
@@ -50,13 +52,32 @@ func dsnFromEnv() string {
 func getDB() (*sql.DB, error) {
 	dbOnce.Do(func() {
 		dsn := dsnFromEnv()
+
+		// Log DSN with password redacted to diagnose connection issues
+		masked := dsn
+		if u, err := url.Parse(dsn); err == nil {
+			if u.User != nil {
+				username := u.User.Username()
+				_, hasPwd := u.User.Password()
+				if hasPwd {
+					u.User = url.UserPassword(username, "****")
+				} else {
+					u.User = url.User(username)
+				}
+			}
+			masked = u.String()
+		}
+		log.Printf("[DB] using DSN: %s", masked)
+
 		dbConn, dbErr = sql.Open("pgx", dsn)
 		if dbErr != nil {
+			log.Printf("[DB] open error: %v", dbErr)
 			return
 		}
 		// Validate connection
 		if err := dbConn.Ping(); err != nil {
 			dbErr = fmt.Errorf("db ping failed: %w", err)
+			log.Printf("[DB] ping error: %v", dbErr)
 			return
 		}
 	})

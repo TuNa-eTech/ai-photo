@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"path"
 	"strconv"
@@ -131,7 +132,13 @@ func AdminTemplatesCollectionHandler(w http.ResponseWriter, r *http.Request) {
 				Conflict(w, r, "slug already exists")
 				return
 			}
-			ServerError(w, r, "failed to create template")
+			// Log underlying error for diagnosis (middleware logs envelope only)
+			log.Printf("[AdminTemplates] create error: %v", err)
+			WriteJSON[struct{}](w, http.StatusInternalServerError, APIResponse[struct{}]{
+				Success: false,
+				Error:   &APIError{Code: "internal_error", Message: "failed to create template", Details: map[string]any{"cause": err.Error()}},
+				Meta:    buildMeta(r),
+			})
 			return
 		}
 		Created(w, r, out)

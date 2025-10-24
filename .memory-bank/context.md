@@ -1,70 +1,38 @@
 # Context
 
-Short, factual snapshot of the current project state.
+Last updated: 2025-10-24
 
-Last updated: 2025-10-23
+Current work focus
+- Diagnose and fix 500 on POST /v1/admin/templates during E2E tests.
+- Stabilize local E2E by running backend in Docker with DevAuth and Postgres in the same Docker network.
 
-## Current Focus
-- Web Admin (React + Vite + TS):
-  - Phase 2 completed for Templates management: full CRUD + publish/unpublish and image assets upload.
-  - Upload available in BOTH Create and Edit:
-    - Create: first upload auto-creates a draft (using current slug/name/status/visibility/tags), then uploads file to assets; thumbnail upload auto-fills `thumbnail_url`.
-    - Edit: upload thumbnail/preview, preview gallery, make-thumbnail, delete.
-  - Admin list shows Thumb (48x48), filters (q/tags/status/visibility/sort), pagination; actions include Edit/Delete and bulk Publish/Unpublish/Delete.
+Recent changes
+- Identified root cause: host-run backend (go run on :8081) failed SASL auth to Dockerized Postgres on 5432, causing “FATAL: password authentication failed for user 'imageai'”.
+- Verified DB schema and credentials inside container; applied migrations (0004–0006) via psql inside container successfully.
+- Added temporary debug logging:
+  - internal/api/admin_templates.go: include error cause in dev responses to aid debugging.
+  - internal/database/postgres.go: log DSN (password masked) and ping errors.
+- Switched E2E tests to containerized backend (:8080) which connects to DB internally via env (DB_HOST=db, DB_PASSWORD=imageai_pass).
+- Enabled and used DevAuth in container backend:
+  - POST /v1/dev/login → token injected into .box-testing/sandbox/env.yaml.
+  - Updated apiBaseUrl to http://localhost:8080.
+- Confirmed success:
+  - Create template: 201 Created.
+  - Upload thumbnail asset: 201 Created.
 
-- Backend (Go + Postgres):
-  - Admin endpoints implemented (envelope pattern):
-    - GET/POST/PUT/DELETE /v1/admin/templates
-    - GET /v1/admin/templates/{slug}
-    - POST /v1/admin/templates/{slug}/publish
-    - POST /v1/admin/templates/{slug}/unpublish
-  - Assets endpoints implemented + static serving:
-    - GET /v1/admin/templates/{slug}/assets
-    - POST /v1/admin/templates/{slug}/assets (multipart, png/jpeg, ~12MB)
-    - PUT /v1/admin/templates/{slug}/assets/{id} (kind/sort_order; unique thumbnail enforced)
-    - DELETE /v1/admin/templates/{slug}/assets/{id}
-    - Static /assets served from Docker volume (../backend/assets:/assets)
-  - Publish requires existing thumbnail; returns 422 validation error if missing.
+Decisions
+- Prefer Dockerized backend for local E2E to avoid host→container Postgres auth issues.
+- Keep debug logging only for local development; remove or guard with build tags/env before production.
 
-- iOS (SwiftUI):
-  - Phase 1 remains stable: Home screen, GET /v1/templates with envelope handle + 401 retry.
-  - No changes required for Phase 2 admin features.
+Next steps
+- Optional: Revisit host-run backend connectivity (go run :8081) to DB container:
+  - Ensure IPv4 DSN: postgres://imageai:imageai_pass@127.0.0.1:5432/imageai_db?sslmode=disable
+  - Reset role password inside container if needed.
+  - Verify host connectivity via `docker run --rm -e PGPASSWORD=imageai_pass postgres:15 psql -h host.docker.internal -U imageai -d imageai_db -c "\dt"`.
+  - If instability persists, continue using Docker backend for E2E.
+- Remove/guard debug error details before release.
+- Proceed with publish flow (requires thumbnail) and complete admin asset use cases.
 
-## Recent Changes
-- Implemented DB layer for `template_assets` (list/insert/update/delete); uniqueness on thumbnail promote.
-- Added storage helpers (ASSETS_DIR/ASSETS_BASE_URL; file save).
-- Wired static /assets in backend mux and Docker volume mount.
-- Extended Swagger: assets endpoints + TemplateAssetAdmin schemas.
-- Frontend:
-  - API module and hooks for assets (list/upload/update/delete).
-  - TemplateFormDrawer updated to support upload in Create + Edit.
-  - Admin list Thumb column rendering from `thumbnail_url`.
-- Docker:
-  - backend env: ASSETS_DIR=/assets, ASSETS_BASE_URL=/assets, DEV auth envs
-  - volumes: ../backend/assets:/assets
-
-## Next Steps
-- Tests:
-  - Frontend: MSW handlers + RTL tests for upload flows (create-draft-on-upload, make-thumbnail, delete).
-  - Backend: table-driven tests for assets handlers; integration for publish guard.
-- Optional:
-  - Reorder previews (drag/drop) → update `sort_order`.
-  - Switch to Firebase Admin verification in prod; keep DevAuth in dev only.
-  - Add envelope pagination metadata (meta.total/hasMore/nextOffset) if needed.
-
-## Risks / Considerations
-- File storage is local in dev; for prod consider S3/CDN. Abstract via `ASSETS_BASE_URL`.
-- Enforce CORS for http://localhost:5173 with Authorization, Content-Type.
-- Ensure admin-only endpoints protected in prod (Firebase Admin).
-
-## References
-- Swagger: swagger/openapi.yaml (assets + admin endpoints)
-- Backend code:
-  - internal/api/admin_templates.go, internal/api/admin_assets.go
-  - internal/database/admin_templates.go, internal/database/admin_assets.go
-  - internal/storage/storage.go
-  - cmd/api/main.go (static /assets)
-- Frontend code:
-  - web-cms/src/api/admin/ (CRUD + assets)
-  - web-cms/src/pages/Admin/
-  - web-cms/src/pages/Templates/
+References
+- .documents/workflows/run-tests.md → “Admin API E2E (Docker + DevAuth)” updated with instructions and troubleshooting.
+- backend/internal/api/admin_templates.go, backend/internal/database/postgres.go (temporary debug logs).
