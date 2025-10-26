@@ -1,7 +1,8 @@
 /**
- * Template Form Dialog Component
+ * Template Form Dialog Component (v2 - Professional Redesign)
  * 
- * Dialog for creating/editing templates
+ * Modern tabbed interface for creating/editing templates
+ * Focus on UX and visual hierarchy
  */
 
 import { useState, useEffect } from 'react'
@@ -16,14 +17,27 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Grid,
   Alert,
   CircularProgress,
   Box,
   Typography,
+  Tabs,
+  Tab,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Chip,
+  Stack,
+  Paper,
+  Divider,
 } from '@mui/material'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import DeleteIcon from '@mui/icons-material/Delete'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
+import ImageIcon from '@mui/icons-material/Image'
+import SettingsIcon from '@mui/icons-material/Settings'
 import type { TemplateAdmin, CreateTemplateRequest, UpdateTemplateRequest, TemplateStatus, TemplateVisibility } from '../../types'
 
 export interface TemplateFormDialogProps {
@@ -35,6 +49,27 @@ export interface TemplateFormDialogProps {
   onSubmit: (data: CreateTemplateRequest | UpdateTemplateRequest, thumbnailFile?: File) => void
 }
 
+interface TabPanelProps {
+  children?: React.ReactNode
+  index: number
+  value: number
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`tabpanel-${index}`}
+      aria-labelledby={`tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+    </div>
+  )
+}
+
 export function TemplateFormDialog({
   open,
   template,
@@ -44,6 +79,7 @@ export function TemplateFormDialog({
   onSubmit,
 }: TemplateFormDialogProps): React.ReactElement {
   const isEdit = !!template
+  const [activeTab, setActiveTab] = useState(0)
 
   const [formData, setFormData] = useState<CreateTemplateRequest>({
     slug: '',
@@ -80,6 +116,7 @@ export function TemplateFormDialog({
       setTagsInput(template.tags?.join(', ') || '')
       setThumbnailPreview(template.thumbnail_url || null)
       setThumbnailFile(null)
+      setActiveTab(0)
     } else {
       setFormData({
         slug: '',
@@ -96,6 +133,7 @@ export function TemplateFormDialog({
       setTagsInput('')
       setThumbnailPreview(null)
       setThumbnailFile(null)
+      setActiveTab(0)
     }
     setErrors({})
   }, [template, open])
@@ -115,6 +153,10 @@ export function TemplateFormDialog({
       newErrors.slug = 'Slug must contain only lowercase letters, numbers, and hyphens'
     }
 
+    if (formData.prompt && formData.prompt.length < 10) {
+      newErrors.prompt = 'Prompt should be at least 10 characters for better results'
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -122,27 +164,23 @@ export function TemplateFormDialog({
   const handleThumbnailChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const file = event.target.files?.[0]
     if (file) {
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         setErrors({ ...errors, thumbnail: 'Please select an image file' })
         return
       }
 
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         setErrors({ ...errors, thumbnail: 'Image must be smaller than 5MB' })
         return
       }
 
       setThumbnailFile(file)
-      // Create preview URL
       const reader = new FileReader()
       reader.onloadend = () => {
         setThumbnailPreview(reader.result as string)
       }
       reader.readAsDataURL(file)
       
-      // Clear thumbnail error if exists
       const newErrors = { ...errors }
       delete newErrors.thumbnail
       setErrors(newErrors)
@@ -151,26 +189,24 @@ export function TemplateFormDialog({
 
   const handleThumbnailRemove = (): void => {
     setThumbnailFile(null)
-    // If editing and has new file selected, revert to original thumbnail
-    // If creating new or no original thumbnail, clear preview
     if (isEdit && template?.thumbnail_url && !thumbnailFile) {
-      // Already showing original, do nothing
       return
     }
     setThumbnailPreview(isEdit ? template?.thumbnail_url || null : null)
   }
 
   const handleSubmit = (): void => {
-    if (!validateForm()) return
+    if (!validateForm()) {
+      setActiveTab(0) // Go to basic info tab if validation fails
+      return
+    }
 
-    // Parse tags
     const tags = tagsInput
       .split(',')
       .map((tag) => tag.trim())
       .filter((tag) => tag.length > 0)
 
     if (isEdit) {
-      // Update: don't send slug
       const updateData: UpdateTemplateRequest = {
         name: formData.name,
         description: formData.description || undefined,
@@ -184,7 +220,6 @@ export function TemplateFormDialog({
       }
       onSubmit(updateData, thumbnailFile || undefined)
     } else {
-      // Create: include slug
       const createData: CreateTemplateRequest = {
         ...formData,
         description: formData.description || undefined,
@@ -204,264 +239,420 @@ export function TemplateFormDialog({
     }
   }
 
+  const promptLength = formData.prompt?.length || 0
+  const negativePromptLength = formData.negative_prompt?.length || 0
+
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>{isEdit ? 'Edit Template' : 'Create Template'}</DialogTitle>
-      <DialogContent>
+    <Dialog 
+      open={open} 
+      onClose={handleClose} 
+      maxWidth="md" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          minHeight: '80vh',
+        }
+      }}
+    >
+      <DialogTitle sx={{ pb: 1 }}>
+        <Box display="flex" alignItems="center" gap={1}>
+          <AutoFixHighIcon color="primary" />
+          <Typography variant="h5" component="span">
+            {isEdit ? 'Edit Template' : 'Create New Template'}
+          </Typography>
+        </Box>
+        {isEdit && (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Editing: <strong>{template?.name}</strong>
+          </Typography>
+        )}
+      </DialogTitle>
+
+      <Divider />
+
+      <DialogContent sx={{ p: 0 }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ m: 3, mb: 0 }}>
             {error}
           </Alert>
         )}
 
-        <Grid container spacing={2} sx={{ mt: 0.5 }}>
-          {/* Name */}
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              required
-              label="Name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              error={!!errors.name}
-              helperText={errors.name || 'Display name for the template'}
-              disabled={loading}
-            />
-          </Grid>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={(_, newValue) => setActiveTab(newValue)}
+            variant="fullWidth"
+          >
+            <Tab label="Basic Info" icon={<InfoOutlinedIcon />} iconPosition="start" />
+            <Tab label="AI Prompts" icon={<AutoFixHighIcon />} iconPosition="start" />
+            <Tab label="Media" icon={<ImageIcon />} iconPosition="start" />
+            <Tab label="Settings" icon={<SettingsIcon />} iconPosition="start" />
+          </Tabs>
+        </Box>
 
-          {/* Slug (only for create) */}
-          {!isEdit && (
-            <Grid item xs={12}>
+        <Box sx={{ px: 3, pb: 2 }}>
+          {/* Tab 1: Basic Info */}
+          <TabPanel value={activeTab} index={0}>
+            <Stack spacing={3}>
               <TextField
                 fullWidth
                 required
-                label="Slug"
-                value={formData.slug}
-                onChange={(e) =>
-                  setFormData({ ...formData, slug: e.target.value.toLowerCase() })
-                }
-                error={!!errors.slug}
-                helperText={
-                  errors.slug || 'URL-friendly identifier (lowercase, hyphens only)'
-                }
+                label="Template Name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                error={!!errors.name}
+                helperText={errors.name || 'Display name for the template'}
                 disabled={loading}
-                placeholder="anime-style"
+                autoFocus
               />
-            </Grid>
-          )}
 
-          {/* Description */}
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              multiline
-              rows={3}
-              label="Description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              helperText="Optional description of the template"
-              disabled={loading}
-            />
-          </Grid>
+              {!isEdit && (
+                <TextField
+                  fullWidth
+                  required
+                  label="Slug"
+                  value={formData.slug}
+                  onChange={(e) =>
+                    setFormData({ ...formData, slug: e.target.value.toLowerCase() })
+                  }
+                  error={!!errors.slug}
+                  helperText={
+                    errors.slug || 'URL-friendly identifier (lowercase, hyphens only)'
+                  }
+                  disabled={loading}
+                  placeholder="anime-style"
+                />
+              )}
 
-          {/* Prompt */}
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              multiline
-              rows={6}
-              label="Prompt"
-              value={formData.prompt}
-              onChange={(e) => setFormData({ ...formData, prompt: e.target.value })}
-              helperText="AI prompt template for image generation/processing"
-              disabled={loading}
-              placeholder="Transform this photo into a beautiful anime-style portrait with vibrant colors, expressive eyes..."
-            />
-          </Grid>
-
-          {/* Negative Prompt */}
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              multiline
-              rows={3}
-              label="Negative Prompt"
-              value={formData.negative_prompt}
-              onChange={(e) => setFormData({ ...formData, negative_prompt: e.target.value })}
-              helperText="What to avoid in generated images"
-              disabled={loading}
-              placeholder="blurry, low quality, distorted, deformed..."
-            />
-          </Grid>
-
-          {/* Model Provider */}
-          <Grid item xs={6}>
-            <FormControl fullWidth>
-              <InputLabel>Model Provider</InputLabel>
-              <Select
-                value={formData.model_provider}
-                label="Model Provider"
-                onChange={(e) =>
-                  setFormData({ ...formData, model_provider: e.target.value })
-                }
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label="Description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                helperText="Brief description of what this template does"
                 disabled={loading}
-              >
-                <MenuItem value="gemini">Gemini</MenuItem>
-                <MenuItem value="openai">OpenAI DALL-E</MenuItem>
-                <MenuItem value="midjourney">Midjourney</MenuItem>
-                <MenuItem value="stable-diffusion">Stable Diffusion</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
+                placeholder="Transform photos into beautiful anime-style portraits..."
+              />
 
-          {/* Model Name */}
-          <Grid item xs={6}>
-            <TextField
-              fullWidth
-              label="Model Name"
-              value={formData.model_name}
-              onChange={(e) => setFormData({ ...formData, model_name: e.target.value })}
-              helperText="Specific model name/version"
-              disabled={loading}
-              placeholder="gemini-1.5-pro, gpt-4-vision..."
-            />
-          </Grid>
-
-          {/* Status */}
-          <Grid item xs={6}>
-            <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={formData.status}
-                label="Status"
-                onChange={(e) =>
-                  setFormData({ ...formData, status: e.target.value as TemplateStatus })
-                }
+              <TextField
+                fullWidth
+                label="Tags"
+                value={tagsInput}
+                onChange={(e) => setTagsInput(e.target.value)}
+                helperText="Comma-separated tags (e.g., anime, portrait, art)"
                 disabled={loading}
-              >
-                <MenuItem value="draft">Draft</MenuItem>
-                <MenuItem value="published">Published</MenuItem>
-                <MenuItem value="archived">Archived</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
+                placeholder="anime, portrait, art"
+              />
+            </Stack>
+          </TabPanel>
 
-          {/* Visibility */}
-          <Grid item xs={6}>
-            <FormControl fullWidth>
-              <InputLabel>Visibility</InputLabel>
-              <Select
-                value={formData.visibility}
-                label="Visibility"
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    visibility: e.target.value as TemplateVisibility,
-                  })
-                }
-                disabled={loading}
-              >
-                <MenuItem value="public">Public</MenuItem>
-                <MenuItem value="private">Private</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-
-          {/* Tags */}
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Tags"
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-              helperText="Comma-separated tags (e.g., anime, portrait, art)"
-              disabled={loading}
-              placeholder="anime, portrait, art"
-            />
-          </Grid>
-
-          {/* Thumbnail Upload */}
-          <Grid item xs={12}>
-            <Box>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Thumbnail Image
-              </Typography>
-              
-              {thumbnailPreview ? (
-                <Box>
-                  <Box
-                    component="img"
-                    src={thumbnailPreview}
-                    alt="Thumbnail preview"
-                    sx={{
-                      width: '200px',
-                      height: '200px',
-                      objectFit: 'cover',
-                      borderRadius: 1,
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      display: 'block',
-                    }}
-                  />
-                  <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
-                    <Button
-                      variant="outlined"
-                      component="label"
-                      size="small"
-                      startIcon={<CloudUploadIcon />}
-                      disabled={loading}
-                    >
-                      Change
-                      <input
-                        type="file"
-                        hidden
-                        accept="image/*"
-                        onChange={handleThumbnailChange}
-                      />
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      size="small"
-                      startIcon={<DeleteIcon />}
-                      onClick={handleThumbnailRemove}
-                      disabled={loading}
-                    >
-                      Remove
-                    </Button>
+          {/* Tab 2: AI Prompts */}
+          <TabPanel value={activeTab} index={1}>
+            <Stack spacing={3}>
+              <Paper variant="outlined" sx={{ p: 2, bgcolor: 'primary.50' }}>
+                <Box display="flex" alignItems="flex-start" gap={1}>
+                  <InfoOutlinedIcon color="primary" fontSize="small" sx={{ mt: 0.5 }} />
+                  <Box>
+                    <Typography variant="body2" fontWeight="medium" gutterBottom>
+                      AI Prompt Tips
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      • Be specific and detailed (100-200 words recommended)<br />
+                      • Describe style, mood, colors, and techniques<br />
+                      • Include quality keywords (4K, professional, high-detail)
+                    </Typography>
                   </Box>
                 </Box>
-              ) : (
-                <Button
-                  variant="outlined"
-                  component="label"
-                  startIcon={<CloudUploadIcon />}
-                  disabled={loading}
-                >
-                  Upload Thumbnail
-                  <input
-                    type="file"
-                    hidden
-                    accept="image/*"
-                    onChange={handleThumbnailChange}
+              </Paper>
+
+              <Box>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Positive Prompt *
+                  </Typography>
+                  <Chip 
+                    label={`${promptLength} characters`} 
+                    size="small"
+                    color={promptLength < 50 ? 'warning' : promptLength > 200 ? 'success' : 'default'}
                   />
-                </Button>
-              )}
-              
-              {errors.thumbnail && (
-                <Typography variant="caption" color="error" display="block" sx={{ mt: 1 }}>
-                  {errors.thumbnail}
+                </Box>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={8}
+                  value={formData.prompt}
+                  onChange={(e) => setFormData({ ...formData, prompt: e.target.value })}
+                  error={!!errors.prompt}
+                  helperText={errors.prompt || 'Describe what you want the AI to generate'}
+                  disabled={loading}
+                  placeholder="Transform this photo into a beautiful anime-style portrait with vibrant saturated colors, large expressive eyes with detailed highlights, soft cel-shading technique, clean line art, modern anime aesthetic..."
+                  sx={{
+                    '& .MuiInputBase-root': {
+                      fontFamily: 'monospace',
+                      fontSize: '0.9rem',
+                      lineHeight: 1.6,
+                    }
+                  }}
+                />
+              </Box>
+
+              <Box>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Negative Prompt
+                  </Typography>
+                  <Chip 
+                    label={`${negativePromptLength} characters`} 
+                    size="small"
+                    variant="outlined"
+                  />
+                </Box>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  value={formData.negative_prompt}
+                  onChange={(e) => setFormData({ ...formData, negative_prompt: e.target.value })}
+                  helperText="What to avoid in generated images"
+                  disabled={loading}
+                  placeholder="blurry, low quality, distorted, deformed, bad anatomy, extra limbs, watermark, signature, text, logo..."
+                  sx={{
+                    '& .MuiInputBase-root': {
+                      fontFamily: 'monospace',
+                      fontSize: '0.9rem',
+                      lineHeight: 1.6,
+                    }
+                  }}
+                />
+              </Box>
+
+              <Accordion>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="subtitle2">Model Configuration</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Stack direction="row" spacing={2}>
+                    <Box sx={{ flex: 1 }}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Model Provider</InputLabel>
+                        <Select
+                          value={formData.model_provider}
+                          label="Model Provider"
+                          onChange={(e) =>
+                            setFormData({ ...formData, model_provider: e.target.value })
+                          }
+                          disabled={loading}
+                        >
+                          <MenuItem value="gemini">Gemini</MenuItem>
+                          <MenuItem value="openai">OpenAI DALL-E</MenuItem>
+                          <MenuItem value="midjourney">Midjourney</MenuItem>
+                          <MenuItem value="stable-diffusion">Stable Diffusion</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Model Name"
+                        value={formData.model_name}
+                        onChange={(e) => setFormData({ ...formData, model_name: e.target.value })}
+                        helperText="Specific model version"
+                        disabled={loading}
+                        placeholder="gemini-1.5-pro"
+                      />
+                    </Box>
+                  </Stack>
+                </AccordionDetails>
+              </Accordion>
+            </Stack>
+          </TabPanel>
+
+          {/* Tab 3: Media */}
+          <TabPanel value={activeTab} index={2}>
+            <Stack spacing={3}>
+              <Paper variant="outlined" sx={{ p: 2, bgcolor: 'info.50' }}>
+                <Box display="flex" alignItems="flex-start" gap={1}>
+                  <InfoOutlinedIcon color="info" fontSize="small" sx={{ mt: 0.5 }} />
+                  <Box>
+                    <Typography variant="body2" fontWeight="medium" gutterBottom>
+                      Thumbnail Requirements
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      • Recommended: Square image, at least 512x512px<br />
+                      • Maximum file size: 5MB<br />
+                      • Formats: JPG, PNG, WebP, GIF
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Thumbnail Image
                 </Typography>
+                
+                {thumbnailPreview ? (
+                  <Box>
+                    <Paper 
+                      variant="outlined" 
+                      sx={{ 
+                        p: 2, 
+                        display: 'inline-block',
+                        borderRadius: 2,
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src={thumbnailPreview}
+                        alt="Thumbnail preview"
+                        sx={{
+                          width: '100%',
+                          maxWidth: 300,
+                          height: 300,
+                          objectFit: 'cover',
+                          borderRadius: 1,
+                          display: 'block',
+                        }}
+                      />
+                    </Paper>
+                    <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                      <Button
+                        variant="outlined"
+                        component="label"
+                        startIcon={<CloudUploadIcon />}
+                        disabled={loading}
+                      >
+                        Change Image
+                        <input
+                          type="file"
+                          hidden
+                          accept="image/*"
+                          onChange={handleThumbnailChange}
+                        />
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={<DeleteIcon />}
+                        onClick={handleThumbnailRemove}
+                        disabled={loading}
+                      >
+                        Remove
+                      </Button>
+                    </Stack>
+                  </Box>
+                ) : (
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    startIcon={<CloudUploadIcon />}
+                    disabled={loading}
+                    sx={{ mt: 1 }}
+                  >
+                    Upload Thumbnail
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      onChange={handleThumbnailChange}
+                    />
+                  </Button>
+                )}
+                
+                {errors.thumbnail && (
+                  <Typography variant="caption" color="error" display="block" sx={{ mt: 1 }}>
+                    {errors.thumbnail}
+                  </Typography>
+                )}
+              </Box>
+            </Stack>
+          </TabPanel>
+
+          {/* Tab 4: Settings */}
+          <TabPanel value={activeTab} index={3}>
+            <Stack spacing={3}>
+              <Stack direction="row" spacing={2}>
+                <Box sx={{ flex: 1 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Status</InputLabel>
+                    <Select
+                      value={formData.status}
+                      label="Status"
+                      onChange={(e) =>
+                        setFormData({ ...formData, status: e.target.value as TemplateStatus })
+                      }
+                      disabled={loading}
+                    >
+                      <MenuItem value="draft">
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Chip label="Draft" size="small" />
+                          <Typography variant="body2">Not visible to users</Typography>
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="published">
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Chip label="Published" size="small" color="success" />
+                          <Typography variant="body2">Live and visible</Typography>
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="archived">
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Chip label="Archived" size="small" color="error" />
+                          <Typography variant="body2">Hidden from users</Typography>
+                        </Box>
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+
+                <Box sx={{ flex: 1 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Visibility</InputLabel>
+                    <Select
+                      value={formData.visibility}
+                      label="Visibility"
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          visibility: e.target.value as TemplateVisibility,
+                        })
+                      }
+                      disabled={loading}
+                    >
+                      <MenuItem value="public">
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Chip label="Public" size="small" color="primary" variant="outlined" />
+                          <Typography variant="body2">Anyone can use</Typography>
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="private">
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Chip label="Private" size="small" variant="outlined" />
+                          <Typography variant="body2">Restricted access</Typography>
+                        </Box>
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+              </Stack>
+
+              {formData.status === 'published' && !thumbnailPreview && (
+                <Alert severity="warning">
+                  Publishing without a thumbnail may fail. Please upload a thumbnail image.
+                </Alert>
               )}
-              
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                Recommended: Square image, at least 512x512px, max 5MB
-              </Typography>
-            </Box>
-          </Grid>
-        </Grid>
+            </Stack>
+          </TabPanel>
+        </Box>
       </DialogContent>
-      <DialogActions>
+
+      <Divider />
+
+      <DialogActions sx={{ px: 3, py: 2 }}>
         <Button onClick={handleClose} disabled={loading}>
           Cancel
         </Button>
@@ -470,8 +661,9 @@ export function TemplateFormDialog({
           variant="contained"
           disabled={loading}
           startIcon={loading ? <CircularProgress size={16} /> : null}
+          sx={{ minWidth: 120 }}
         >
-          {isEdit ? 'Update' : 'Create'}
+          {isEdit ? 'Update Template' : 'Create Template'}
         </Button>
       </DialogActions>
     </Dialog>

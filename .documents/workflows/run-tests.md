@@ -1,33 +1,107 @@
 # Run Tests (Local)
 
 Status: Stable  
-Updated: 2025-10-23  
+Updated: 2025-10-26  
 Owner: @anhtu
 
-Backend (Go)
-- Run all unit & integration tests:
-  ```
-  cd backend
-  go test ./...
-  ```
-- Coverage:
-  ```
-  go test -cover ./...
-  ```
+## Test Coverage Summary
 
-iOS (Swift/SwiftUI)
-- Xcode: open `AIPhotoApp/AIPhotoApp.xcodeproj`, select test target, press ⌘U.
-- CLI (example):
-  ```
-  xcodebuild test \
-    -project AIPhotoApp/AIPhotoApp.xcodeproj \
-    -scheme AIPhotoApp \
-    -destination "platform=iOS Simulator,name=iPhone 17" \
-    -parallel-testing-enabled NO | xcpretty
-  ```
-Notes:
-- Run sequentially (no parallel) to avoid memory issues.
-- Use `-only-testing:<Target>/<TestClass>` to run a specific test class.
+| Platform | Tests | Status |
+|----------|-------|--------|
+| Backend Unit | 23 | ✅ 100% |
+| Backend E2E | 15 | ✅ 100% |
+| iOS Unit | 47 | ✅ 100% |
+| **Total** | **85** | **✅ 100%** |
+
+---
+
+## Backend (NestJS + Jest + Supertest)
+
+### Unit Tests (23 passing)
+```bash
+cd server
+yarn test templates.service.spec.ts
+```
+
+### E2E Tests (15 passing)
+```bash
+cd server
+yarn test:e2e templates.e2e-spec.ts
+```
+
+### Run All Tests
+```bash
+cd server
+yarn test
+yarn test:e2e
+```
+
+### Coverage
+```bash
+cd server
+yarn test:cov
+```
+
+**Test Files:**
+- `server/src/templates/templates.service.spec.ts` - 23 unit tests with mocked Prisma
+- `server/test/templates.e2e-spec.ts` - 15 e2e tests with DevAuth
+
+---
+
+## iOS (Swift Testing + XCTest)
+
+### Unit Tests (47 passing)
+
+**Recommended: Build and run tests**
+```bash
+cd AIPhotoApp
+
+xcodebuild test \
+  -scheme AIPhotoApp \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -only-testing:AIPhotoAppTests \
+  -parallel-testing-enabled NO \
+  2>&1 | xcpretty --color --test
+```
+
+**Faster: Build once, run multiple times**
+```bash
+cd AIPhotoApp
+
+# Build once
+xcodebuild build-for-testing \
+  -scheme AIPhotoApp \
+  -destination 'platform=iOS Simulator,name=iPhone 17'
+
+# Run tests (repeatable)
+xcodebuild test-without-building \
+  -scheme AIPhotoApp \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -only-testing:AIPhotoAppTests \
+  -parallel-testing-enabled NO \
+  2>&1 | xcpretty --color --test
+```
+
+**Xcode GUI**
+- Open `AIPhotoApp.xcodeproj`
+- Press **⌘U** to run all tests
+- Or right-click test class → "Run Tests"
+
+**Important Flags:**
+- `-parallel-testing-enabled NO` - **Required** for deterministic async tests
+- `xcpretty --color --test` - Clean formatted output
+- `-only-testing:AIPhotoAppTests` - Run only unit tests (not UI tests)
+
+**Test Files:**
+- `AIPhotoAppTests/TemplateDTOsTests.swift` - 20 tests for DTO decoding, computed properties
+- `AIPhotoAppTests/HomeViewModelTests.swift` - 27 tests for ViewModel logic, API integration
+
+**Notes:**
+- Async tests require 100ms sleep for Task completion
+- Use MockTemplatesRepository conforming to TemplatesRepositoryProtocol
+- Tests run on iOS Simulator (iPhone 17)
+
+---
 
 Web CMS (Vite + React + TS)
 - Run:

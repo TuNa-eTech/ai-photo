@@ -77,12 +77,30 @@ let TemplatesService = class TemplatesService {
     }
     async listTemplates(query) {
         const { limit, offset, q, tags, sort } = query;
-        const where = {};
+        const where = {
+            status: client_1.TemplateStatus.published,
+            visibility: 'public',
+        };
         if (q && q.trim()) {
-            where.OR = [
-                { name: { contains: q.trim(), mode: 'insensitive' } },
-                { id: { contains: q.trim(), mode: 'insensitive' } },
+            where.AND = [
+                {
+                    OR: [
+                        { name: { contains: q.trim(), mode: 'insensitive' } },
+                        { id: { contains: q.trim(), mode: 'insensitive' } },
+                    ],
+                },
             ];
+        }
+        if (tags && tags.trim()) {
+            const tagList = tags.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
+            if (tagList.length > 0) {
+                if (where.AND) {
+                    where.AND.push({ tags: { hasSome: tagList } });
+                }
+                else {
+                    where.AND = [{ tags: { hasSome: tagList } }];
+                }
+            }
         }
         const orderBy = this.resolveOrder(sort);
         const rows = await this.prisma.template.findMany({

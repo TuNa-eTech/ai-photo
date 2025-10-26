@@ -5,7 +5,6 @@
  */
 
 import {
-  Box,
   TextField,
   Select,
   MenuItem,
@@ -13,7 +12,8 @@ import {
   InputLabel,
   Button,
   Paper,
-  Grid,
+  Box,
+  Stack,
 } from '@mui/material'
 import type { SelectChangeEvent } from '@mui/material/Select'
 import SearchIcon from '@mui/icons-material/Search'
@@ -67,9 +67,9 @@ export function TemplatesFilters({
 
   return (
     <Paper sx={{ p: 2, mb: 3 }}>
-      <Grid container spacing={2} alignItems="center">
+      <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
         {/* Search */}
-        <Grid item xs={12} md={3}>
+        <Box sx={{ flex: '1 1 300px', minWidth: 200 }}>
           <TextField
             fullWidth
             size="small"
@@ -81,10 +81,10 @@ export function TemplatesFilters({
               startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
             }}
           />
-        </Grid>
+        </Box>
 
         {/* Status Filter */}
-        <Grid item xs={6} md={2}>
+        <Box sx={{ flex: '1 1 150px', minWidth: 120 }}>
           <FormControl fullWidth size="small">
             <InputLabel>Status</InputLabel>
             <Select
@@ -98,10 +98,10 @@ export function TemplatesFilters({
               <MenuItem value="archived">Archived</MenuItem>
             </Select>
           </FormControl>
-        </Grid>
+        </Box>
 
         {/* Visibility Filter */}
-        <Grid item xs={6} md={2}>
+        <Box sx={{ flex: '1 1 150px', minWidth: 120 }}>
           <FormControl fullWidth size="small">
             <InputLabel>Visibility</InputLabel>
             <Select
@@ -114,10 +114,10 @@ export function TemplatesFilters({
               <MenuItem value="private">Private</MenuItem>
             </Select>
           </FormControl>
-        </Grid>
+        </Box>
 
         {/* Sort */}
-        <Grid item xs={6} md={2}>
+        <Box sx={{ flex: '1 1 180px', minWidth: 150 }}>
           <FormControl fullWidth size="small">
             <InputLabel>Sort By</InputLabel>
             <Select
@@ -131,10 +131,10 @@ export function TemplatesFilters({
               <MenuItem value="name">Name (A-Z)</MenuItem>
             </Select>
           </FormControl>
-        </Grid>
+        </Box>
 
         {/* Tags */}
-        <Grid item xs={6} md={2}>
+        <Box sx={{ flex: '1 1 150px', minWidth: 120 }}>
           <TextField
             fullWidth
             size="small"
@@ -143,22 +143,20 @@ export function TemplatesFilters({
             value={filters.tags || ''}
             onChange={handleTagsChange}
           />
-        </Grid>
+        </Box>
 
         {/* Reset Button */}
-        <Grid item xs={12} md={1}>
-          <Button
-            fullWidth
-            variant="outlined"
-            size="medium"
-            onClick={onReset}
-            disabled={!hasActiveFilters}
-            startIcon={<ClearIcon />}
-          >
-            Reset
-          </Button>
-        </Grid>
-      </Grid>
+        <Button
+          variant="outlined"
+          size="medium"
+          onClick={onReset}
+          disabled={!hasActiveFilters}
+          startIcon={<ClearIcon />}
+          sx={{ minWidth: 100 }}
+        >
+          Reset
+        </Button>
+      </Stack>
     </Paper>
   )
 }

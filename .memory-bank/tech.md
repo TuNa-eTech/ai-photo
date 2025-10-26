@@ -1,6 +1,6 @@
 # Tech
 
-Last updated: 2025-10-25
+Last updated: 2025-10-26
 
 Technologies
 - Backend: NestJS (Node.js), Prisma ORM (@prisma/client), PostgreSQL driver.
@@ -9,8 +9,8 @@ Technologies
   - Production: Firebase Admin SDK, BearerAuthGuard with Firebase token verification.
   - Local Dev: DevAuth (DEV_AUTH_TOKEN env variable) for admin endpoints.
 - Frontends:
-  - iOS: SwiftUI.
-  - Web CMS: Vite + React + TypeScript.
+  - iOS: SwiftUI, Firebase SDK.
+  - Web CMS: Vite 7 + React 19 + TypeScript 5.9 + Material-UI v7 + React Query v5 + React Router v7.
 - Containerization: Docker Compose (Postgres, NestJS Server, optional Web CMS/Preview, pgAdmin).
 - Tooling: yarn, prisma CLI, curl, jq, yq (for scripting), psql via docker exec/run.
 
@@ -69,8 +69,12 @@ Local Development Setup
 
 Database & Migrations
 - Schema is defined in server/prisma/schema.prisma:
-  - Template model with id, name, thumbnailUrl, publishedAt, usageCount.
-  - Future: template_versions, tags, template_tags, template_assets models.
+  - Template model with id, slug, name, description, prompt, negativePrompt, modelProvider, modelName, status, visibility, thumbnailUrl, publishedAt, usageCount, tags, createdAt, updatedAt.
+  - Enums: TemplateStatus (draft, published, archived), TemplateVisibility (public, private).
+  - Future: template_versions, template_assets models.
+- Recent migrations:
+  - 20251026115941_add_prompt_fields (added prompt, negativePrompt, modelProvider, modelName)
+  - 20251026105027_add_admin_fields_to_templates (added slug, status, visibility, tags, dates)
 - Migrate methods:
   - Prisma migrations: npx prisma migrate dev
   - Generate client: npx prisma generate
@@ -97,33 +101,121 @@ Observability & Debugging (dev)
 
 Dependencies & Versions
 - Node.js: 20+
-- Package manager: Yarn
-- NestJS packages: @nestjs/core, @nestjs/common, @nestjs/config, @nestjs/platform-express, @nestjs/serve-static
-- Database: @prisma/client, prisma (dev dependency)
-- Firebase: firebase-admin
-- File upload: multer (via @nestjs/platform-express), @types/multer
-- Validation: class-validator, class-transformer
+- Package manager: Yarn (backend + web-cms)
+- Backend:
+  - NestJS packages: @nestjs/core, @nestjs/common, @nestjs/config, @nestjs/platform-express, @nestjs/serve-static
+  - Database: @prisma/client, prisma (dev dependency)
+  - Firebase: firebase-admin
+  - File upload: multer (via @nestjs/platform-express), @types/multer
+  - Validation: class-validator, class-transformer
+- Web CMS:
+  - React 19.1.1, TypeScript 5.9
+  - Vite 7.1.7, React Router 7.9.4
+  - Material-UI 7.3.4, @emotion/react, @emotion/styled
+  - React Query 5.90.5 (for server state)
+  - Firebase 12.4.0 (for auth)
+  - Axios 1.12.2 (HTTP client)
+  - date-fns 4.1.0 (date formatting)
 - Docker images:
   - postgres:15
   - dpage/pgadmin4 (optional)
   - node:20-alpine (for NestJS server)
-- Frontend package manager: pnpm for Web CMS (React + Vite + Material UI).
 
 Testing
-- Backend:
-  - Unit/integration: yarn test (Jest + Supertest).
-  - E2E: yarn test:e2e
-- iOS:
-  - Xcode (⌘U) or xcodebuild with -parallel-testing-enabled NO.
-- Web CMS:
-  - pnpm vitest
-- E2E (admin):
-  - Preferred via Docker NestJS + DevAuth using .box-testing scripts.
-  - See .documents/workflows/run-tests.md → Admin API E2E (Docker + DevAuth).
+
+Backend (NestJS + Jest + Supertest)
+- Unit tests (23 passing):
+  ```bash
+  cd server
+  yarn test templates.service.spec.ts
+  ```
+- E2E tests (15 passing):
+  ```bash
+  cd server
+  yarn test:e2e templates.e2e-spec.ts
+  ```
+- Run all tests:
+  ```bash
+  cd server
+  yarn test
+  yarn test:e2e
+  ```
+- Coverage:
+  ```bash
+  cd server
+  yarn test:cov
+  ```
+
+iOS (Swift Testing + XCTest)
+- Unit tests (47 passing):
+  ```bash
+  cd AIPhotoApp
+  
+  # Build and run tests (recommended)
+  xcodebuild test \
+    -scheme AIPhotoApp \
+    -destination 'platform=iOS Simulator,name=iPhone 17' \
+    -only-testing:AIPhotoAppTests \
+    -parallel-testing-enabled NO \
+    2>&1 | xcpretty --color --test
+  
+  # Or build once, run multiple times (faster)
+  xcodebuild build-for-testing \
+    -scheme AIPhotoApp \
+    -destination 'platform=iOS Simulator,name=iPhone 17'
+  
+  xcodebuild test-without-building \
+    -scheme AIPhotoApp \
+    -destination 'platform=iOS Simulator,name=iPhone 17' \
+    -only-testing:AIPhotoAppTests \
+    -parallel-testing-enabled NO \
+    2>&1 | xcpretty --color --test
+  
+  # Or in Xcode: Cmd+U
+  ```
+- Important flags:
+  - `-parallel-testing-enabled NO`: Required for deterministic async tests
+  - `xcpretty --color --test`: Clean formatted output
+  - `-only-testing:AIPhotoAppTests`: Run only unit tests (not UI tests)
+- Test organization:
+  - AIPhotoAppTests/TemplateDTOsTests.swift (20 tests): DTO decoding, computed properties
+  - AIPhotoAppTests/HomeViewModelTests.swift (27 tests): ViewModel logic, API integration
+
+Web CMS (Vitest + React Testing Library)
+- Unit tests:
+  ```bash
+  cd web-cms
+  yarn test
+  ```
+- UI tests:
+  ```bash
+  cd web-cms
+  yarn test:ui
+  ```
+- Coverage:
+  ```bash
+  cd web-cms
+  yarn test:coverage
+  ```
+- E2E (future): Playwright
+
+Admin API E2E (Docker + DevAuth)
+- Preferred via Docker NestJS + DevAuth using .box-testing scripts
+- See .documents/workflows/run-tests.md → Admin API E2E (Docker + DevAuth)
+
+Test Coverage Summary (as of 2025-10-26)
+- Backend: 38 tests (23 unit + 15 e2e) - 100% passing
+- iOS: 47 tests (unit) - 100% passing
+- Total: 85 tests - 100% passing ✅
 
 Constraints & Notes
-- Public template listing does not expose prompts; prompts live in server-side template_versions (future).
-- Publish requires thumbnail to be present (validation enforced - future).
-- Assets are persisted under ASSETS_DIR with BASE_URL mapping; ensure mount present in docker-compose (future).
+- Public template listing does not expose prompts; prompts managed server-side only.
+- Prompts currently stored directly in Template model (Phase 1), will migrate to template_versions table (Phase 2).
+- Publish requires thumbnail to be present (validation enforced).
+- Assets are persisted in public/thumbnails/ with pattern: {slug}-{kind}-{timestamp}.{ext}.
+- Automatic file cleanup: old thumbnails deleted on upload, all files deleted on template delete.
 - NestJS global interceptors and filters provide consistent envelope responses.
+- Web CMS uses envelope unwrapping in API client interceptor for cleaner code.
 - Prisma migrations are version-controlled and applied via CLI.
+- Web CMS theme customizable via src/theme/theme.ts (Material-UI createTheme).
+- Image processing currently synchronous (10-30s timeout), async job queue planned for Phase 2.

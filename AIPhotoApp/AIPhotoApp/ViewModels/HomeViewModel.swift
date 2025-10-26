@@ -27,8 +27,8 @@ final class HomeViewModel {
         let tag: String?
         let isNew: Bool
         let isTrending: Bool
-        // Placeholder local image name (optional) for UI mock; replace with remote URL later
-        let thumbnailSymbol: String?
+        let thumbnailURL: URL?           // Real image URL from backend
+        let thumbnailSymbol: String?     // Fallback SF Symbol for UI mock
 
         init(id: UUID = UUID(),
              slug: String,
@@ -37,6 +37,7 @@ final class HomeViewModel {
              tag: String? = nil,
              isNew: Bool = false,
              isTrending: Bool = false,
+             thumbnailURL: URL? = nil,
              thumbnailSymbol: String? = nil) {
             self.id = id
             self.slug = slug
@@ -45,6 +46,7 @@ final class HomeViewModel {
             self.tag = tag
             self.isNew = isNew
             self.isTrending = isTrending
+            self.thumbnailURL = thumbnailURL
             self.thumbnailSymbol = thumbnailSymbol
         }
     }
@@ -189,25 +191,29 @@ final class HomeViewModel {
     }
 
     // Load templates from API (/v1/templates) using repository and bearer token
-    func fetchFromAPI(repo: TemplatesRepository, bearerIDToken: String, limit: Int? = nil, offset: Int? = nil, tokenProvider: (() async throws -> String)? = nil) {
+    func fetchFromAPI(repo: TemplatesRepositoryProtocol, bearerIDToken: String, limit: Int? = nil, offset: Int? = nil, tokenProvider: (() async throws -> String)? = nil) {
         isLoading = true
         errorMessage = nil
         Task {
             do {
                 let resp = try await repo.listTemplates(limit: limit, offset: offset, bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
                 let items: [TemplateItem] = resp.templates.map { dto in
+                    // Map DTO to TemplateItem with real data
                     TemplateItem(
                         slug: dto.id,
                         title: dto.name,
-                        subtitle: nil,
-                        tag: nil,
-                        isNew: false,
-                        isTrending: false,
-                        thumbnailSymbol: nil
+                        subtitle: subtitleText(for: dto),
+                        tag: tagText(for: dto),
+                        isNew: dto.isNew,
+                        isTrending: dto.isTrending,
+                        thumbnailURL: dto.thumbnailURL,
+                        thumbnailSymbol: "photo"  // Fallback icon
                     )
                 }
                 await MainActor.run {
-                    self.featured = Array(items.prefix(3))
+                    // Use first 3 trending or new items for featured, otherwise first 3
+                    let featured = items.filter { $0.isTrending || $0.isNew }.prefix(3)
+                    self.featured = Array(featured.isEmpty ? items.prefix(3) : featured)
                     self.allTemplates = items
                     self.isLoading = false
                 }
@@ -218,6 +224,37 @@ final class HomeViewModel {
                 }
             }
         }
+    }
+    
+    // Helper: Generate subtitle from template data
+    private func subtitleText(for dto: TemplateDTO) -> String? {
+        var parts: [String] = []
+        
+        if dto.isNew {
+            parts.append("New")
+        }
+        
+        if dto.isTrending {
+            parts.append("Popular")
+        }
+        
+        if let count = dto.usageCount, count > 0 {
+            parts.append("\(count) uses")
+        }
+        
+        return parts.isEmpty ? nil : parts.joined(separator: " • ")
+    }
+    
+    // Helper: Generate tag from template data
+    private func tagText(for dto: TemplateDTO) -> String? {
+        if dto.isNew {
+            return "New"
+        } else if dto.isTrending {
+            return "Trending"
+        } else if let count = dto.usageCount, count > 50 {
+            return "Popular"
+        }
+        return nil
     }
 
     func toggleFavorite(_ item: TemplateItem) {

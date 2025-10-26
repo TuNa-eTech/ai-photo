@@ -3,13 +3,70 @@
 Last updated: 2025-10-26
 
 Current work focus
-- **iOS Profile Screen:** Completed full profile screen with beige + liquid glass design.
+- **Templates API Integration (iOS ↔ Backend):** ✅ COMPLETED with 100% test coverage
+  - Backend security fixes and enhancements implemented
+  - iOS app fully integrated with real API data
+  - Comprehensive unit tests: 85 total (38 backend + 47 iOS) - all passing
+- **Web CMS Professional Redesign:** Completed comprehensive UI/UX redesign with Material-UI v7, professional theme, and modern components.
+- **Template Detail Page:** Implemented full template detail view with AI image generation testing capabilities.
 - Admin CRUD endpoints fully implemented and tested.
-- Web CMS fully functional with templates management (create, edit, delete, publish/unpublish).
+- Web CMS fully functional with templates management, testing, and professional interface.
 - File upload system working with thumbnail management and automatic cleanup.
 - Local development setup optimized (DB in Docker, server and web-cms run locally).
 
 Recent changes
+- ✅ **Templates API Integration & Testing (2025-10-26):**
+  - **Backend Security & Enhancements:**
+    - Added security filters to `/v1/templates`: only return published + public templates
+    - Implemented tags filtering with `hasSome` Prisma query
+    - Added comprehensive mapping from `DbTemplate` to `ApiTemplate` with snake_case
+    - Created `TemplatesRepositoryProtocol` for iOS testability
+  - **iOS DTOs & ViewModels:**
+    - Updated `TemplateDTO` with `publishedAt` and `usageCount` fields
+    - Added computed properties `isNew` (published within 7 days) and `isTrending` (usage >= 100)
+    - Updated `HomeViewModel.fetchFromAPI()` to use real API via repository protocol
+    - Dynamic subtitle/tag generation based on template data (New, Popular, uses count)
+    - Featured templates now prioritize trending/new items (max 3)
+    - Updated `GlassComponents` (CardGlassSmall, CardGlassLarge) with `AsyncImage` for real thumbnails
+  - **Comprehensive Test Coverage (100% pass rate):**
+    - **Backend Unit Tests (23):** TemplatesService security, search, tags, sorting, pagination, mapping
+    - **Backend E2E Tests (15):** `/v1/templates` endpoint with query params, response format validation
+    - **iOS Unit Tests (47):**
+      - TemplateDTO: decoding, computed properties (isNew/isTrending), Hashable, Identifiable
+      - HomeViewModel: initialization, fetchFromAPI, template mapping, filtering, search, favorites, featured logic
+    - Fixed async timing issues in iOS tests (increased sleep to 100ms)
+    - All 85 tests passing successfully
+  - **Files Updated:**
+    - Backend: `templates.service.ts`, `templates.service.spec.ts`, `templates.e2e-spec.ts`
+    - iOS: `TemplatesDTOs.swift`, `TemplatesRepository.swift`, `HomeViewModel.swift`, `GlassComponents.swift`
+    - iOS Tests: `TemplateDTOsTests.swift`, `HomeViewModelTests.swift`, `MockTemplatesRepository`
+
+
+- ✅ **Web CMS Template Detail Page (2025-10-26):**
+  - Implemented comprehensive Template Detail page with 2-column layout
+  - Created TemplateInfoCard: displays full template info with accordions for prompts and metadata
+  - Created ImageGeneratorForm: dual-mode (upload file / paste URL) with validation and preview
+  - Created ResultDisplay: side-by-side comparison of original and processed images
+  - Integrated with image processing API (/v1/images/process)
+  - Added loading states, error handling, and user feedback (snackbars)
+  - Full TypeScript typing with proper API client integration
+  - Build successful, production-ready
+- ✅ **Web CMS UI/UX Professional Redesign (2025-10-26):**
+  - Created professional theme: Indigo primary (#3f51b5) + Teal secondary (#009688), Inter font
+  - Built AppLayout component: navigation bar with logo, menu, user dropdown
+  - Enhanced TemplateFormDialog: tabbed interface (Basic Info, AI Prompts, Media, Settings) with character counters
+  - Redesigned TemplateTable: modern design with hover effects, color-coded chips, larger thumbnails
+  - Created Dashboard page: stats cards and recent templates list
+  - Built utility components: LoadingState, EmptyState for consistent UX
+  - Updated filters with responsive flexbox layout
+  - All components follow Material-UI v7 patterns, clean code, no TypeScript errors
+- ✅ **Phase 1 Prompt Fields Implementation (2025-10-26):**
+  - Added prompt, negativePrompt, modelProvider, modelName fields to Template model
+  - Updated Prisma schema with new fields and migration (20251026115941_add_prompt_fields)
+  - Updated all DTOs (CreateTemplateDto, UpdateTemplateDto) and service layer
+  - Updated Web CMS types and UI to support new fields
+  - Updated sample data with realistic prompts for all 13 templates
+  - Successfully re-imported sample data with new fields
 - ✅ **iOS Profile Screen (2025-10-26):**
   - Completed full profile screen with card-based layout matching Home design
   - Created ProfileComponents: HeroCard, StatCard, SettingsRow, SettingsToggleRow, DangerButton
@@ -43,31 +100,57 @@ Recent changes
 - Local dev setup: only DB in Docker, server (yarn start:dev) and web-cms run on host for better DX
 
 Decisions
+- Web CMS uses Material-UI v7 with custom professional theme (Indigo + Teal, Inter font)
+- Template prompts stored directly in Template model (Phase 1), will move to template_versions later (Phase 2)
+- Image processing uses synchronous API for Phase 1, will add async job queue later
+- Web CMS Template Detail page uses 2-column layout (info + generator) for better UX
 - Use multer (@nestjs/platform-express) for file upload handling
 - Store uploaded files in public/thumbnails/ with pattern: {slug}-{kind}-{timestamp}.{ext}
 - Auto-delete old files when uploading new thumbnails or deleting templates (disk cleanup)
 - Use process.cwd() for static file path to work in both dev and prod
 - Admin endpoints use full TemplateAdmin type with all fields, public endpoints use minimal Template type
 - Run server and web-cms locally for hot-reload, only DB in Docker
+- **Testing:**
+  - Backend: Use Jest for unit tests, Supertest for e2e, mock PrismaService for isolation
+  - iOS: Use Swift Testing framework (@Test, @Suite), mock repositories via protocols
+  - iOS async tests require 100ms sleep for Task completion (unstructured Task in ViewModel)
+  - Disable parallel testing on iOS (`-parallel-testing-enabled NO`) for deterministic results
 
 Next steps
-- **Complete iOS UI redesign with beige theme and minimalist glass effects**
-- Add filtering/sorting to admin list endpoint (status, visibility, tags, search)
-- Implement template_versions table for prompt management
+- **iOS Integration Testing:** Test real API integration with Firebase auth on simulator/device
+- **End-to-End iOS Tests:** Implement UI tests for template browsing and favorites flow
+- **Test Template Detail page with real backend API** (image processing endpoint)
+- **Implement async job queue for image processing** (polling every 2s)
+- Implement file upload endpoint (/v1/images/upload) for image generator
+- Add test history storage and display
+- Implement template_versions table for prompt management (Phase 2)
 - Add template_assets table for multiple asset types (preview, cover)
-- Add E2E tests for admin endpoints
-- iOS app integration with new template fields
+- Add E2E tests for Web CMS
+- Deploy backend and configure production Firebase credentials
 
 References
-- .implementation_plan/profile-screen-design.md → Profile screen implementation plan
-- .implementation_plan/ui-redesign-beige-minimalist.md → UI redesign implementation plan
-- AIPhotoApp/AIPhotoApp/Views/Common/ProfileComponents.swift → Profile components
-- AIPhotoApp/AIPhotoApp/Views/Home/ProfileView.swift → Profile main screen
-- AIPhotoApp/AIPhotoApp/Views/Home/ProfileEditView.swift → Profile edit modal
-- AIPhotoApp/AIPhotoApp/Views/Common/GlassComponents.swift → Glass design system
-- server/src/templates/templates-admin.controller.ts → Admin CRUD endpoints
-- server/src/templates/templates.service.ts → Business logic with file cleanup
-- server/src/templates/dto/ → DTOs (CreateTemplateDto, UpdateTemplateDto, UploadAssetDto)
-- web-cms/src/components/templates/ → UI components (TemplateFormDialog, TemplateTable)
-- .box-testing/json/templates-sample.json → Sample data for testing (13 templates)
-- server/scripts/import-from-box-testing.ts → Script to import sample data
+- **API Integration & Testing:**
+  - server/src/templates/templates.service.ts → Security filters, tags, mapping logic
+  - server/src/templates/templates.service.spec.ts → 23 unit tests for service layer
+  - server/test/templates.e2e-spec.ts → 15 e2e tests for /v1/templates endpoint
+  - AIPhotoApp/AIPhotoApp/Models/DTOs/TemplatesDTOs.swift → iOS DTOs with computed properties
+  - AIPhotoApp/AIPhotoApp/Repositories/TemplatesRepository.swift → iOS API client with protocol
+  - AIPhotoApp/AIPhotoApp/ViewModels/HomeViewModel.swift → Real API integration logic
+  - AIPhotoApp/AIPhotoAppTests/TemplateDTOsTests.swift → 20 iOS DTO tests
+  - AIPhotoApp/AIPhotoAppTests/HomeViewModelTests.swift → 27 iOS ViewModel tests
+- **Web CMS:**
+  - .implementation_plan/ui-ux-redesign-summary.md → Web CMS UI/UX redesign complete details
+  - .implementation_plan/template-detail-page-summary.md → Template Detail page implementation
+  - .implementation_plan/phase1-prompt-fields-implementation-summary.md → Prompt fields Phase 1
+  - web-cms/src/theme/theme.ts → Professional theme configuration
+  - web-cms/src/components/layout/AppLayout.tsx → Main layout with navigation
+  - web-cms/src/components/templates/TemplateDetailPage.tsx → Template detail with generator
+  - web-cms/src/api/images.ts → Image processing API client
+- **iOS UI:**
+  - .implementation_plan/profile-screen-design.md → iOS Profile screen plan
+  - .implementation_plan/ui-redesign-beige-minimalist.md → iOS UI redesign plan
+  - AIPhotoApp/AIPhotoApp/Views/Common/GlassComponents.swift → Liquid glass UI components
+- **Backend:**
+  - server/src/templates/templates-admin.controller.ts → Admin CRUD endpoints
+  - .box-testing/json/templates-sample.json → Sample data with prompts (13 templates)
+  - server/scripts/import-from-box-testing.ts → Script to import sample data

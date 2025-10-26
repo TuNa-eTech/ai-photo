@@ -223,7 +223,8 @@ struct TemplatesHomeView: View {
                             title: item.title,
                             subtitle: item.subtitle,
                             badge: item.isNew ? "New" : (item.isTrending ? "Popular" : nil),
-                            image: Image(systemName: item.thumbnailSymbol ?? "photo"),
+                            thumbnailURL: item.thumbnailURL,
+                            thumbnailSymbol: item.thumbnailSymbol,
                             parallax: 12
                         )
                         .frame(width: 320, height: 240)
@@ -258,7 +259,8 @@ struct TemplatesHomeView: View {
                     CardGlassSmall(
                         title: item.title,
                         tag: item.tag,
-                        image: Image(systemName: item.thumbnailSymbol ?? "photo")
+                        thumbnailURL: item.thumbnailURL,
+                        thumbnailSymbol: item.thumbnailSymbol
                     )
                     .overlay(alignment: .topTrailing) {
                         favoriteBadge(isFav: home.isFavorite(item))

@@ -1,26 +1,14 @@
 /**
  * App Component
  * 
- * Main application wrapper with Router and Theme
+ * Main application wrapper with Router and Professional Theme
  */
 
 import { RouterProvider } from 'react-router-dom'
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material'
+import { CssBaseline, ThemeProvider } from '@mui/material'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { router } from './router/routes'
-
-// Create MUI theme
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-})
+import { theme } from './theme/theme'
 
 // Create Query Client
 const queryClient = new QueryClient({

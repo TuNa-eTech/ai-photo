@@ -40,7 +40,7 @@ import type {
 import { APIClientError } from '../../api/client'
 
 export function TemplatesListPage(): React.ReactElement {
-  const { user, logout } = useAuth()
+  useAuth() // For authentication check
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -149,13 +149,6 @@ export function TemplatesListPage(): React.ReactElement {
     setSnackbar({ open: true, message, severity })
   }
 
-  const handleLogout = async (): Promise<void> => {
-    try {
-      await logout()
-    } catch (err) {
-      console.error('Logout failed:', err)
-    }
-  }
 
   const handleFiltersChange = (newFilters: AdminTemplatesQueryParams): void => {
     setFilters({ ...newFilters, limit: filters.limit, offset: 0 })
@@ -266,20 +259,17 @@ export function TemplatesListPage(): React.ReactElement {
     <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          Templates
-        </Typography>
-        <Box display="flex" gap={2} alignItems="center">
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateClick}>
-            New Template
-          </Button>
-          <Typography variant="body2" color="text.secondary">
-            {user?.email}
+        <Box>
+          <Typography variant="h4" component="h1" fontWeight={700} gutterBottom>
+            Templates
           </Typography>
-          <Button variant="outlined" onClick={handleLogout}>
-            Logout
-          </Button>
+          <Typography variant="body2" color="text.secondary">
+            Manage your AI image generation templates
+          </Typography>
         </Box>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateClick} size="large">
+          New Template
+        </Button>
       </Box>
 
       {/* Error Alert */}
@@ -305,6 +295,7 @@ export function TemplatesListPage(): React.ReactElement {
         onPublish={handlePublish}
         onUnpublish={handleUnpublish}
         onView={handleView}
+        onCreateNew={handleCreateClick}
       />
 
       {/* Pagination */}

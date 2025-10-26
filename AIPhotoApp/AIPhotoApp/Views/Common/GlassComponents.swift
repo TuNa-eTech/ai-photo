@@ -176,27 +176,48 @@ struct GlassFloatingButton: View {
 struct CardGlassSmall: View {
     let title: String
     let tag: String?
-    let image: Image? // Placeholder/local image if available
+    let thumbnailURL: URL?          // Real image URL from backend
+    let thumbnailSymbol: String?    // Fallback SF Symbol
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            // Thumbnail with subtle tint overlay
-            (image ?? Image(systemName: "photo"))
-                .resizable()
-                .scaledToFill()
-                .frame(maxWidth: .infinity)
-                .overlay(
-                    LinearGradient(
-                        colors: [
-                            GlassTokens.primary1.opacity(0.4),
-                            GlassTokens.accent1.opacity(0.3)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+            // Thumbnail: AsyncImage with fallback
+            Group {
+                if let url = thumbnailURL {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        case .failure:
+                            fallbackImage
+                        case .empty:
+                            ZStack {
+                                Color.gray.opacity(0.2)
+                                ProgressView()
+                            }
+                        @unknown default:
+                            fallbackImage
+                        }
+                    }
+                } else {
+                    fallbackImage
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .overlay(
+                LinearGradient(
+                    colors: [
+                        GlassTokens.primary1.opacity(0.4),
+                        GlassTokens.accent1.opacity(0.3)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
-                .blur(radius: GlassTokens.blurCard)
-                .clipped()
+            )
+            .blur(radius: GlassTokens.blurCard)
+            .clipped()
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
@@ -215,13 +236,20 @@ struct CardGlassSmall: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text("\(title)\(tag.map { ", \($0)" } ?? "")"))
     }
+    
+    private var fallbackImage: some View {
+        Image(systemName: thumbnailSymbol ?? "photo")
+            .resizable()
+            .scaledToFill()
+    }
 }
 
 struct CardGlassLarge: View {
     let title: String
     let subtitle: String?
     let badge: String?
-    let image: Image?
+    let thumbnailURL: URL?          // Real image URL from backend
+    let thumbnailSymbol: String?    // Fallback SF Symbol
     // Parallax factor in points (10–16 recommended)
     var parallax: CGFloat = 12
 
@@ -231,23 +259,46 @@ struct CardGlassLarge: View {
         GeometryReader { geo in
             let minX = geo.frame(in: .global).minX
             ZStack(alignment: .bottomLeading) {
-                // Background with subtle parallax and beige tint
-                (image ?? Image(systemName: "photo"))
-                    .resizable()
-                    .scaledToFill()
-                    .offset(x: -minX / 20) // parallax divisor for subtle effect
-                    .overlay(
-                        LinearGradient(
-                            colors: [
-                                GlassTokens.primary2.opacity(0.5),
-                                GlassTokens.accent1.opacity(0.4)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                // Background with subtle parallax and beige tint: AsyncImage
+                Group {
+                    if let url = thumbnailURL {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .offset(x: -minX / 20) // parallax effect
+                            case .failure:
+                                fallbackImage
+                                    .offset(x: -minX / 20)
+                            case .empty:
+                                ZStack {
+                                    Color.gray.opacity(0.2)
+                                    ProgressView()
+                                }
+                            @unknown default:
+                                fallbackImage
+                                    .offset(x: -minX / 20)
+                            }
+                        }
+                    } else {
+                        fallbackImage
+                            .offset(x: -minX / 20)
+                    }
+                }
+                .overlay(
+                    LinearGradient(
+                        colors: [
+                            GlassTokens.primary2.opacity(0.5),
+                            GlassTokens.accent1.opacity(0.4)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
                     )
-                    .blur(radius: GlassTokens.blurCard)
-                    .clipped()
+                )
+                .blur(radius: GlassTokens.blurCard)
+                .clipped()
 
                 VStack(alignment: .leading, spacing: 8) {
                     if let badge {
@@ -278,6 +329,12 @@ struct CardGlassLarge: View {
         }
         .frame(width: 320, height: 240)
     }
+    
+    private var fallbackImage: some View {
+        Image(systemName: thumbnailSymbol ?? "photo")
+            .resizable()
+            .scaledToFill()
+    }
 }
 
 // MARK: - Debug Overlay (DEBUG only)
@@ -300,11 +357,11 @@ struct DebugOverlay: View {
     ZStack {
         GlassBackgroundView(animated: false)
         VStack(spacing: 16) {
-            CardGlassLarge(title: "Anime Style", subtitle: "New • High Quality", badge: "New", image: Image(systemName: "moon.stars.fill"))
+            CardGlassLarge(title: "Anime Style", subtitle: "New • High Quality", badge: "New", thumbnailURL: nil, thumbnailSymbol: "moon.stars.fill")
                 .frame(width: 320)
             HStack {
-                CardGlassSmall(title: "Cartoon", tag: "Trending", image: Image(systemName: "paintbrush.pointed.fill"))
-                CardGlassSmall(title: "Cyberpunk", tag: "New", image: Image(systemName: "bolt.fill"))
+                CardGlassSmall(title: "Cartoon", tag: "Trending", thumbnailURL: nil, thumbnailSymbol: "paintbrush.pointed.fill")
+                CardGlassSmall(title: "Cyberpunk", tag: "New", thumbnailURL: nil, thumbnailSymbol: "bolt.fill")
             }
             .frame(height: 180)
             .padding(.horizontal)

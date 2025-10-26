@@ -73,13 +73,35 @@ export class TemplatesService {
   async listTemplates(query: QueryTemplatesDto): Promise<{ templates: ApiTemplate[] }> {
     const { limit, offset, q, tags, sort } = query;
 
-    // TODO: tags filter requires taxonomy tables. Ignored for milestone 1.
-    const where: any = {};
+    // Security: Only return published + public templates to end users
+    const where: any = {
+      status: TemplateStatus.published,
+      visibility: 'public',
+    };
+
+    // Search filter (if provided)
     if (q && q.trim()) {
-      where.OR = [
-        { name: { contains: q.trim(), mode: 'insensitive' } },
-        { id: { contains: q.trim(), mode: 'insensitive' } },
+      where.AND = [
+        {
+          OR: [
+            { name: { contains: q.trim(), mode: 'insensitive' } },
+            { id: { contains: q.trim(), mode: 'insensitive' } },
+          ],
+        },
       ];
+    }
+
+    // Tags filter (if provided)
+    // TODO: tags filter requires taxonomy tables. Ignored for milestone 1.
+    if (tags && tags.trim()) {
+      const tagList = tags.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
+      if (tagList.length > 0) {
+        if (where.AND) {
+          where.AND.push({ tags: { hasSome: tagList } });
+        } else {
+          where.AND = [{ tags: { hasSome: tagList } }];
+        }
+      }
     }
 
     const orderBy = this.resolveOrder(sort);

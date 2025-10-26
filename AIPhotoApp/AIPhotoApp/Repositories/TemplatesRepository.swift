@@ -7,7 +7,20 @@
 
 import Foundation
 
-final class TemplatesRepository {
+// MARK: - Protocol for testability
+
+protocol TemplatesRepositoryProtocol {
+    func listTemplates(
+        limit: Int?,
+        offset: Int?,
+        bearerIDToken: String,
+        tokenProvider: (() async throws -> String)?
+    ) async throws -> TemplatesListResponse
+}
+
+// MARK: - Implementation
+
+final class TemplatesRepository: TemplatesRepositoryProtocol {
 
     enum NetworkError: LocalizedError {
         case unauthorized
