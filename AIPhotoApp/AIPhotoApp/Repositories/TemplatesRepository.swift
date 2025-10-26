@@ -16,6 +16,13 @@ protocol TemplatesRepositoryProtocol {
         bearerIDToken: String,
         tokenProvider: (() async throws -> String)?
     ) async throws -> TemplatesListResponse
+    
+    func listTrendingTemplates(
+        limit: Int?,
+        offset: Int?,
+        bearerIDToken: String,
+        tokenProvider: (() async throws -> String)?
+    ) async throws -> TemplatesListResponse
 }
 
 // MARK: - Implementation
@@ -39,6 +46,16 @@ final class TemplatesRepository: TemplatesRepositoryProtocol {
     }
 
     private let client: APIClientProtocol
+    
+    // Custom decoder that respects explicit CodingKeys
+    // IMPORTANT: Do NOT use .convertFromSnakeCase because it converts
+    // "thumbnail_url" → "thumbnailUrl" (lowercase u), but our property is "thumbnailURL"
+    private var customDecoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        // We have explicit CodingKeys, so no need for auto snake_case conversion
+        return decoder
+    }
 
     init(client: APIClientProtocol = APIClient()) {
         self.client = client
@@ -62,7 +79,7 @@ final class TemplatesRepository: TemplatesRepositoryProtocol {
                     req,
                     as: TemplatesListResponse.self,
                     authToken: bearerIDToken,
-                    decoder: nil,
+                    decoder: customDecoder,
                     tokenProvider: tokenProvider
                 )
             } else {
@@ -70,9 +87,67 @@ final class TemplatesRepository: TemplatesRepositoryProtocol {
                     req,
                     as: TemplatesListResponse.self,
                     authToken: bearerIDToken,
-                    decoder: nil
+                    decoder: customDecoder
                 )
             }
+        } catch let apiErr as APIClientError {
+            switch apiErr {
+            case .httpStatus(let code, let body):
+                if code == 401 { throw NetworkError.unauthorized }
+                if let body, !body.isEmpty {
+                    throw NetworkError.serverError(body)
+                }
+                throw NetworkError.invalidResponse
+            case .decodingFailed:
+                throw NetworkError.decodingFailed
+            default:
+                throw NetworkError.invalidResponse
+            }
+        } catch {
+            throw NetworkError.invalidResponse
+        }
+    }
+    
+    // GET /v1/templates/trending (Bearer required)
+    func listTrendingTemplates(limit: Int? = nil,
+                                offset: Int? = nil,
+                                bearerIDToken: String,
+                                tokenProvider: (() async throws -> String)? = nil) async throws -> TemplatesListResponse {
+        var req = APIRequest(method: "GET", path: AppConfig.APIPath.trendingTemplates)
+        var items: [URLQueryItem] = []
+        if let limit { items.append(URLQueryItem(name: "limit", value: String(limit))) }
+        if let offset { items.append(URLQueryItem(name: "offset", value: String(offset))) }
+        req.queryItems = items
+
+        do {
+            // Backend returns standardized envelope (retry once on 401 if tokenProvider provided)
+            let result: TemplatesListResponse
+            if let tokenProvider {
+                result = try await client.sendEnvelopeRetry401(
+                    req,
+                    as: TemplatesListResponse.self,
+                    authToken: bearerIDToken,
+                    decoder: customDecoder,
+                    tokenProvider: tokenProvider
+                )
+            } else {
+                result = try await client.sendEnvelope(
+                    req,
+                    as: TemplatesListResponse.self,
+                    authToken: bearerIDToken,
+                    decoder: customDecoder
+                )
+            }
+            
+            #if DEBUG
+            print("✅ Decoded \(result.templates.count) templates successfully")
+            if let first = result.templates.first {
+                print("   Sample: \(first.name)")
+                print("   URL: \(first.thumbnailURL?.absoluteString ?? "nil")")
+            }
+            #endif
+            
+            return result
         } catch let apiErr as APIClientError {
             switch apiErr {
             case .httpStatus(let code, let body):

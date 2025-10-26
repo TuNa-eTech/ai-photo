@@ -181,7 +181,7 @@ struct CardGlassSmall: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            // Thumbnail: AsyncImage with fallback
+            // Thumbnail: AsyncImage with fallback (NO BLUR for clarity)
             Group {
                 if let url = thumbnailURL {
                     AsyncImage(url: url) { phase in
@@ -190,47 +190,74 @@ struct CardGlassSmall: View {
                             image
                                 .resizable()
                                 .scaledToFill()
-                        case .failure:
-                            fallbackImage
+                        case .failure(let error):
+                            VStack {
+                                fallbackImage
+                                #if DEBUG
+                                Text("Failed: \(error.localizedDescription)")
+                                    .font(.caption2)
+                                    .foregroundStyle(.red)
+                                    .padding(4)
+                                #endif
+                            }
                         case .empty:
                             ZStack {
-                                Color.gray.opacity(0.2)
+                                LinearGradient(
+                                    colors: [GlassTokens.primary1.opacity(0.3), GlassTokens.accent1.opacity(0.2)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                                 ProgressView()
+                                    .tint(GlassTokens.textPrimary)
                             }
                         @unknown default:
                             fallbackImage
                         }
                     }
+                    .onAppear {
+                        #if DEBUG
+                        print("🖼️ Loading image: \(url.absoluteString)")
+                        #endif
+                    }
                 } else {
-                    fallbackImage
+                    ZStack {
+                        fallbackImage
+                        #if DEBUG
+                        Text("No URL")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                            .padding(4)
+                        #endif
+                    }
                 }
             }
-            .frame(maxWidth: .infinity)
-            .overlay(
-                LinearGradient(
-                    colors: [
-                        GlassTokens.primary1.opacity(0.4),
-                        GlassTokens.accent1.opacity(0.3)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .blur(radius: GlassTokens.blurCard)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
+            
+            // Gradient overlay for better text readability
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(0),
+                    Color.black.opacity(0.6)
+                ],
+                startPoint: .center,
+                endPoint: .bottom
+            )
 
+            // Text overlay
             VStack(alignment: .leading, spacing: 6) {
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(GlassTokens.textPrimary)
-                    .lineLimit(1)
                 if let tag {
                     GlassChip(text: tag, systemImage: "flame")
                 }
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
             }
             .padding(12)
         }
-        .frame(height: 180)
+        .frame(height: 200)
         .glassCard()
         .contentShape(RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous))
         .accessibilityElement(children: .combine)
@@ -238,9 +265,16 @@ struct CardGlassSmall: View {
     }
     
     private var fallbackImage: some View {
-        Image(systemName: thumbnailSymbol ?? "photo")
-            .resizable()
-            .scaledToFill()
+        ZStack {
+            LinearGradient(
+                colors: [GlassTokens.primary1, GlassTokens.accent1],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Image(systemName: thumbnailSymbol ?? "photo")
+                .font(.system(size: 48))
+                .foregroundStyle(.white.opacity(0.5))
+        }
     }
 }
 

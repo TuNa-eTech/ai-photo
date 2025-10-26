@@ -2,7 +2,7 @@
 
 Foundation document defining core requirements and goals. Owner-maintained; update as the project evolves.
 
-Last updated: 2025-10-25
+Last updated: 2025-10-26
 
 ## Project Summary
 AI Image Stylist is a cross-platform system:
@@ -22,6 +22,10 @@ Authentication is unified via Firebase Auth (Google/Apple). Clients attach Fireb
   - /v1/templates supports:
     - Fields: thumbnail_url, published_at, usage_count
     - Query params: limit, offset, q, tags (CSV), sort (newest|popular|name)
+  - /v1/templates/trending:
+    - Returns high-usage templates (usage_count >= 500) sorted by usage DESC
+    - Optimized for Home screen "Trending Templates" section
+    - Query params: limit (max 50), offset
   - Envelope response structure with meta.requestId/timestamp.
   - Prisma queries support filtering, sorting, and thumbnail join.
   - OpenAPI 3.1 spec in swagger/openapi.yaml.

@@ -38,8 +38,8 @@ struct RootRouterView: View {
                 // Go straight to Home when authenticated
                 TemplatesHomeView(model: model)
             } else {
-                // Otherwise show the login landing
-                AuthLandingView(model: model)
+                // Otherwise show the login landing (V2 with Liquid Glass design)
+                AuthLandingViewV2(model: model)
             }
         }
     }

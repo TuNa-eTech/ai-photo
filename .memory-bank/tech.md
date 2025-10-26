@@ -9,8 +9,12 @@ Technologies
   - Production: Firebase Admin SDK, BearerAuthGuard with Firebase token verification.
   - Local Dev: DevAuth (DEV_AUTH_TOKEN env variable) for admin endpoints.
 - Frontends:
-  - iOS: SwiftUI, Firebase SDK.
+  - iOS: SwiftUI (iOS 17+), Firebase SDK, Liquid Glass Beige design system.
+    - Design tokens: GlassTokens (beige palette: #F5E6D3, #F4E4C1, #E8D5D0, text #4A3F35)
+    - Glass effects: .ultraThinMaterial, gradient overlays, blur, shadows
+    - Animations: Spring transitions, organic blob motion, haptic feedback
   - Web CMS: Vite 7 + React 19 + TypeScript 5.9 + Material-UI v7 + React Query v5 + React Router v7.
+    - Custom theme: Indigo primary (#3f51b5) + Teal secondary (#009688), Inter font
 - Containerization: Docker Compose (Postgres, NestJS Server, optional Web CMS/Preview, pgAdmin).
 - Tooling: yarn, prisma CLI, curl, jq, yq (for scripting), psql via docker exec/run.
 
@@ -219,3 +223,32 @@ Constraints & Notes
 - Prisma migrations are version-controlled and applied via CLI.
 - Web CMS theme customizable via src/theme/theme.ts (Material-UI createTheme).
 - Image processing currently synchronous (10-30s timeout), async job queue planned for Phase 2.
+
+iOS-Specific Best Practices
+- **JSONDecoder + CodingKeys Pattern:**
+  - NEVER combine `.convertFromSnakeCase` with explicit CodingKeys
+  - Problem: `.convertFromSnakeCase` converts `thumbnail_url` → `thumbnailUrl` (lowercase "u"), conflicts with Swift property `thumbnailURL` (uppercase "URL")
+  - Solution: Use explicit CodingKeys WITHOUT `.convertFromSnakeCase`
+  - Always provide custom decoder when working with backend APIs that use snake_case
+  - Example: `TemplatesRepository.customDecoder` - only sets `.iso8601` for dates
+- **iOS Simulator Network:**
+  - Simulator CANNOT access host's `localhost` - `localhost` in simulator = simulator itself
+  - Solution: Use Mac's actual IP address (e.g., `192.168.1.123:8080`)
+  - Find IP: `ifconfig | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}' | head -1`
+  - Update `AppConfig.swift` with Mac IP for local testing
+  - Backend MUST listen on `0.0.0.0` (all interfaces), not just `localhost`
+  - See `SIMULATOR_NETWORK_FIX.md` for detailed troubleshooting
+- **AsyncImage Best Practices:**
+  - Always handle all phases: `.success`, `.failure`, `.empty`
+  - Use `@State` for parent ViewModels to ensure persistence across view updates
+  - Avoid applying blur effects to actual images - use gradient overlays for text readability instead
+  - Add debug logging in DEBUG builds to track loading failures
+- **State Management:**
+  - Use `@State private var` for ViewModels in views to prevent re-initialization
+  - Pass ViewModels explicitly to child views (dependency injection)
+  - Use `@Observable` macro for ViewModels (not `@StateObject`)
+- **API Integration:**
+  - Always use Repository Protocol pattern for testability
+  - Mock repositories in tests, never make real network calls
+  - Handle 401 retry with token refresh via tokenProvider closure
+  - Use envelope unwrapping in repositories to simplify ViewModel code

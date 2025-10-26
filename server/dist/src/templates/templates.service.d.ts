@@ -36,6 +36,9 @@ export declare class TemplatesService {
     listTemplates(query: QueryTemplatesDto): Promise<{
         templates: ApiTemplate[];
     }>;
+    listTrendingTemplates(query: QueryTemplatesDto): Promise<{
+        templates: ApiTemplate[];
+    }>;
     private mapToAdminApi;
     listAdminTemplates(): Promise<{
         templates: ApiTemplateAdmin[];

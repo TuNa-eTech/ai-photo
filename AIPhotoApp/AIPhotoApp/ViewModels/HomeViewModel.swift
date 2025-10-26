@@ -2,7 +2,7 @@
 //  HomeViewModel.swift
 //  AIPhotoApp
 //
-//  ViewModel for Home screen (templates listing, featured, filters, search, recent results)
+//  ViewModel for Home screen (MVP: trending templates + user projects)
 //
 
 import Foundation
@@ -11,14 +11,6 @@ import Observation
 @Observable
 final class HomeViewModel {
     // MARK: - Types
-    enum Filter: String, CaseIterable, Identifiable {
-        case all = "All"
-        case trending = "Trending"
-        case new = "New"
-        case favorites = "Favorites"
-        var id: String { rawValue }
-    }
-
     struct TemplateItem: Identifiable, Hashable {
         let id: UUID
         let slug: String
@@ -51,19 +43,11 @@ final class HomeViewModel {
         }
     }
 
-    // MARK: - Inputs (UI state)
-    var searchText: String = ""
-    var selectedFilter: Filter = .all
-    var selectedCategory: TemplateCategory = .all
-
     // MARK: - Outputs (data)
-    var featured: [TemplateItem] = []
-    var allTemplates: [TemplateItem] = []
-    var recentResults: [String] = [] // placeholder identifiers or local asset names
+    var trendingTemplates: [TemplateItem] = []
+    var userProjects: [Project] = []
+    var allTemplates: [TemplateItem] = [] // For AllTemplatesView
     
-    // MARK: - Stats
-    var todayCreatedCount: Int = 0 // Number of templates/images created today
-
     // MARK: - Favorites
     private(set) var favorites: Set<UUID> = []
 
@@ -72,36 +56,17 @@ final class HomeViewModel {
     var errorMessage: String?
 
     // MARK: - Computed
-    var filteredTemplates: [TemplateItem] {
-        var list = allTemplates
-
-        // Category filter
-        if selectedCategory != .all {
-            list = list.filter { $0.tag == selectedCategory.id }
-        }
-
-        // Filter segment
-        switch selectedFilter {
-        case .all:
-            break
-        case .trending:
-            list = list.filter { $0.isTrending }
-        case .new:
-            list = list.filter { $0.isNew }
-        case .favorites:
-            list = list.filter { favorites.contains($0.id) }
-        }
-
-        // Search
-        let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !q.isEmpty {
-            list = list.filter {
-                $0.title.localizedCaseInsensitiveContains(q) ||
-                ($0.tag?.localizedCaseInsensitiveContains(q) ?? false) ||
-                ($0.subtitle?.localizedCaseInsensitiveContains(q) ?? false)
-            }
-        }
-        return list
+    var shouldShowProjects: Bool {
+        !userProjects.isEmpty
+    }
+    
+    var trendingLimit: Int {
+        // Show fewer trending templates when user has projects
+        shouldShowProjects ? 4 : 6
+    }
+    
+    var displayTrendingTemplates: [TemplateItem] {
+        Array(trendingTemplates.prefix(trendingLimit))
     }
 
     // MARK: - Actions
@@ -114,7 +79,8 @@ final class HomeViewModel {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
             guard let self else { return }
 
-            let f: [TemplateItem] = [
+            // Trending templates
+            let trending: [TemplateItem] = [
                 .init(slug: "anime-style",
                       title: "Anime Style",
                       subtitle: "New • High Quality",
@@ -135,38 +101,20 @@ final class HomeViewModel {
                       tag: "Trending",
                       isNew: true,
                       isTrending: true,
-                      thumbnailSymbol: "bolt.fill")
-            ]
-            self.featured = f
-
-            let grid: [TemplateItem] = [
-                .init(slug: "cartoon",
-                      title: "Cartoon",
-                      subtitle: "Playful lines",
-                      tag: "Trending",
-                      isNew: false,
-                      isTrending: true,
-                      thumbnailSymbol: "paintbrush.fill"),
-                .init(slug: "cyberpunk",
-                      title: "Cyberpunk",
-                      subtitle: "Neon vibe",
-                      tag: "New",
-                      isNew: true,
-                      isTrending: true,
                       thumbnailSymbol: "bolt.fill"),
                 .init(slug: "portrait-hq",
                       title: "Portrait HQ",
                       subtitle: "Natural tone",
                       tag: "Studio",
                       isNew: false,
-                      isTrending: false,
+                      isTrending: true,
                       thumbnailSymbol: "person.crop.square"),
                 .init(slug: "watercolor",
                       title: "Watercolor",
                       subtitle: "Soft & airy",
                       tag: "Art",
                       isNew: true,
-                      isTrending: false,
+                      isTrending: true,
                       thumbnailSymbol: "drop.fill"),
                 .init(slug: "pixelart",
                       title: "Pixel Art",
@@ -174,24 +122,60 @@ final class HomeViewModel {
                       tag: "Retro",
                       isNew: false,
                       isTrending: true,
-                      thumbnailSymbol: "gamecontroller.fill"),
-                .init(slug: "noir-film",
-                      title: "Noir Film",
-                      subtitle: "B&W dramatic",
-                      tag: "Classic",
-                      isNew: false,
-                      isTrending: false,
-                      thumbnailSymbol: "camera.aperture")
+                      thumbnailSymbol: "gamecontroller.fill")
             ]
-            self.allTemplates = grid
-
-            self.recentResults = ["recent-1", "recent-2", "recent-3"]
+            self.trendingTemplates = trending
+            self.allTemplates = trending // For now, all templates = trending
+            
+            // Mock user projects (uncomment to test projects UI)
+            // self.userProjects = self.mockProjects()
+            
             self.isLoading = false
         }
     }
 
-    // Load templates from API (/v1/templates) using repository and bearer token
-    func fetchFromAPI(repo: TemplatesRepositoryProtocol, bearerIDToken: String, limit: Int? = nil, offset: Int? = nil, tokenProvider: (() async throws -> String)? = nil) {
+    // Load trending templates from API (/v1/templates/trending) using repository and bearer token
+    func fetchTrendingFromAPI(repo: TemplatesRepositoryProtocol, bearerIDToken: String, limit: Int? = 20, tokenProvider: (() async throws -> String)? = nil) {
+        isLoading = true
+        errorMessage = nil
+        Task {
+            do {
+                let resp = try await repo.listTrendingTemplates(limit: limit, offset: 0, bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
+                let items: [TemplateItem] = resp.templates.map { dto in
+                    #if DEBUG
+                    print("📦 DTO: \(dto.name)")
+                    print("   - thumbnailURL: \(dto.thumbnailURL?.absoluteString ?? "nil")")
+                    print("   - isNew: \(dto.isNew), isTrending: \(dto.isTrending)")
+                    #endif
+                    
+                    // Map DTO to TemplateItem with real data
+                    return TemplateItem(
+                        slug: dto.id,
+                        title: dto.name,
+                        subtitle: subtitleText(for: dto),
+                        tag: tagText(for: dto),
+                        isNew: dto.isNew,
+                        isTrending: dto.isTrending,
+                        thumbnailURL: dto.thumbnailURL,
+                        thumbnailSymbol: "photo"  // Fallback icon
+                    )
+                }
+                await MainActor.run {
+                    // Trending templates directly from API (no client-side filtering needed)
+                    self.trendingTemplates = items
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.isLoading = false
+                    self.errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+    
+    // Load all templates from API (/v1/templates) - for AllTemplatesView
+    func fetchAllTemplatesFromAPI(repo: TemplatesRepositoryProtocol, bearerIDToken: String, limit: Int? = nil, offset: Int? = nil, tokenProvider: (() async throws -> String)? = nil) {
         isLoading = true
         errorMessage = nil
         Task {
@@ -211,9 +195,6 @@ final class HomeViewModel {
                     )
                 }
                 await MainActor.run {
-                    // Use first 3 trending or new items for featured, otherwise first 3
-                    let featured = items.filter { $0.isTrending || $0.isNew }.prefix(3)
-                    self.featured = Array(featured.isEmpty ? items.prefix(3) : featured)
                     self.allTemplates = items
                     self.isLoading = false
                 }
@@ -268,4 +249,25 @@ final class HomeViewModel {
     func isFavorite(_ item: TemplateItem) -> Bool {
         favorites.contains(item.id)
     }
+    
+    // MARK: - Mock Data (for testing)
+    
+    #if DEBUG
+    func mockProjects() -> [Project] {
+        [
+            Project(
+                templateId: "anime-style",
+                templateName: "Anime Style",
+                createdAt: Date().addingTimeInterval(-86400 * 2), // 2 days ago
+                status: .completed
+            ),
+            Project(
+                templateId: "cyberpunk",
+                templateName: "Cyberpunk",
+                createdAt: Date().addingTimeInterval(-3600 * 5), // 5 hours ago
+                status: .processing
+            )
+        ]
+    }
+    #endif
 }

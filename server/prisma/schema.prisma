@@ -52,3 +52,17 @@ model Template {
   @@index([publishedAt])
   @@map("templates")
 }
+
+model User {
+  id          String   @id @default(uuid())
+  firebaseUid String   @unique @map("firebase_uid")
+  name        String
+  email       String   @unique
+  avatarUrl   String?  @map("avatar_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([firebaseUid])
+  @@index([email])
+  @@map("users")
+}

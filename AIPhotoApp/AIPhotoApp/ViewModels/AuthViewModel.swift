@@ -228,6 +228,16 @@ final class AuthViewModel {
     @MainActor
     private func handleSignedIn(session: AuthSession) {
         self.session = session
+        
+        // Log Firebase token info (safely)
+        let tokenLength = session.idToken.count
+        let tokenPrefix = session.idToken.prefix(15)
+        let tokenSuffix = session.idToken.suffix(10)
+        print("🔑 [AuthViewModel] Firebase token obtained:")
+        print("   • Length: \(tokenLength) chars")
+        print("   • Prefix: \(tokenPrefix)...")
+        print("   • Suffix: ...\(tokenSuffix)")
+        
         // Prefill profile from provider (may be nil/empty depending on provider)
         let emailValue = (session.email ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let providedName = (session.name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -236,10 +246,15 @@ final class AuthViewModel {
         self.name = derivedName
         self.email = emailValue
         self.avatarURL = session.avatarURL
+        
+        print("👤 [AuthViewModel] User profile:")
+        print("   • Name: \(self.name)")
+        print("   • Email: \(self.email)")
 
         // Always attempt automatic registration without prompting for additional info.
         Task { @MainActor in
             do {
+                print("📤 [AuthViewModel] Calling registerUser API...")
                 try await register(
                     name: self.name,
                     email: self.email,
@@ -247,8 +262,10 @@ final class AuthViewModel {
                     idToken: session.idToken,
                     tokenProvider: { try await self.authService.fetchFirebaseIDToken(forceRefresh: true) }
                 )
+                print("✅ [AuthViewModel] Registration successful")
                 setAuthenticated()
             } catch {
+                print("❌ [AuthViewModel] Registration failed: \(error.localizedDescription)")
                 setError(error.localizedDescription)
             }
         }

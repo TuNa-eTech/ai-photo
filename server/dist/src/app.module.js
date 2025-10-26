@@ -12,6 +12,7 @@ const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const prisma_module_1 = require("./prisma/prisma.module");
 const templates_module_1 = require("./templates/templates.module");
+const users_module_1 = require("./users/users.module");
 const config_1 = require("@nestjs/config");
 const serve_static_1 = require("@nestjs/serve-static");
 const path_1 = require("path");
@@ -21,7 +22,10 @@ exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            config_1.ConfigModule.forRoot({ isGlobal: true }),
+            config_1.ConfigModule.forRoot({
+                isGlobal: true,
+                envFilePath: ['.env.local', '.env'],
+            }),
             serve_static_1.ServeStaticModule.forRoot({
                 rootPath: (0, path_1.join)(process.cwd(), 'public'),
                 serveRoot: '/public',
@@ -31,6 +35,7 @@ exports.AppModule = AppModule = __decorate([
             }),
             prisma_module_1.PrismaModule,
             templates_module_1.TemplatesModule,
+            users_module_1.UsersModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

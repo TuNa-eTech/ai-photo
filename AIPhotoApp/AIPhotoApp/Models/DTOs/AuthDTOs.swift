@@ -12,8 +12,14 @@ struct UserRegisterRequest: Codable, Sendable {
 }
 
 struct UserRegisterResponse: Codable, Sendable {
-    let userId: String
-    let message: String
+    let id: String
+    let name: String
+    let email: String
+    let avatarUrl: String?
+    let createdAt: Date
+    let updatedAt: Date
+    
+    // No custom CodingKeys needed - JSONDecoder.keyDecodingStrategy = .convertFromSnakeCase handles it
 }
 
 struct APIErrorResponse: Codable, Error, Sendable {

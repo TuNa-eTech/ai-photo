@@ -123,6 +123,33 @@ export class TemplatesService {
     return { templates: rows.map((r) => this.mapToApi(r as DbTemplate)) };
   }
 
+  async listTrendingTemplates(query: QueryTemplatesDto): Promise<{ templates: ApiTemplate[] }> {
+    const { limit = 20, offset = 0 } = query;
+
+    // Security: Only return published + public templates with high usage
+    const where: any = {
+      status: TemplateStatus.published,
+      visibility: 'public',
+      usageCount: { gte: 500 }, // Trending threshold
+    };
+
+    const rows = await this.prisma.template.findMany({
+      where,
+      orderBy: { usageCount: 'desc' }, // Sort by usage count descending
+      take: Math.min(limit, 50), // Cap at 50 for performance
+      skip: offset,
+      select: {
+        id: true,
+        name: true,
+        thumbnailUrl: true,
+        publishedAt: true,
+        usageCount: true,
+      },
+    });
+
+    return { templates: rows.map((r) => this.mapToApi(r as DbTemplate)) };
+  }
+
   // ========== ADMIN METHODS ==========
 
   private mapToAdminApi(t: Template): ApiTemplateAdmin {

@@ -8,11 +8,17 @@ Full CRUD API for template management with file upload support.
 
 **Authentication**: Required (Bearer token via Firebase or DevAuth)
 
-**Related Endpoints**:
-- Public Templates API: `GET /v1/templates` (documented in OpenAPI spec)
-  - Returns only `published` + `public` templates
+**Related Public Endpoints** (No auth required, documented in OpenAPI spec):
+- `GET /v1/templates` - List all published + public templates
   - Security filters applied server-side
   - Supports query params: `limit`, `offset`, `q`, `tags`, `sort`
+  - Returns minimal template info (no prompts/model details)
+- `GET /v1/templates/trending` - List trending templates ⭐ NEW
+  - Returns high-usage templates (`usage_count >= 500`)
+  - Sorted by `usage_count` DESC
+  - Optimized for Home screen display
+  - Query params: `limit` (max 50), `offset`
+  - Same security filters as `/v1/templates`
 
 ## Endpoints
 

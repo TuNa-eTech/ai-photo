@@ -12,4 +12,9 @@ export class TemplatesController {
   async list(@Query() query: QueryTemplatesDto) {
     return this.templatesService.listTemplates(query);
   }
+
+  @Get('trending')
+  async listTrending(@Query() query: QueryTemplatesDto) {
+    return this.templatesService.listTrendingTemplates(query);
+  }
 }

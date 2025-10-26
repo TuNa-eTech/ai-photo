@@ -1,5 +1,14 @@
 node_modules
+
 # Keep environment variables out of version control
 .env
+.env.local
+.env*.local
+# BUT keep the template
+!.env.example
+
+# Firebase Admin SDK credentials (sensitive!)
+firebase-adminsdk.json
+firebase-adminsdk*.json
 
 /generated/prisma

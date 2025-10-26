@@ -3,6 +3,11 @@
 Last updated: 2025-10-26
 
 Current work focus
+- **iOS Login Screen Redesign:** ✅ COMPLETED - Liquid Glass Beige authentication experience
+  - Redesigned AuthLandingView with premium glass aesthetic matching Home screen
+  - Implemented animated beige gradient background with organic blob motion
+  - Created reusable glass components for authentication flow
+  - Full documentation and implementation plans delivered
 - **Templates API Integration (iOS ↔ Backend):** ✅ COMPLETED with 100% test coverage
   - Backend security fixes and enhancements implemented
   - iOS app fully integrated with real API data
@@ -14,7 +19,72 @@ Current work focus
 - File upload system working with thumbnail management and automatic cleanup.
 - Local development setup optimized (DB in Docker, server and web-cms run locally).
 
-Recent changes
+Recent changes (latest first)
+- ✅ **Trending Templates API & iOS Home Screen Simplification (2025-10-26):**
+  - **Implemented `/v1/templates/trending` endpoint:**
+    - Backend: Added `listTrendingTemplates()` in TemplatesService (usage_count >= 500, sorted DESC)
+    - Backend: Added `GET /v1/templates/trending` route in TemplatesController
+    - iOS: Added `listTrendingTemplates()` to TemplatesRepository protocol
+    - iOS: Updated HomeViewModel with `fetchTrendingFromAPI()` method
+    - Updated OpenAPI/Swagger spec with complete endpoint documentation
+    - Created .implementation_plan/trending-templates-api-plan.md
+  - **Simplified Home Screen (MVP Design):**
+    - Removed: Search, filters, categories, featured carousel, recent results
+    - New user experience: Only "Trending Templates" with "See All" button
+    - Existing user experience: User projects list + condensed trending list
+    - Created AllTemplatesView for full templates with search/filters
+    - Created SimpleHeader component (avatar + greeting + settings only)
+    - Created Project model for future user projects feature
+  - **Fixed Critical Image Loading Bug:**
+    - **Root cause:** JSONDecoder's `.convertFromSnakeCase` strategy converted `thumbnail_url` → `thumbnailUrl` (lowercase "u"), but property was `thumbnailURL` (uppercase "URL")
+    - **Solution:** Created custom JSONDecoder in TemplatesRepository that respects explicit CodingKeys (no auto snake_case)
+    - **Impact:** All thumbnail images now load correctly from backend
+  - **UI Improvements:**
+    - Removed blur effect from CardGlassSmall (images now display sharp and clear)
+    - Added gradient overlay on card bottoms for better text readability
+    - Increased card height (180→200pt), improved spacing (12→14pt)
+    - Added template count display, empty state, better "See All" button styling
+    - Added debug logs for image loading and DTO decoding
+  - **Files Updated:**
+    - Backend: `templates.controller.ts`, `templates.service.ts`
+    - iOS: `TemplatesHomeView.swift`, `HomeViewModel.swift`, `TemplatesRepository.swift`, `TemplatesDTOs.swift`, `GlassComponents.swift`, `AppConfig.swift`
+    - New: `SimpleHeader.swift`, `AllTemplatesView.swift`, `Project.swift`
+    - Documentation: `swagger/openapi.yaml`, `architecture.md`, `trending-templates-api-plan.md`
+    - Guides: `SIMULATOR_NETWORK_FIX.md` (iOS Simulator cannot access localhost - must use Mac IP)
+  - **Status:** Fully implemented, tested with debug logs, ready for user verification
+
+- ✅ **iOS Login Screen Redesign (2025-10-26):**
+  - **Design & Implementation:**
+    - Created AuthLandingView.v2.swift with Liquid Glass Beige aesthetic
+    - Implemented AuthBackgroundView with animated beige gradient + 2 organic blobs (13s & 15s cycles)
+    - Built BrandLogoView with glass circle, gradient icon, and scale animation
+    - Created AuthGlassCard reusable container with beige tint overlay and white border glow
+    - Implemented GlassSignInButton with press states, haptic feedback, and smooth animations
+    - Built LoadingGlassOverlay with blur effect for loading state
+    - Created ErrorGlassBanner with slide animation and auto-dismiss
+  - **Design System:**
+    - Matches Liquid Glass Beige theme from Home screen (GlassTokens)
+    - Colors: Warm Linen (#F5E6D3), Champagne (#F4E4C1), Dusty Rose (#E8D5D0), Dark Brown text (#4A3F35)
+    - Premium glass effects: .ultraThinMaterial, gradient overlays, white border glow, soft shadows
+    - Smooth animations: Logo scale (0.8→1.0), card slide-up, button press (1.0→0.98), blob motion
+  - **Components Created:**
+    - AuthLandingViewV2: Main view with animated background, logo, glass card, sign-in buttons
+    - BrandLogoView: 100x100 glass circle with gradient sparkles icon
+    - AuthGlassCard: Reusable glass container with 28pt corner radius, beige tint, white border
+    - GlassSignInButton: 56pt height buttons with press animations and haptic feedback
+    - LoadingGlassOverlay: Full-screen blur with glass HUD and progress indicator
+    - ErrorGlassBanner: Red glass banner with slide-in/out animations
+  - **Integration:**
+    - Updated BootstrapViews.swift to use AuthLandingViewV2 (line 42)
+    - No changes required to AuthViewModel (backward compatible)
+    - Works with existing Firebase Auth flow (Google & Apple Sign In)
+  - **Documentation:**
+    - Created .implementation_plan/login-redesign-plan.md (comprehensive design plan)
+    - Created .implementation_plan/login-mockup.md (visual mockup with specs)
+    - Created .implementation_plan/LOGIN_REDESIGN_SUMMARY.md (implementation guide)
+  - **User Feedback:** Approved by user ("look good")
+  - **Status:** Production-ready, deployed to app
+
 - ✅ **Templates API Integration & Testing (2025-10-26):**
   - **Backend Security & Enhancements:**
     - Added security filters to `/v1/templates`: only return published + public templates
@@ -99,7 +169,15 @@ Recent changes
 - Web CMS UI complete: create, edit (with thumbnail change), delete, publish/unpublish all working
 - Local dev setup: only DB in Docker, server (yarn start:dev) and web-cms run on host for better DX
 
-Decisions
+Decisions and Key Learnings
+- **CRITICAL:** iOS JSONDecoder with `.convertFromSnakeCase` + explicit CodingKeys = CONFLICT!
+  - Problem: `.convertFromSnakeCase` converts `thumbnail_url` → `thumbnailUrl` (lowercase "u")
+  - Our property: `thumbnailURL` (uppercase "URL") per Swift conventions
+  - Solution: Use custom JSONDecoder WITHOUT `.convertFromSnakeCase`, rely on explicit CodingKeys
+  - Always use explicit CodingKeys in DTOs for backend API (snake_case → camelCase mapping)
+- **iOS Simulator Network:** Cannot access host's `localhost` - must use Mac's IP address (e.g., 192.168.1.123:8080)
+  - Update AppConfig.swift with Mac IP for testing
+  - Backend must listen on 0.0.0.0 (all interfaces), not just localhost
 - Web CMS uses Material-UI v7 with custom professional theme (Indigo + Teal, Inter font)
 - Template prompts stored directly in Template model (Phase 1), will move to template_versions later (Phase 2)
 - Image processing uses synchronous API for Phase 1, will add async job queue later
@@ -129,6 +207,12 @@ Next steps
 - Deploy backend and configure production Firebase credentials
 
 References
+- **iOS Login Screen Redesign:**
+  - .implementation_plan/login-redesign-plan.md → Comprehensive design plan with phases and components
+  - .implementation_plan/login-mockup.md → Visual mockup with color specs, animations, accessibility
+  - .implementation_plan/LOGIN_REDESIGN_SUMMARY.md → Implementation guide and testing checklist
+  - AIPhotoApp/AIPhotoApp/Views/Authentication/AuthLandingView.v2.swift → New login screen implementation
+  - AIPhotoApp/AIPhotoApp/Views/Common/BootstrapViews.swift → Router integration (line 42)
 - **API Integration & Testing:**
   - server/src/templates/templates.service.ts → Security filters, tags, mapping logic
   - server/src/templates/templates.service.spec.ts → 23 unit tests for service layer

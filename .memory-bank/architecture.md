@@ -61,7 +61,8 @@ Local development patterns
 
 Admin Templates flow (implemented)
 - Public endpoints:
-  - GET /v1/templates → TemplatesService.listTemplates (minimal fields for end users)
+  - GET /v1/templates → TemplatesService.listTemplates (minimal fields for end users, all templates with filters)
+  - GET /v1/templates/trending → TemplatesService.listTrendingTemplates (high usage templates with usage_count >= 500, sorted DESC)
 - Admin endpoints (templates-admin.controller.ts):
   - GET /v1/admin/templates → listAdminTemplates (full fields including slug, status, visibility, tags)
   - POST /v1/admin/templates → createTemplate (with validation: slug format, unique check)
@@ -129,15 +130,25 @@ iOS app architecture (AIPhotoApp/)
 - Project structure:
   - Models/DTOs/ → Data transfer objects matching backend API schema
     - TemplatesDTOs.swift → TemplateDTO with computed properties (isNew, isTrending)
+    - AuthDTOs.swift → UserRegisterRequest/Response for backend registration
   - Repositories/ → API client layer with protocol-based architecture
     - TemplatesRepository.swift → Implements TemplatesRepositoryProtocol for testability
+    - UserRepository.swift → User registration API with envelope handling
   - ViewModels/ → Observable view models for business logic
     - HomeViewModel.swift → Manages template state, fetching, filtering, favorites
-    - AuthViewModel.swift → Firebase authentication
+    - AuthViewModel.swift → Firebase authentication and user registration
   - Views/ → SwiftUI views with liquid glass design
-    - Home/ → Template browsing (TemplatesHomeView, CompactHeader, HeroStatsCard)
-    - Common/ → Reusable components (GlassComponents, GlassBackgroundView)
+    - Home/ → Template browsing
+      - TemplatesHomeView.swift → Simplified MVP home with trending templates
+      - SimpleHeader.swift → Minimal header (avatar + greeting + settings)
+      - AllTemplatesView.swift → Full templates list with search/filters
+    - Common/ → Reusable components (GlassComponents, GlassBackgroundView, BootstrapViews)
     - Authentication/ → Login/signup flows
+      - AuthLandingView.v2.swift → Premium login screen with Liquid Glass Beige design
+      - ProfileCompletionView.swift → Profile editing modal
+      - Components/ → Authentication-specific components
+    - Profile/ → User profile and settings
+      - ProfileView.swift → Profile screen with card-based layout
   - Utilities/ → Shared utilities
     - Networking/ → APIClient with envelope handling and 401 retry
     - Constants/ → Design tokens (GlassTokens with beige color palette)
@@ -149,14 +160,48 @@ iOS app architecture (AIPhotoApp/)
   - Repository Protocol pattern for dependency injection and testability
   - @Observable for reactive ViewModels (no @Published needed)
   - APIClient with envelope unwrapping and standardized error handling
+  - Custom JSONDecoder without `.convertFromSnakeCase` to respect explicit CodingKeys
   - AsyncImage for loading thumbnails from URLs with fallback SF Symbols
   - Dynamic subtitle/tag generation based on template metadata
+  - Reusable glass components for consistent UI across authentication and main app
+- MVP Home Screen UX:
+  - Simplified design focused on trending templates
+  - New users: Only "Trending Templates" section with "See All" button
+  - Existing users: "My Projects" history + condensed trending list (6 items)
+  - Clear template thumbnails with gradient overlay for text readability
+  - Card height: 200pt, spacing: 14pt for breathable layout
+  - SimpleHeader: Avatar + greeting + settings (no search/filters on home)
+  - AllTemplatesView: Full templates with search, category filters, and sort options
+- Authentication UI (AuthLandingView.v2):
+  - Animated beige gradient background with 2 organic blobs (13s & 15s motion cycles)
+  - BrandLogoView: Glass circle (100x100) with gradient sparkles icon and scale animation
+  - AuthGlassCard: Reusable glass container with beige tint overlay and white border glow
+  - GlassSignInButton: 56pt height buttons with press states, haptic feedback, smooth animations
+  - LoadingGlassOverlay: Full-screen blur with glass HUD for loading state
+  - ErrorGlassBanner: Red glass banner with slide-in/out animations and auto-dismiss
+  - Integrated with BootstrapViews router for seamless flow (Splash → Login → Home)
 
 References
-- .implementation_plan/ui-ux-redesign-summary.md → Web CMS redesign details
-- .implementation_plan/template-detail-page-summary.md → Template detail implementation
-- .documents/workflows/run-tests.md → Admin API E2E (Docker + DevAuth)
-- .documents/troubleshooting/db-auth.md → DB auth issues and fixes
-- server/src/templates/templates.service.ts → Prisma query details
-- server/src/templates/templates.controller.ts → request handling and validation
-- .implementation_plan/nest-migration-plan.md → Migration from Go to NestJS
+- **iOS Authentication:**
+  - .implementation_plan/login-redesign-plan.md → Login screen redesign plan
+  - .implementation_plan/login-mockup.md → Visual mockup with specs
+  - .implementation_plan/LOGIN_REDESIGN_SUMMARY.md → Implementation guide
+  - AIPhotoApp/AIPhotoApp/Views/Authentication/AuthLandingView.v2.swift → New login implementation
+- **iOS Home Screen:**
+  - .implementation_plan/trending-templates-api-plan.md → Trending API implementation plan
+  - SIMULATOR_NETWORK_FIX.md → iOS Simulator network troubleshooting guide
+  - AIPhotoApp/AIPhotoApp/Views/Home/TemplatesHomeView.swift → Simplified MVP home
+  - AIPhotoApp/AIPhotoApp/Views/Home/SimpleHeader.swift → Minimal header component
+  - AIPhotoApp/AIPhotoApp/Views/Home/AllTemplatesView.swift → Full templates with filters
+  - AIPhotoApp/AIPhotoApp/Models/DTOs/TemplatesDTOs.swift → Custom decoder implementation
+  - AIPhotoApp/AIPhotoApp/Repositories/TemplatesRepository.swift → Custom JSONDecoder
+- **Web CMS:**
+  - .implementation_plan/ui-ux-redesign-summary.md → Web CMS redesign details
+  - .implementation_plan/template-detail-page-summary.md → Template detail implementation
+- **Backend:**
+  - .documents/workflows/run-tests.md → Admin API E2E (Docker + DevAuth)
+  - .documents/troubleshooting/db-auth.md → DB auth issues and fixes
+  - server/src/templates/templates.service.ts → Prisma query details (includes listTrendingTemplates)
+  - server/src/templates/templates.controller.ts → request handling and validation (includes trending route)
+  - swagger/openapi.yaml → API specification (includes /v1/templates/trending)
+  - .implementation_plan/nest-migration-plan.md → Migration from Go to NestJS

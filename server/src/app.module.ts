@@ -3,13 +3,20 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { TemplatesModule } from './templates/templates.module';
+import { UsersModule } from './users/users.module';
 import { ConfigModule } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      // Load .env.local first (highest priority), then .env
+      // .env.local is for local development secrets (gitignored)
+      // .env.example serves as template for team
+      envFilePath: ['.env.local', '.env'],
+    }),
     ServeStaticModule.forRoot({
       // Use process.cwd() to get project root, works in both dev and prod
       rootPath: join(process.cwd(), 'public'),
@@ -20,6 +27,7 @@ import { join } from 'path';
     }),
     PrismaModule,
     TemplatesModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

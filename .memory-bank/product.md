@@ -23,13 +23,25 @@ How it should work
 - Clients browse templates and process images using provider-backed prompts (server-side only).
 
 User experience goals
-- Professional, modern UI with Material-UI v7 design system.
-- Fast, reliable admin workflows: create template, configure AI, upload thumbnail, test generation, publish in minutes.
-- Intuitive template testing with dual input modes (file upload / URL paste).
-- Clear visual feedback with loading states, error messages, and success notifications.
-- Responsive design working on desktop, tablet, and mobile devices.
-- Stable local E2E path using Docker to avoid environment issues (DB/auth).
-- Predictable versioning and safe defaults to minimize regressions.
+- **iOS App:** Premium, elegant UI with Liquid Glass Beige minimalist design
+  - Warm, sophisticated beige color palette (#F5E6D3, #F4E4C1, #E8D5D0)
+  - Smooth animations: organic blob motion, scale transitions, press feedback
+  - Consistent glass effects across authentication and main app
+  - Engaging first impression with animated login screen
+  - Haptic feedback for all interactions
+  - **MVP Home Screen (Simplified):**
+    - New users: See only "Trending Templates" with clean grid layout
+    - Existing users: See "My Projects" history + condensed trending list
+    - "See All" navigation to full templates with search/filters
+    - Focus on clarity and quick access to popular templates
+    - Sharp, clear template thumbnails (no blur effects)
+- **Web CMS:** Professional, modern UI with Material-UI v7 design system
+  - Fast, reliable admin workflows: create template, configure AI, upload thumbnail, test generation, publish in minutes
+  - Intuitive template testing with dual input modes (file upload / URL paste)
+  - Clear visual feedback with loading states, error messages, and success notifications
+  - Responsive design working on desktop, tablet, and mobile devices
+- Stable local E2E path using Docker to avoid environment issues (DB/auth)
+- Predictable versioning and safe defaults to minimize regressions
 
 Current features (Web CMS)
 - **Dashboard**: Overview with stats (total, published, drafts, usage) and recent templates list.
@@ -48,8 +60,15 @@ Out of scope (current)
 - Test history storage and replay (planned for Phase 2).
 
 Key references
-- .documents/web-cms/architecture.md (Web CMS architecture and components).
-- .implementation_plan/ui-ux-redesign-summary.md (UI/UX redesign details).
-- .implementation_plan/template-detail-page-summary.md (Template detail implementation).
-- .documents/workflows/run-tests.md (Admin API E2E via Docker + DevAuth).
-- .documents/troubleshooting/db-auth.md (local Postgres auth issues and fixes).
+- **iOS:**
+  - .implementation_plan/login-redesign-plan.md (Login screen redesign plan)
+  - .implementation_plan/LOGIN_REDESIGN_SUMMARY.md (Login implementation guide)
+  - .documents/product/ui-home-concept.md (Liquid Glass design concept)
+  - .documents/platform-guides/ios.md (iOS architecture and patterns)
+- **Web CMS:**
+  - .documents/web-cms/architecture.md (Web CMS architecture and components)
+  - .implementation_plan/ui-ux-redesign-summary.md (UI/UX redesign details)
+  - .implementation_plan/template-detail-page-summary.md (Template detail implementation)
+- **Backend:**
+  - .documents/workflows/run-tests.md (Admin API E2E via Docker + DevAuth)
+  - .documents/troubleshooting/db-auth.md (local Postgres auth issues and fixes)

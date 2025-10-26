@@ -31,6 +31,29 @@ struct NetworkLogger {
     var redactHeaders: Set<String> = ["authorization", "api-key", "x-api-key", "cookie", "set-cookie"]
     var maxBodyLength: Int = 100_000 // truncate very large bodies to avoid Xcode lag
     
+    /// Extract safe token info (prefix + length + suffix) for debugging
+    private func extractTokenInfo(from authHeader: String) -> String {
+        // Format: "Bearer <token>"
+        let parts = authHeader.split(separator: " ", maxSplits: 1)
+        guard parts.count == 2, parts[0].lowercased() == "bearer" else {
+            return "INVALID_FORMAT"
+        }
+        
+        let token = String(parts[1])
+        let length = token.count
+        
+        // Show first 15 and last 10 chars for verification
+        if length > 30 {
+            let prefix = token.prefix(15)
+            let suffix = token.suffix(10)
+            return "Bearer \(prefix)...\(suffix) (length: \(length))"
+        } else if length > 0 {
+            return "Bearer <\(length) chars>"
+        } else {
+            return "Bearer EMPTY"
+        }
+    }
+    
     func logRequest(_ request: URLRequest) {
         guard enabled else { return }
         let method = request.httpMethod ?? "UNKNOWN"
@@ -41,8 +64,17 @@ struct NetworkLogger {
             print("   Headers:")
             for (k, v) in headers {
                 let keyLower = k.lowercased()
-                let value = redactHeaders.contains(keyLower) ? "REDACTED" : v
-                print("   • \(k): \(value)")
+                if redactHeaders.contains(keyLower) {
+                    // For Authorization header, log token info safely
+                    if keyLower == "authorization" {
+                        let tokenInfo = extractTokenInfo(from: v)
+                        print("   • \(k): \(tokenInfo)")
+                    } else {
+                        print("   • \(k): REDACTED")
+                    }
+                } else {
+                    print("   • \(k): \(v)")
+                }
             }
         }
         if let body = request.httpBody, !body.isEmpty {
@@ -66,14 +98,14 @@ struct NetworkLogger {
         // Headers (response)
         let headers = response.allHeaderFields
         if !headers.isEmpty {
-            print("   Response Headers:")
-            for (kAny, vAny) in headers {
-                let key = String(describing: kAny)
-                let value = String(describing: vAny)
-                let keyLower = key.lowercased()
-                let val = redactHeaders.contains(keyLower) ? "REDACTED" : value
-                print("   • \(key): \(val)")
-            }
+//            print("   Response Headers:")
+//            for (kAny, vAny) in headers {
+//                let key = String(describing: kAny)
+//                let value = String(describing: vAny)
+//                let keyLower = key.lowercased()
+//                let val = redactHeaders.contains(keyLower) ? "REDACTED" : value
+//                print("   • \(key): \(val)")
+//            }
         }
         
         // Body
@@ -205,6 +237,7 @@ final class APIClient: APIClientProtocol {
             let dec = decoder ?? {
                 let d = JSONDecoder()
                 d.keyDecodingStrategy = .convertFromSnakeCase
+                d.dateDecodingStrategy = .iso8601
                 return d
             }()
             do {
@@ -240,6 +273,7 @@ final class APIClient: APIClientProtocol {
             let dec = decoder ?? {
                 let d = JSONDecoder()
                 d.keyDecodingStrategy = .convertFromSnakeCase
+                d.dateDecodingStrategy = .iso8601
                 return d
             }()
 

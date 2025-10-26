@@ -87,6 +87,67 @@ paths:
       security:
         - bearerAuth: []
 
+  /v1/templates/trending:
+    get:
+      summary: Lấy danh sách template đang thịnh hành (Trending)
+      description: |
+        Trả về danh sách Templates có lượt sử dụng cao (trending).
+        Chỉ trả về templates với usage_count >= 500, sắp xếp theo usage_count giảm dần.
+        Phù hợp cho màn hình Home để hiển thị templates hot nhất.
+      tags:
+        - Templates
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+          description: Số lượng trending templates trả về (tối đa 50)
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Vị trí bắt đầu (phân trang)
+      responses:
+        '200':
+          description: Danh sách trending templates (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeTemplatesList'
+              example:
+                success: true
+                data:
+                  templates:
+                    - id: "5193b903-9595-4b81-9080-01122eb51166"
+                      name: "Hyper-Realistic Portrait Pro"
+                      thumbnail_url: "http://localhost:8080/public/thumbnails/realistic-portrait-pro-thumbnail-1761475486057.jpeg"
+                      published_at: "2025-10-26T15:31:41.255Z"
+                      usage_count: 3120
+                    - id: "e000b2d3-9928-425a-b46b-45dc387be647"
+                      name: "Watercolor Fantasy Art"
+                      thumbnail_url: "http://localhost:8080/public/thumbnails/watercolor-fantasy-art-thumbnail-1761475478270.jpeg"
+                      usage_count: 2340
+                    - id: "a6f48613-7897-4086-acd6-54264d77e5f6"
+                      name: "Steampunk Vintage Style"
+                      thumbnail_url: "http://localhost:8080/public/thumbnails/steampunk-vintage-thumbnail-1761475400197.jpeg"
+                      usage_count: 2100
+                meta:
+                  requestId: "trending-request-id"
+                  timestamp: "2025-10-26T15:45:00Z"
+        '401':
+          description: Chưa xác thực (envelope error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+      security:
+        - bearerAuth: []
+
 components:
   schemas:
     Template:

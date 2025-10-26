@@ -25,6 +25,9 @@ let TemplatesController = class TemplatesController {
     async list(query) {
         return this.templatesService.listTemplates(query);
     }
+    async listTrending(query) {
+        return this.templatesService.listTrendingTemplates(query);
+    }
 };
 exports.TemplatesController = TemplatesController;
 __decorate([
@@ -34,6 +37,13 @@ __decorate([
     __metadata("design:paramtypes", [query_templates_dto_1.QueryTemplatesDto]),
     __metadata("design:returntype", Promise)
 ], TemplatesController.prototype, "list", null);
+__decorate([
+    (0, common_1.Get)('trending'),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [query_templates_dto_1.QueryTemplatesDto]),
+    __metadata("design:returntype", Promise)
+], TemplatesController.prototype, "listTrending", null);
 exports.TemplatesController = TemplatesController = __decorate([
     (0, common_1.Controller)('v1/templates'),
     (0, common_1.UseGuards)(bearer_auth_guard_1.BearerAuthGuard),

@@ -7,9 +7,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### 2025-10-26
+### 2025-10-26 (PM) - Critical Fixes & Trending API
 
-#### Added - Templates API Integration (iOS ↔ Backend) ✅
+#### Added - Trending Templates API ⭐
+- **Backend**: New `GET /v1/templates/trending` endpoint
+  - Returns templates with `usage_count >= 500` sorted by usage DESC
+  - Query params: `limit` (max 50), `offset`
+  - Optimized for Home screen performance (server-side filtering vs client-side)
+  - Implemented in `TemplatesController.listTrending()` and `TemplatesService.listTrendingTemplates()`
+  - Full OpenAPI/Swagger documentation with examples
+- **iOS**: `TemplatesRepository.listTrendingTemplates()` protocol method
+  - `HomeViewModel.fetchTrendingFromAPI()` for Home screen
+  - `HomeViewModel.fetchAllTemplatesFromAPI()` for AllTemplatesView
+
+#### Fixed - Critical iOS Image Loading Bug 🐛
+- **Root Cause**: JSONDecoder `.convertFromSnakeCase` + explicit CodingKeys = CONFLICT
+  - `.convertFromSnakeCase` converted `thumbnail_url` → `thumbnailUrl` (lowercase "u")
+  - Swift property was `thumbnailURL` (uppercase "URL" per Swift conventions)
+  - Decoder ignored explicit CodingKeys, tried to decode non-existent key
+  - Result: `thumbnailURL = nil` (silent failure)
+- **Solution**: Created custom JSONDecoder in `TemplatesRepository` WITHOUT `.convertFromSnakeCase`
+  - Only sets `.iso8601` for date decoding
+  - Relies on explicit CodingKeys for snake_case → camelCase mapping
+- **Impact**: All thumbnail images now load correctly from backend
+
+#### Changed - iOS Home Screen Simplification (MVP)
+- **Simplified UI Design**:
+  - Removed: Search bar, filters, categories, featured carousel, recent results
+  - New user experience: Only "Trending Templates" section with "See All" button
+  - Existing user experience: "My Projects" history + condensed trending list (6 items)
+  - Created `SimpleHeader.swift` (avatar + greeting + settings only)
+  - Created `AllTemplatesView.swift` for full templates with search/filters
+  - Created `Project.swift` model for future user projects feature
+- **UI Improvements**:
+  - Removed blur effect from `CardGlassSmall` images (clear thumbnails)
+  - Added gradient overlay on card bottoms for text readability
+  - Increased card height (180→200pt), improved spacing (12→14pt)
+  - Text: white with shadow for contrast on images
+  - Added template count display and empty state UI
+  - Better "See All" button styling (capsule with background)
+- **State Management Fix**:
+  - Changed `HomeViewModel` from `let` to `@State private var` in `TemplatesHomeView`
+  - Prevents ViewModel re-initialization on view updates
+  - Ensures data persistence across UI refreshes
+
+#### Added - iOS Debug Logging
+- `TemplateDTO.init(from:)` logs URL creation failures in DEBUG
+- `TemplatesRepository` logs decoded template counts and sample data
+- `HomeViewModel` logs each DTO's thumbnail URL during mapping
+- `CardGlassSmall` logs image loading attempts with full URLs
+- Enables easy troubleshooting of network/decoding issues
+
+#### Added - Documentation & Guides
+- Created `SIMULATOR_NETWORK_FIX.md` - iOS Simulator network troubleshooting
+  - Explains why Simulator can't access `localhost`
+  - Step-by-step guide to use Mac's IP address
+  - Backend configuration requirements
+  - Multiple solutions (IP address, ngrok, physical device)
+- Created `.implementation_plan/trending-templates-api-plan.md`
+  - Full implementation plan with status checklist
+  - Design, testing, deployment steps
+- Updated OpenAPI spec (`swagger/openapi.yaml`) with trending endpoint
+- Updated all memory bank files with critical learnings
+- Updated `.documents/platform-guides/ios.md` with:
+  - **Critical Patterns & Gotchas** section (JSONDecoder, Simulator network)
+  - Updated code examples with fixes
+  - Expanded troubleshooting section
+  - Updated project structure
+
+#### Changed - TemplateDTO Improvements
+- Updated `isTrending` threshold: `100` → `500` (more selective)
+- Added custom `init(from decoder:)` for graceful URL decoding
+- Added debug logging for URL creation failures
+
+### 2025-10-26 (AM) - Templates API Integration (iOS ↔ Backend) ✅
 
 **Backend Security & Enhancements**
 - **Security Filters**: `/v1/templates` now only returns `published` + `public` templates to end users

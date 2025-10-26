@@ -118,6 +118,28 @@ let TemplatesService = class TemplatesService {
         });
         return { templates: rows.map((r) => this.mapToApi(r)) };
     }
+    async listTrendingTemplates(query) {
+        const { limit = 20, offset = 0 } = query;
+        const where = {
+            status: client_1.TemplateStatus.published,
+            visibility: 'public',
+            usageCount: { gte: 500 },
+        };
+        const rows = await this.prisma.template.findMany({
+            where,
+            orderBy: { usageCount: 'desc' },
+            take: Math.min(limit, 50),
+            skip: offset,
+            select: {
+                id: true,
+                name: true,
+                thumbnailUrl: true,
+                publishedAt: true,
+                usageCount: true,
+            },
+        });
+        return { templates: rows.map((r) => this.mapToApi(r)) };
+    }
     mapToAdminApi(t) {
         return {
             id: t.id,

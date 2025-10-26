@@ -10,9 +10,11 @@ exports.HttpEnvelopeExceptionFilter = void 0;
 const common_1 = require("@nestjs/common");
 const envelope_dto_1 = require("../dto/envelope.dto");
 let HttpEnvelopeExceptionFilter = class HttpEnvelopeExceptionFilter {
+    logger = new common_1.Logger('ExceptionFilter');
     catch(exception, host) {
         const ctx = host.switchToHttp();
         const res = ctx.getResponse();
+        const req = ctx.getRequest();
         let status = common_1.HttpStatus.INTERNAL_SERVER_ERROR;
         let code = 'internal_error';
         let message = 'Internal Server Error';
@@ -43,6 +45,21 @@ let HttpEnvelopeExceptionFilter = class HttpEnvelopeExceptionFilter {
                 code = 'not_found';
             if (status === common_1.HttpStatus.BAD_REQUEST && code === 'internal_error')
                 code = 'bad_request';
+        }
+        const errorLog = {
+            timestamp: new Date().toISOString(),
+            path: req.url,
+            method: req.method,
+            statusCode: status,
+            code,
+            message,
+            details,
+        };
+        if (status >= 500) {
+            this.logger.error(`${req.method} ${req.url} - ${status} ${code}: ${message}`, exception instanceof Error ? exception.stack : JSON.stringify(exception));
+        }
+        else if (status >= 400) {
+            this.logger.warn(`${req.method} ${req.url} - ${status} ${code}: ${message}`, JSON.stringify(details || {}));
         }
         res.status(status).json((0, envelope_dto_1.err)(code, message, details));
     }
