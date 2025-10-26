@@ -1,0 +1,14 @@
+[
+  {
+    "id": "test-import-1",
+    "name": "Test Import Style 1",
+    "thumbnailUrl": "http://localhost:8080/public/thumbnails/test_img.png",
+    "usageCount": 999
+  },
+  {
+    "id": "test-import-2",
+    "name": "Test Import Style 2",
+    "usageCount": 888
+  }
+]
+

@@ -1,46 +1,43 @@
-import { createBrowserRouter } from 'react-router-dom';
-import ProtectedRoute from '../auth/ProtectedRoute';
-import Login from '../pages/Login';
-import TemplatesList from '../pages/Templates/TemplatesList';
-import TemplateDetail from '../pages/Templates/TemplateDetail';
-import AdminTemplatesList from '../pages/Admin/Templates/List';
-import AdminTemplateCreate from '../pages/Admin/Templates/Create';
-import AdminTemplateEdit from '../pages/Admin/Templates/Edit';
+/**
+ * Application Routes
+ * 
+ * Defines all routes with protection
+ */
+
+import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { ProtectedRoute } from '../auth'
+import { LoginPage } from '../pages/Login/LoginPage'
+import { TemplatesListPage } from '../pages/Templates/TemplatesListPage'
+import { TemplateDetailPage } from '../pages/Templates/TemplateDetailPage'
 
 export const router = createBrowserRouter([
   {
-    path: '/login',
-    element: <Login />,
+    path: '/',
+    element: <Navigate to="/templates" replace />,
   },
   {
-    element: <ProtectedRoute />,
-    children: [
-      {
-        path: '/',
-        element: <AdminTemplatesList />,
-      },
-      {
-        path: '/templates',
-        element: <TemplatesList />,
-      },
-      {
-        path: '/admin/templates',
-        element: <AdminTemplatesList />,
-      },
-      {
-        path: '/admin/templates/new',
-        element: <AdminTemplateCreate />,
-      },
-      {
-        path: '/admin/templates/:slug',
-        element: <AdminTemplateEdit />,
-      },
-      {
-        path: '/templates/:id',
-        element: <TemplateDetail />,
-      },
-    ],
+    path: '/login',
+    element: <LoginPage />,
   },
-]);
+  {
+    path: '/templates',
+    element: (
+      <ProtectedRoute>
+        <TemplatesListPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/templates/:slug',
+    element: (
+      <ProtectedRoute>
+        <TemplateDetailPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '*',
+    element: <Navigate to="/templates" replace />,
+  },
+])
 
-export default router;

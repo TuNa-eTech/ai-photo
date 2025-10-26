@@ -1,11 +1,11 @@
 # Refresh Token + Logout Flows (AIPhotoApp)
 
 Status: Draft v1
-Last updated: 2025-10-19
+Last updated: 2025-10-25
 
 Scope
 - Defines client-side token refresh and logout flows for the iOS app using FirebaseAuth.
-- Complements “Login + Register User Flow” by ensuring robust session maintenance and clean sign-out.
+- Complements "Login + Register User Flow" by ensuring robust session maintenance and clean sign-out.
 
 Overview
 - The backend is stateless w.r.t. sessions; every request is authenticated with a Firebase ID Token (JWT).

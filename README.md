@@ -1,19 +1,19 @@
 # ImageAIWraper
 
-AI-powered photo styling platform for iOS, with a secure, scalable Go backend and modern TDD/documentation-driven workflow.
+AI-powered photo styling platform for iOS, with a secure, scalable NestJS backend and modern TDD/documentation-driven workflow.
 
 ---
 
 ## 🚀 Overview
 
-**ImageAIWraper** is a modern iOS application and Go backend system that enables users to apply advanced AI styles (e.g., Gemini) to their photos. The project is designed for seamless integration, security, and extensibility, using Firebase Auth for authentication and a robust, testable architecture.
+**ImageAIWraper** is a modern iOS application and NestJS backend system that enables users to apply advanced AI styles (e.g., Gemini) to their photos. The project is designed for seamless integration, security, and extensibility, using Firebase Auth for authentication and a robust, testable architecture.
 
 ---
 
 ## 🏗️ Architecture
 
 - **iOS App:** Native SwiftUI app for user interaction, photo selection, and AI style application.
-- **Backend:** Go service (containerized) for template management, image processing (via Gemini API), and secure file storage.
+- **Backend:** NestJS service (containerized) for template management, image processing (via Gemini API), and secure file storage.
 - **Authentication:** 100% via Firebase Auth (Google/Apple login on iOS, backend verifies idToken). No backend login API.
 - **Profile Management:** `/v1/users/register` API for storing/updating user profile (not authentication).
 - **AI Processing:** Gemini API integration for real-time, high-quality image transformation.
@@ -45,9 +45,11 @@ AI-powered photo styling platform for iOS, with a secure, scalable Go backend an
 
 ### Prerequisites
 
-- Go >= 1.18
+- Node.js >= 20
+- Yarn package manager
 - Xcode (latest, with SwiftUI support)
 - Firebase project (with Google/Apple sign-in enabled)
+- Docker & Docker Compose
 - Gemini API access (for image processing)
 - (Optional) PostgreSQL, S3/GCS/MinIO for storage
 

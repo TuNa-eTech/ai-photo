@@ -1,10 +1,10 @@
 # Login + Register User Flow (AIPhotoApp)
 
 Status: Draft v1
-Last updated: 2025-10-19
+Last updated: 2025-10-25
 
 Scope
-- This document describes the end-to-end authentication flow of the iOS client and backend:
+- This document describes the end-to-end authentication flow of the iOS client and NestJS backend:
   UI (SwiftUI) → Firebase sign-in (Apple/Google) → Backend registration → Client state transition.
 - It standardizes the request/response contracts, decoding strategy, and error handling to avoid client/server mismatches.
 
@@ -16,7 +16,7 @@ Architecture Overview
   - POST /v1/users/register
   - Headers: Authorization: Bearer <Firebase ID Token>
   - Body: JSON payload with user profile (name, email, avatarURL)
-- Backend (Go) verifies the token, upserts user records, and returns a standardized JSON envelope:
+- Backend (NestJS) verifies the token via BearerAuthGuard, upserts user records, and returns a standardized JSON envelope:
   {
     "success": boolean,
     "data": {},
@@ -39,8 +39,8 @@ Prerequisites & Configuration
   - JSONDecoder keyDecodingStrategy = .convertFromSnakeCase across networking
 - Backend
   - Endpoint: POST /v1/users/register
-  - Firebase token verification middleware
-  - DB migrations present under backend/migrations (users, profiles, unify)
+  - BearerAuthGuard with Firebase token verification
+  - Prisma schema with User model
   - Returns standardized envelope always
 
 End-to-End Sequence
@@ -68,8 +68,8 @@ End-to-End Sequence
      - If HTTP error, surfaces APIClientError.httpStatus(statusCode, body: String?).
 
 4) Backend Processing (/v1/users/register)
-   - Auth middleware verifies Firebase ID Token
-   - Upsert user (and profile if needed) to the DB schema (see migrations)
+   - BearerAuthGuard verifies Firebase ID Token via Firebase Admin SDK
+   - Upsert user (and profile if needed) to the Prisma schema
    - Returns response envelope with data payload (e.g., user_id and message)
 
 5) Client State Transition
@@ -160,14 +160,11 @@ Client Implementation References
   - Services/AuthService.swift
     - Orchestrates Firebase sign-in, retrieves ID Token
 
-- Backend (Go)
+- Backend (NestJS)
   - POST /v1/users/register
-  - Firebase token verification
-  - Upsert user/profile
-  - Migrations:
-    - backend/migrations/0001_create_users_table.up.sql
-    - backend/migrations/0002_create_user_profiles_table.up.sql
-    - backend/migrations/0003_unify_users_table.up.sql
+  - BearerAuthGuard with Firebase token verification
+  - Prisma User model and service
+  - Global EnvelopeInterceptor for response wrapping
 
 Decoding Strategy & DTO Alignment
 - All client decoding uses convertFromSnakeCase.

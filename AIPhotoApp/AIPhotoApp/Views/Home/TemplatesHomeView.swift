@@ -16,7 +16,7 @@ struct TemplatesHomeView: View {
 
     // UI local state
     @State private var showDebugOverlay: Bool = false
-    @State private var showSettings: Bool = false
+    @State private var showProfile: Bool = false
     @State private var showNotifications: Bool = false
 
     private let gridCols: [GridItem] = [
@@ -29,21 +29,29 @@ struct TemplatesHomeView: View {
         ZStack {
             GlassBackgroundView()
 
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 16) {
-                    headerSection
+            VStack(spacing: 0) {
+                // Compact sticky header
+                compactHeaderSection
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Hero stats card
+                        heroStatsSection
+                        
+                        // Category navigation
+                        categoryNavigationSection
+                        
+                        searchAndFiltersSection
 
-                    searchAndFiltersSection
+                        featuredCarouselSection
 
-                    featuredCarouselSection
+                        templatesGridSection
 
-                    templatesGridSection
-
-                    recentResultsSection
+                        recentResultsSection
+                    }
+                    .padding(.bottom, 96) // leave space for FAB
+                    .padding(.top, 16)
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 96) // leave space for FAB
-                .padding(.top, 8)
             }
             .overlay(alignment: .top) {
                 // Loading / Error banners
@@ -106,8 +114,8 @@ struct TemplatesHomeView: View {
                 }
             }
         }
-        .sheet(isPresented: $showSettings) {
-            PlaceholderSheet(title: "Settings")
+        .fullScreenCover(isPresented: $showProfile) {
+            ProfileView(model: model)
         }
         .sheet(isPresented: $showNotifications) {
             PlaceholderSheet(title: "Notifications")
@@ -115,57 +123,41 @@ struct TemplatesHomeView: View {
     }
 
     // MARK: - Sections
-
-    private var headerSection: some View {
-        HStack(alignment: .center, spacing: 12) {
-            avatarView
-                .onTapGesture(count: 3) { // Hidden debug gesture
-                    #if DEBUG
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                        showDebugOverlay.toggle()
-                    }
-                    #endif
-                }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Xin chào, \(greetingName()) 👋")
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .accessibilityAddTraits(.isHeader)
-                Text("Sẵn sàng tạo phong cách ảnh hôm nay?")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.9))
-                    .accessibilityHint("Hãy chọn một template để bắt đầu")
+    
+    private var compactHeaderSection: some View {
+        CompactHeader(
+            userName: greetingName(),
+            avatarURL: model.avatarURL?.absoluteString,
+            showNotifications: $showNotifications,
+            showSettings: $showProfile,
+            notificationCount: 0 // TODO: Wire to real notification count
+        )
+        .onTapGesture(count: 3) { // Hidden debug gesture on header
+            #if DEBUG
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                showDebugOverlay.toggle()
             }
-
-            Spacer()
-
-            HStack(spacing: 12) {
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    showNotifications = true
-                } label: {
-                    Image(systemName: "bell")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(width: 36, height: 36)
-                        .background(.ultraThinMaterial, in: Circle())
-                        .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 1))
-                }
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    showSettings = true
-                } label: {
-                    Image(systemName: "gearshape")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(width: 36, height: 36)
-                        .background(.ultraThinMaterial, in: Circle())
-                        .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 1))
-                }
-            }
+            #endif
         }
-        .padding(.top, 8)
+    }
+    
+    private var heroStatsSection: some View {
+        HeroStatsCard(
+            templateCount: home.allTemplates.count,
+            todayCreatedCount: home.todayCreatedCount,
+            latestTemplateName: home.allTemplates.first?.title
+        )
+        .padding(.horizontal, 16)
+    }
+    
+    private var categoryNavigationSection: some View {
+        CategoryScrollView(
+            selectedCategory: Binding(
+                get: { home.selectedCategory },
+                set: { home.selectedCategory = $0 }
+            ),
+            categories: TemplateCategory.allCategories
+        )
     }
 
     private var searchAndFiltersSection: some View {
@@ -173,7 +165,7 @@ struct TemplatesHomeView: View {
             // Search pill
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(GlassTokens.textSecondary)
                 TextField(
                     "Search styles or tags…",
                     text: Binding(
@@ -183,21 +175,21 @@ struct TemplatesHomeView: View {
                 )
                     .textInputAutocapitalization(.never)
                     .disableAutocorrection(true)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(GlassTokens.textPrimary)
                 if !home.searchText.isEmpty {
                     Button {
                         home.searchText = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.white.opacity(0.9))
+                            .foregroundStyle(GlassTokens.textSecondary)
                     }
                     .accessibilityLabel(Text("Clear search"))
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 1))
+            .background(.ultraThinMaterial.opacity(0.85), in: Capsule())
+            .overlay(Capsule().stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8))
 
             // Segmented filters
             Picker(
@@ -214,14 +206,15 @@ struct TemplatesHomeView: View {
             .pickerStyle(.segmented)
             .accessibilityLabel(Text("Template filters"))
         }
+        .padding(.horizontal, 16)
     }
 
     private var featuredCarouselSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Featured")
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
-                .padding(.leading, 4)
+                .foregroundStyle(GlassTokens.textPrimary)
+                .padding(.leading, 20)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 14) {
@@ -257,8 +250,8 @@ struct TemplatesHomeView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Templates")
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
-                .padding(.leading, 4)
+                .foregroundStyle(GlassTokens.textPrimary)
+                .padding(.leading, 20)
 
             LazyVGrid(columns: gridCols, spacing: 12) {
                 ForEach(home.filteredTemplates) { item in
@@ -284,6 +277,7 @@ struct TemplatesHomeView: View {
                     }
                 }
             }
+            .padding(.horizontal, 16)
         }
     }
 
@@ -294,21 +288,21 @@ struct TemplatesHomeView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Recent Results")
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(GlassTokens.textPrimary)
                         .padding(.leading, 4)
 
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             ForEach(home.recentResults, id: \.self) { _ in
                                 Rectangle()
-                                    .fill(.ultraThinMaterial)
+                                    .fill(.ultraThinMaterial.opacity(0.85))
                                     .frame(width: 100, height: 140)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 16)
-                                            .stroke(.white.opacity(0.25), lineWidth: 1)
+                                            .stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8)
                                     )
                                     .clipShape(RoundedRectangle(cornerRadius: 16))
-                                    .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: 10)
+                                    .shadow(color: GlassTokens.shadowColor, radius: GlassTokens.shadowRadius, x: 0, y: GlassTokens.shadowY)
                                     .onTapGesture {
                                         // TODO: open processed image detail/share
                                     }
@@ -377,12 +371,16 @@ private struct HUDGlass: View {
     var text: String
     var body: some View {
         HStack(spacing: 8) {
-            ProgressView().progressViewStyle(.circular)
-            Text(text).font(.footnote)
+            ProgressView()
+                .progressViewStyle(.circular)
+                .tint(GlassTokens.textPrimary)
+            Text(text)
+                .font(.footnote)
+                .foregroundStyle(GlassTokens.textPrimary)
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 1))
+        .background(.ultraThinMaterial.opacity(0.9), in: Capsule())
+        .overlay(Capsule().stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8))
     }
 }
 
@@ -395,6 +393,7 @@ private struct BannerGlass: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(tint)
             Text(text)
+                .foregroundStyle(GlassTokens.textPrimary)
                 .lineLimit(2)
             Spacer()
             if let retry {
@@ -404,10 +403,10 @@ private struct BannerGlass: View {
         }
         .font(.footnote)
         .padding(12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(.ultraThinMaterial.opacity(0.9), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(.white.opacity(0.25), lineWidth: 1)
+                .stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8)
         )
         .padding(.horizontal, 16)
     }
@@ -421,8 +420,9 @@ private struct PlaceholderSheet: View {
             VStack(spacing: 12) {
                 Text("\(title)")
                     .font(.title2.weight(.semibold))
+                    .foregroundStyle(GlassTokens.textPrimary)
                 Text("Đang phát triển…")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(GlassTokens.textSecondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(GlassBackgroundView())
@@ -431,6 +431,7 @@ private struct PlaceholderSheet: View {
                     Button("Đóng") {
                         dismiss()
                     }
+                    .foregroundStyle(GlassTokens.textPrimary)
                 }
             }
         }

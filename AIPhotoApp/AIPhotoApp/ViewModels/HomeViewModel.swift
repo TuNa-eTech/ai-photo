@@ -52,11 +52,15 @@ final class HomeViewModel {
     // MARK: - Inputs (UI state)
     var searchText: String = ""
     var selectedFilter: Filter = .all
+    var selectedCategory: TemplateCategory = .all
 
     // MARK: - Outputs (data)
     var featured: [TemplateItem] = []
     var allTemplates: [TemplateItem] = []
     var recentResults: [String] = [] // placeholder identifiers or local asset names
+    
+    // MARK: - Stats
+    var todayCreatedCount: Int = 0 // Number of templates/images created today
 
     // MARK: - Favorites
     private(set) var favorites: Set<UUID> = []
@@ -68,6 +72,11 @@ final class HomeViewModel {
     // MARK: - Computed
     var filteredTemplates: [TemplateItem] {
         var list = allTemplates
+
+        // Category filter
+        if selectedCategory != .all {
+            list = list.filter { $0.tag == selectedCategory.id }
+        }
 
         // Filter segment
         switch selectedFilter {

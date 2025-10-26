@@ -1,0 +1,54 @@
+/**
+ * Prisma schema
+ * Source of truth for DB models during Nest migration.
+ */
+
+ // This is your Prisma schema file,
+ // learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+ // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+ // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TemplateStatus {
+  draft
+  published
+  archived
+}
+
+enum TemplateVisibility {
+  public
+  private
+}
+
+model Template {
+  id             String             @id @default(uuid())
+  slug           String             @unique
+  name           String
+  description    String?
+  prompt         String?            // AI prompt template for image generation
+  negativePrompt String?            @map("negative_prompt") // What to avoid in generated images
+  modelProvider  String             @default("gemini") @map("model_provider") // AI provider: gemini, openai, midjourney
+  modelName      String             @default("gemini-1.5-pro") @map("model_name") // Specific model name/version
+  status         TemplateStatus     @default(draft)
+  visibility     TemplateVisibility @default(public)
+  thumbnailUrl   String?            @map("thumbnail_url")
+  publishedAt    DateTime?          @map("published_at")
+  usageCount     Int                @default(0) @map("usage_count")
+  tags           String[]           @default([])
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([visibility])
+  @@index([publishedAt])
+  @@map("templates")
+}

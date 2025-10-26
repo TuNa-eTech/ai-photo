@@ -1,6 +1,6 @@
 # Project Architecture (Documentation-Driven)
 
-Last updated: 2025-10-21
+Last updated: 2025-10-25
 
 Authoritative overview of system components, data flow, and operational concerns. Complements `swagger/openapi.yaml` and other `.documents/*` files.
 
@@ -11,8 +11,8 @@ Authoritative overview of system components, data flow, and operational concerns
   - Web Admin (React + Vite + TypeScript): internal tool for data curation and operations (Phase 1: read-only list/detail; Phase 2: CRUD).
 
 - Backend
-  - Go 1.25+ HTTP API with envelope responses.
-  - Postgres 15 as primary datastore.
+  - NestJS HTTP API with envelope responses.
+  - Postgres 15 as primary datastore with Prisma ORM.
   - Containerized runtime with Docker Compose for local development.
   - Stateless app with Firebase ID token (JWT) authentication (Authorization: Bearer).
 
@@ -39,27 +39,27 @@ graph TD
   end
 
   subgraph Backend
-    API[(Go HTTP API)]
-    PG[(Postgres 15)]
+    API[(NestJS HTTP API)]
+    PG[(Postgres 15 + Prisma)]
   end
 
   iOS -->|Firebase Sign-In| Firebase
   Admin -->|Firebase Sign-In| Firebase
   iOS -->|Bearer ID Token| API
   Admin -->|Bearer ID Token| API
-  API -->|SQL| PG
+  API -->|Prisma ORM| PG
 ```
 
 ## Repository Structure (relevant paths)
 
 - iOS app: `AIPhotoApp/AIPhotoApp/*`
   - Views, ViewModels, Repositories, Utilities/Networking (API client, envelope handling, 401 retry)
-- Backend: `backend/*`
-  - `internal/api` (handlers, middleware, routes)
-  - `internal/database` (postgres, file fallback)
-  - `internal/models`
-  - `migrations` (0001…0006)
-  - `cmd/api` entrypoint
+- Backend: `server/*`
+  - `src/auth` (BearerAuthGuard, Firebase Admin SDK)
+  - `src/common` (envelope interceptor, exception filter, DTOs)
+  - `src/templates` (controller, service, DTOs)
+  - `src/prisma` (Prisma service, module)
+  - `prisma` (schema, migrations)
 - Swagger: `swagger/openapi.yaml`
 - Web Admin: `web-cms/*` (implemented; Phase 2 CRUD + assets)
 - Documentation: `.documents/*`
@@ -72,11 +72,11 @@ graph TD
 - Inputs: `limit`, `offset`, `q`, `tags` (CSV), `sort` (`newest|popular|name`)
 - Auth: Bearer Firebase ID token
 - Backend:
-  - Parse query params → build `TemplateQuery`
-  - Postgres: join `template_assets` where `kind='thumbnail'`, filter by `ILIKE(q)`, filter by tag slugs, sort by selected criterion
-  - Fallback to file-source list with basic `q` filtering if DB not available
+  - Parse query params → build `QueryTemplatesDto`
+  - Prisma: query `Template` model with filters, sorting, pagination
+  - Global EnvelopeInterceptor wraps response
 - Output: `EnvelopeTemplatesList` with `templates: Template[]`
-  - `Template`: `id`, `name`, `thumbnail_url?`, `published_at?`, `usage_count?`
+  - `Template`: `id`, `name`, `thumbnailUrl?`, `publishedAt?`, `usageCount?`
 - Client:
   - iOS or Web Admin unpacks envelope; handles 401 with single token refresh and retry
 
@@ -92,18 +92,14 @@ graph TD
 
 ## Data Model (excerpt)
 
-- templates
-  - id/slug (PK), name, published_at (nullable), usage_count (int, default 0)
-- template_assets
-  - id (PK), template_id (FK), url, kind (thumbnail|cover|preview), sort_order
-- taxonomy (Phase 1 consumer, Phase 2 admin CRUD)
-  - tags, template_tags (many-to-many)
-  - categories (optional, TBD)
+- templates (Prisma model)
+  - id (String, PK), name (String), thumbnailUrl (String?), publishedAt (DateTime?), usageCount (Int, default 0)
+- Future models (to be migrated from Go schema):
+  - template_versions, template_assets, tags, template_tags
 
 Migration notes:
-- 0004: templates & versioning
-- 0005: template taxonomy & assets (`kind='thumbnail'` used in list)
-- 0006: `usage_count` added to templates
+- Current: Basic Template model implemented
+- Future: Migrate template_versions, taxonomy, and assets from Go schema
 
 ## Security
 
@@ -111,7 +107,8 @@ Migration notes:
   - Use Firebase SDK to manage auth state and ID token; attach Bearer header.
   - Single 401 refresh-and-retry pattern.
 - Server-side:
-  - Validate Firebase JWT on protected endpoints.
+  - BearerAuthGuard validates Firebase JWT on protected endpoints.
+  - DevAuth mode for local development (DEV_AUTH_TOKEN).
   - For future admin-only endpoints (Phase 2), enforce Firebase Admin verification and admin claims.
 
 ## CORS (development)
@@ -120,7 +117,7 @@ Migration notes:
 - Allow methods: `GET, POST` (extend as necessary).
 - Allow headers: `Authorization, Content-Type`.
 - Credentials: not required for this admin app.
-- Configure in backend middleware (`internal/api/middleware.go`).
+- Configure in NestJS main.ts with CORS_ALLOWED_ORIGINS environment variable.
 
 ## Non-Functional Requirements
 
@@ -183,5 +180,6 @@ Migration notes:
 - API: `swagger/openapi.yaml`
 - Memory: `.memory-bank/*`
 - iOS Networking: `AIPhotoApp/AIPhotoApp/Utilities/Networking/APIClient.swift`
-- Backend Handlers: `backend/internal/api/handlers.go`
-- DB Access: `backend/internal/database/postgres.go`
+- NestJS Templates: `server/src/templates/templates.controller.ts`
+- Prisma Service: `server/src/prisma/prisma.service.ts`
+- Migration Plan: `.implementation_plan/nest-migration-plan.md`

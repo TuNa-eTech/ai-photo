@@ -155,6 +155,12 @@ final class AuthViewModel {
             clearSession()
         }
     }
+    
+    // Alias for logout (async version for ProfileView)
+    @MainActor
+    func signOut() async throws {
+        logout()
+    }
 
     @MainActor
     private func clearSession() {

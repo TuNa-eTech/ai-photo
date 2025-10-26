@@ -1,38 +1,73 @@
 # Context
 
-Last updated: 2025-10-24
+Last updated: 2025-10-26
 
 Current work focus
-- Diagnose and fix 500 on POST /v1/admin/templates during E2E tests.
-- Stabilize local E2E by running backend in Docker with DevAuth and Postgres in the same Docker network.
+- **iOS Profile Screen:** Completed full profile screen with beige + liquid glass design.
+- Admin CRUD endpoints fully implemented and tested.
+- Web CMS fully functional with templates management (create, edit, delete, publish/unpublish).
+- File upload system working with thumbnail management and automatic cleanup.
+- Local development setup optimized (DB in Docker, server and web-cms run locally).
 
 Recent changes
-- Identified root cause: host-run backend (go run on :8081) failed SASL auth to Dockerized Postgres on 5432, causing “FATAL: password authentication failed for user 'imageai'”.
-- Verified DB schema and credentials inside container; applied migrations (0004–0006) via psql inside container successfully.
-- Added temporary debug logging:
-  - internal/api/admin_templates.go: include error cause in dev responses to aid debugging.
-  - internal/database/postgres.go: log DSN (password masked) and ping errors.
-- Switched E2E tests to containerized backend (:8080) which connects to DB internally via env (DB_HOST=db, DB_PASSWORD=imageai_pass).
-- Enabled and used DevAuth in container backend:
-  - POST /v1/dev/login → token injected into .box-testing/sandbox/env.yaml.
-  - Updated apiBaseUrl to http://localhost:8080.
-- Confirmed success:
-  - Create template: 201 Created.
-  - Upload thumbnail asset: 201 Created.
+- ✅ **iOS Profile Screen (2025-10-26):**
+  - Completed full profile screen with card-based layout matching Home design
+  - Created ProfileComponents: HeroCard, StatCard, SettingsRow, SettingsToggleRow, DangerButton
+  - Implemented ProfileView with sections: Hero, Stats, Account, Preferences, About, Danger Zone
+  - Created ProfileEditView modal with form validation (name, email)
+  - Integrated with CompactHeader settings button (fullscreen modal)
+  - Added signOut() method to AuthViewModel
+  - No linter errors, ready for testing
+- ✅ **iOS UI Redesign (2025-10-26):**
+  - Implemented beige + liquid glass minimalist design theme
+  - Updated GlassTokens with warm beige color palette (#F5E6D3, #D4C4B0, #F4E4C1, #E8D5D0)
+  - Reduced blur (25→15), shadow (25→18), and border thickness for minimalist aesthetic
+  - Updated all text colors to dark brown (#4A3F35) for proper contrast on light background
+  - Updated all components: GlassComponents, TemplatesHomeView, CompactHeader, HeroStatsCard, CategoryChip
+  - No linter errors, ready for testing on simulator
+- ✅ Completed admin CRUD endpoints (Phase 2):
+  - GET /v1/admin/templates (list with full admin fields including slug, status, visibility, tags)
+  - POST /v1/admin/templates (create template)
+  - GET /v1/admin/templates/{slug} (get by slug)
+  - PUT /v1/admin/templates/{slug} (update template)
+  - DELETE /v1/admin/templates/{slug} (delete template with file cleanup)
+  - POST /v1/admin/templates/{slug}/publish (publish with thumbnail validation)
+  - POST /v1/admin/templates/{slug}/unpublish (unpublish)
+  - POST /v1/admin/templates/{slug}/assets (upload thumbnail with multer)
+- Prisma schema updated with full template fields:
+  - Added slug (unique), description, status (enum), visibility (enum), tags (array), createdAt, updatedAt
+  - Migration applied: 20251026105027_add_admin_fields_to_templates
+- Static file serving configured with ServeStaticModule (process.cwd()/public)
+- File upload with automatic cleanup: old thumbnails deleted when uploading new ones, files deleted when template is deleted
+- Web CMS UI complete: create, edit (with thumbnail change), delete, publish/unpublish all working
+- Local dev setup: only DB in Docker, server (yarn start:dev) and web-cms run on host for better DX
 
 Decisions
-- Prefer Dockerized backend for local E2E to avoid host→container Postgres auth issues.
-- Keep debug logging only for local development; remove or guard with build tags/env before production.
+- Use multer (@nestjs/platform-express) for file upload handling
+- Store uploaded files in public/thumbnails/ with pattern: {slug}-{kind}-{timestamp}.{ext}
+- Auto-delete old files when uploading new thumbnails or deleting templates (disk cleanup)
+- Use process.cwd() for static file path to work in both dev and prod
+- Admin endpoints use full TemplateAdmin type with all fields, public endpoints use minimal Template type
+- Run server and web-cms locally for hot-reload, only DB in Docker
 
 Next steps
-- Optional: Revisit host-run backend connectivity (go run :8081) to DB container:
-  - Ensure IPv4 DSN: postgres://imageai:imageai_pass@127.0.0.1:5432/imageai_db?sslmode=disable
-  - Reset role password inside container if needed.
-  - Verify host connectivity via `docker run --rm -e PGPASSWORD=imageai_pass postgres:15 psql -h host.docker.internal -U imageai -d imageai_db -c "\dt"`.
-  - If instability persists, continue using Docker backend for E2E.
-- Remove/guard debug error details before release.
-- Proceed with publish flow (requires thumbnail) and complete admin asset use cases.
+- **Complete iOS UI redesign with beige theme and minimalist glass effects**
+- Add filtering/sorting to admin list endpoint (status, visibility, tags, search)
+- Implement template_versions table for prompt management
+- Add template_assets table for multiple asset types (preview, cover)
+- Add E2E tests for admin endpoints
+- iOS app integration with new template fields
 
 References
-- .documents/workflows/run-tests.md → “Admin API E2E (Docker + DevAuth)” updated with instructions and troubleshooting.
-- backend/internal/api/admin_templates.go, backend/internal/database/postgres.go (temporary debug logs).
+- .implementation_plan/profile-screen-design.md → Profile screen implementation plan
+- .implementation_plan/ui-redesign-beige-minimalist.md → UI redesign implementation plan
+- AIPhotoApp/AIPhotoApp/Views/Common/ProfileComponents.swift → Profile components
+- AIPhotoApp/AIPhotoApp/Views/Home/ProfileView.swift → Profile main screen
+- AIPhotoApp/AIPhotoApp/Views/Home/ProfileEditView.swift → Profile edit modal
+- AIPhotoApp/AIPhotoApp/Views/Common/GlassComponents.swift → Glass design system
+- server/src/templates/templates-admin.controller.ts → Admin CRUD endpoints
+- server/src/templates/templates.service.ts → Business logic with file cleanup
+- server/src/templates/dto/ → DTOs (CreateTemplateDto, UpdateTemplateDto, UploadAssetDto)
+- web-cms/src/components/templates/ → UI components (TemplateFormDialog, TemplateTable)
+- .box-testing/json/templates-sample.json → Sample data for testing (13 templates)
+- server/scripts/import-from-box-testing.ts → Script to import sample data

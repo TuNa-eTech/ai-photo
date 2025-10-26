@@ -10,22 +10,29 @@ import SwiftUI
 // MARK: - Design Tokens
 
 enum GlassTokens {
-    // Colors
-    static let primary1 = Color(red: 0.302, green: 0.639, blue: 1.0)      // #4DA3FF
-    static let primary2 = Color(red: 0.635, green: 0.349, blue: 1.0)      // #A259FF
-    static let accent1  = Color(red: 0.196, green: 0.878, blue: 0.769)    // #32E0C4
-    static let accent2  = Color(red: 1.0,   green: 0.302, blue: 0.604)    // #FF4D9A
-    static let textOnGlass = Color.white.opacity(0.9)
+    // Colors - Beige Theme
+    static let primary1 = Color(red: 0.961, green: 0.902, blue: 0.827)    // #F5E6D3 - Warm Linen
+    static let primary2 = Color(red: 0.831, green: 0.769, blue: 0.690)    // #D4C4B0 - Soft Taupe
+    static let accent1  = Color(red: 0.957, green: 0.894, blue: 0.757)    // #F4E4C1 - Champagne
+    static let accent2  = Color(red: 0.910, green: 0.835, blue: 0.816)    // #E8D5D0 - Dusty Rose
+    
+    // Text Colors (Dark on Light for contrast)
+    static let textPrimary = Color(red: 0.290, green: 0.247, blue: 0.208)      // #4A3F35 - Dark Brown
+    static let textSecondary = Color(red: 0.478, green: 0.435, blue: 0.365)    // #7A6F5D - Soft Brown
+    static let textOnGlass = textPrimary
+    
+    // Border Color (Subtle beige-brown)
+    static let borderColor = Color(red: 0.6, green: 0.55, blue: 0.48)          // Muted brown for borders
 
     // Spacing
     static let spaceBase: CGFloat = 4
-    static let radiusCard: CGFloat = 20
-    static let blurCard: CGFloat = 25   // 25 ±5 (tùy performance)
+    static let radiusCard: CGFloat = 22    // Slightly rounder for softer look
+    static let blurCard: CGFloat = 15      // Reduced for minimalist clarity
 
-    // Shadow
-    static let shadowColor = Color.black.opacity(0.25)
-    static let shadowRadius: CGFloat = 25
-    static let shadowY: CGFloat = 12
+    // Shadow (Lighter for minimalist aesthetic)
+    static let shadowColor = Color.black.opacity(0.15)
+    static let shadowRadius: CGFloat = 18
+    static let shadowY: CGFloat = 8
 }
 
 // MARK: - Background
@@ -37,38 +44,38 @@ struct GlassBackgroundView: View {
 
     var body: some View {
         ZStack {
-            // Gradient multi-point (blue → purple → cyan)
+            // Beige gradient (lightest beige → warm linen → champagne)
             LinearGradient(
                 colors: [
-                    GlassTokens.primary1.opacity(0.9),
-                    GlassTokens.primary2.opacity(0.9),
-                    Color.cyan.opacity(0.9)
+                    Color(red: 0.98, green: 0.95, blue: 0.90),    // Lightest beige
+                    GlassTokens.primary1,                          // Warm linen #F5E6D3
+                    GlassTokens.accent1                            // Champagne #F4E4C1
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
 
-            // Subtle animated blobs (performance friendly)
+            // Subtle animated blobs (beige theme, performance friendly)
             if animated {
                 Circle()
-                    .fill(GlassTokens.accent1.opacity(0.25))
-                    .frame(width: 260, height: 260)
-                    .blur(radius: 60)
-                    .offset(x: blobMove ? -120 : 80, y: blobMove ? -150 : -40)
-                    .animation(.easeInOut(duration: 12).repeatForever(autoreverses: true), value: blobMove)
+                    .fill(GlassTokens.accent1.opacity(0.4))        // Champagne blob
+                    .frame(width: 280, height: 280)
+                    .blur(radius: 50)
+                    .offset(x: blobMove ? -100 : 70, y: blobMove ? -140 : -30)
+                    .animation(.easeInOut(duration: 13).repeatForever(autoreverses: true), value: blobMove)
 
                 Circle()
-                    .fill(GlassTokens.accent2.opacity(0.20))
-                    .frame(width: 300, height: 300)
-                    .blur(radius: 70)
-                    .offset(x: blobMove ? 120 : -80, y: blobMove ? 140 : 60)
-                    .animation(.easeInOut(duration: 14).repeatForever(autoreverses: true), value: blobMove)
+                    .fill(GlassTokens.accent2.opacity(0.3))        // Dusty rose blob
+                    .frame(width: 320, height: 320)
+                    .blur(radius: 60)
+                    .offset(x: blobMove ? 110 : -70, y: blobMove ? 130 : 50)
+                    .animation(.easeInOut(duration: 15).repeatForever(autoreverses: true), value: blobMove)
             }
 
-            // Noise overlay (very subtle)
+            // Subtle texture overlay (minimalist)
             LinearGradient(
-                colors: [Color.white.opacity(0.03), Color.clear, Color.black.opacity(0.03)],
+                colors: [Color.white.opacity(0.02), Color.clear, GlassTokens.textPrimary.opacity(0.02)],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -86,10 +93,14 @@ struct GlassCardModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .background(
+                .ultraThinMaterial
+                    .opacity(0.85),  // Slightly more opaque for better content visibility
+                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                    .stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8)  // Thinner beige border
             )
             .shadow(color: GlassTokens.shadowColor, radius: GlassTokens.shadowRadius, x: 0, y: GlassTokens.shadowY)
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
@@ -120,8 +131,8 @@ struct GlassChip: View {
         .foregroundStyle(GlassTokens.textOnGlass)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay(Capsule().stroke(Color.white.opacity(0.25), lineWidth: 1))
+        .background(.ultraThinMaterial.opacity(0.8), in: Capsule())
+        .overlay(Capsule().stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8))
         .accessibilityLabel(Text(text))
     }
 }
@@ -129,10 +140,11 @@ struct GlassChip: View {
 struct GlassCTAButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
+            .foregroundStyle(GlassTokens.textPrimary)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(Capsule().stroke(Color.white.opacity(0.25), lineWidth: 1))
+            .background(.ultraThinMaterial.opacity(0.85), in: Capsule())
+            .overlay(Capsule().stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8))
             .shadow(color: GlassTokens.shadowColor, radius: GlassTokens.shadowRadius, x: 0, y: GlassTokens.shadowY)
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
             .animation(.spring(response: 0.25, dampingFraction: 0.8), value: configuration.isPressed)
@@ -150,8 +162,8 @@ struct GlassFloatingButton: View {
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(GlassTokens.textOnGlass)
                 .frame(width: 56, height: 56)
-                .background(.ultraThinMaterial, in: Circle())
-                .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                .background(.ultraThinMaterial.opacity(0.9), in: Circle())
+                .overlay(Circle().stroke(GlassTokens.borderColor.opacity(0.35), lineWidth: 0.8))
         }
         .shadow(color: GlassTokens.shadowColor, radius: GlassTokens.shadowRadius, x: 0, y: GlassTokens.shadowY)
         .accessibilityLabel(Text("Create"))
@@ -168,19 +180,28 @@ struct CardGlassSmall: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            // Thumbnail (placeholder implementation)
+            // Thumbnail with subtle tint overlay
             (image ?? Image(systemName: "photo"))
                 .resizable()
                 .scaledToFill()
                 .frame(maxWidth: .infinity)
-                .overlay(.ultraThinMaterial)
+                .overlay(
+                    LinearGradient(
+                        colors: [
+                            GlassTokens.primary1.opacity(0.4),
+                            GlassTokens.accent1.opacity(0.3)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
                 .blur(radius: GlassTokens.blurCard)
                 .clipped()
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
                     .font(.headline)
-                    .foregroundStyle(GlassTokens.textOnGlass)
+                    .foregroundStyle(GlassTokens.textPrimary)
                     .lineLimit(1)
                 if let tag {
                     GlassChip(text: tag, systemImage: "flame")
@@ -210,12 +231,21 @@ struct CardGlassLarge: View {
         GeometryReader { geo in
             let minX = geo.frame(in: .global).minX
             ZStack(alignment: .bottomLeading) {
-                // Background with subtle parallax
+                // Background with subtle parallax and beige tint
                 (image ?? Image(systemName: "photo"))
                     .resizable()
                     .scaledToFill()
                     .offset(x: -minX / 20) // parallax divisor for subtle effect
-                    .overlay(.ultraThinMaterial)
+                    .overlay(
+                        LinearGradient(
+                            colors: [
+                                GlassTokens.primary2.opacity(0.5),
+                                GlassTokens.accent1.opacity(0.4)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .blur(radius: GlassTokens.blurCard)
                     .clipped()
 
@@ -225,12 +255,12 @@ struct CardGlassLarge: View {
                     }
                     Text(title)
                         .font(.title3.bold())
-                        .foregroundStyle(GlassTokens.textOnGlass)
+                        .foregroundStyle(GlassTokens.textPrimary)
                         .lineLimit(2)
                     if let subtitle {
                         Text(subtitle)
                             .font(.footnote)
-                            .foregroundStyle(Color.white.opacity(0.85))
+                            .foregroundStyle(GlassTokens.textSecondary)
                             .lineLimit(2)
                     }
                 }
@@ -256,9 +286,10 @@ struct DebugOverlay: View {
     var body: some View {
         Text("AI Engine: OK • API ~54ms")
             .font(.caption2)
+            .foregroundStyle(GlassTokens.textPrimary)
             .padding(8)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 1))
+            .background(.ultraThinMaterial.opacity(0.9), in: Capsule())
+            .overlay(Capsule().stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8))
             .padding()
     }
 }

@@ -2,12 +2,12 @@
 
 Foundation document defining core requirements and goals. Owner-maintained; update as the project evolves.
 
-Last updated: 2025-10-21
+Last updated: 2025-10-25
 
 ## Project Summary
 AI Image Stylist is a cross-platform system:
 - iOS app (SwiftUI) for end-users to browse AI templates and generate stylized photos.
-- Go backend (Postgres) providing secure APIs with an envelope response format.
+- NestJS backend (Postgres + Prisma) providing secure APIs with an envelope response format.
 - Web Admin (React) for internal curation and management of template metadata, assets, and taxonomy.
 
 Authentication is unified via Firebase Auth (Google/Apple). Clients attach Firebase ID token as Authorization: Bearer.
@@ -23,7 +23,7 @@ Authentication is unified via Firebase Auth (Google/Apple). Clients attach Fireb
     - Fields: thumbnail_url, published_at, usage_count
     - Query params: limit, offset, q, tags (CSV), sort (newest|popular|name)
   - Envelope response structure with meta.requestId/timestamp.
-  - Postgres queries support filtering, sorting, and thumbnail join; file-source fallback maintained.
+  - Prisma queries support filtering, sorting, and thumbnail join.
   - OpenAPI 3.1 spec in swagger/openapi.yaml.
 
 - Web Admin (Phase 1)

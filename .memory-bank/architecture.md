@@ -1,81 +1,88 @@
 # Architecture
 
-Last updated: 2025-10-24
+Last updated: 2025-10-25
 
 System overview
 - iOS app (SwiftUI) consumes public APIs for browsing templates and processing images.
 - Web CMS (Vite + React + TS) for admins to manage Templates and Assets.
-- Backend (Go) exposes:
+- Backend (NestJS + Prisma) exposes:
   - Public endpoints (templates listing, image processing).
   - Admin endpoints (templates CRUD, assets, publish/unpublish).
 - PostgreSQL stores templates, versions, tags, assets, and metrics.
-- Local dev uses Docker Compose for Postgres and a runtime backend container. DevAuth can be enabled for admin endpoints in local.
+- Local dev uses Docker Compose for Postgres and NestJS runtime container. DevAuth can be enabled for admin endpoints in local.
 
 Key code paths (backend)
-- Entrypoints:
-  - backend/cmd/api/main.go (runtime entry with Firebase auth in production policy).
-  - backend/main.go (alt entry; ensure consistent with production constraints).
+- Entrypoint:
+  - server/src/main.ts (NestJS bootstrap with global interceptors, filters, CORS).
 - HTTP layer:
-  - internal/api/routes.go (mux bindings).
-  - internal/api/admin_templates.go (Admin Templates CRUD, publish/unpublish).
-  - internal/api/admin_assets.go (Admin Template assets upload/list/update/delete).
-  - internal/api/middleware.go (logging, CORS, RequestID).
-  - internal/api/dev_auth.go (DevAuth for local-only admin auth via token).
-  - internal/api/responder.go (envelope responses & helpers).
+  - server/src/app.module.ts (root module configuration).
+  - server/src/templates/templates.controller.ts (Templates CRUD endpoints).
+  - server/src/templates/templates.service.ts (business logic).
+  - server/src/templates/dto/ (request/response DTOs with validation).
 - Auth:
-  - internal/auth/auth.go (Firebase Admin, middleware, AdminOnly).
+  - server/src/auth/bearer-auth.guard.ts (Firebase token verification + DevAuth).
+  - server/src/auth/firebase-admin.ts (Firebase Admin SDK initialization).
 - Data access:
-  - internal/database/postgres.go (pgx driver, DSN/envs, connection).
-  - internal/database/admin_templates.go (list/get/create/update/delete templates, tags, assets; publish/unpublish).
-  - internal/database/database.go (file-based fallbacks for templates/users in certain flows).
-- Models:
-  - internal/models/models.go (DTOs/types: CreateTemplateInput, TemplateAdmin, TemplateAssetAdmin, etc).
-- Image processing:
-  - internal/image/image.go (processing stub/integration area).
+  - server/src/prisma/prisma.service.ts (Prisma client service).
+  - server/prisma/schema.prisma (database schema definition).
+  - server/prisma/migrations/ (database migrations).
+- Common:
+  - server/src/common/interceptors/envelope.interceptor.ts (response envelope wrapper).
+  - server/src/common/filters/http-exception.filter.ts (error envelope mapping).
+  - server/src/common/dto/envelope.dto.ts (envelope types and helpers).
 
 Database schema (PostgreSQL)
-- Tables (see backend/migrations):
-  - templates (id UUID, slug UNIQUE, name, description, status [draft|published|archived], visibility [public|private], usage_count INT, current_version_id, timestamps).
-  - template_versions (template_id FK, version, prompt_template, parameters JSONB, etc).
-  - tags, template_tags (M:N).
-  - template_assets (id UUID, template_id FK, kind [thumbnail|cover|preview], url, sort_order).
-- Migrations in order:
-  - 0004_create_templates_and_versions.up.sql
-  - 0005_create_template_taxonomy_and_assets.up.sql
-  - 0006_add_usage_count.up.sql
+- Tables (see server/prisma/schema.prisma):
+  - templates (id UUID, slug String unique, name String, description String, status enum, visibility enum, thumbnailUrl String, publishedAt DateTime, usageCount Int, tags String[], createdAt DateTime, updatedAt DateTime).
+  - Enums: TemplateStatus (draft, published, archived), TemplateVisibility (public, private).
+  - Future: template_versions, template_assets (to be added for prompt management and multiple assets).
+- Migrations:
+  - Prisma migrations in server/prisma/migrations/
+  - Latest: 20251026105027_add_admin_fields_to_templates (added admin fields)
+  - Schema defined in Prisma format with @map directives for PostgreSQL compatibility.
 
 Local development patterns
-- Preferred E2E path: Dockerized backend container connects to DB via Docker network:
-  - DB_HOST=db, DB_USER=imageai, DB_PASSWORD=imageai_pass, DB_NAME=imageai_db.
-  - Admin auth via DevAuth (DEV_AUTH_ENABLED=1) → /v1/dev/login to obtain token for Authorization: Bearer <token>.
-- Host-run backend (go run on :8081) can be used but may hit DB auth issues to container Postgres; see Troubleshooting.
+- Preferred E2E path: Dockerized NestJS container connects to DB via Docker network:
+  - DATABASE_URL=postgres://imageai:imageai_pass@db:5432/imageai_db?sslmode=disable.
+  - Admin auth via DevAuth (DEV_AUTH_ENABLED=1) → use DEV_AUTH_TOKEN for Authorization: Bearer <token>.
+- Host-run NestJS (yarn start:dev) can be used with host Postgres connection.
 
-Admin Templates flow (high-level)
-- POST /v1/admin/templates → database.CreateAdminTemplate:
-  - INSERT into templates (slug, name, description, status, visibility).
-  - Upsert tags (tags table) and mapping (template_tags).
-  - Upsert thumbnail asset if provided (template_assets with kind=thumbnail).
-- POST /v1/admin/templates/{slug}/assets (multipart) → saves assets under /assets mount; updates DB.
-- POST /v1/admin/templates/{slug}/publish → requires thumbnail; sets status=published, published_at=NOW().
+Admin Templates flow (implemented)
+- Public endpoints:
+  - GET /v1/templates → TemplatesService.listTemplates (minimal fields for end users)
+- Admin endpoints (templates-admin.controller.ts):
+  - GET /v1/admin/templates → listAdminTemplates (full fields including slug, status, visibility, tags)
+  - POST /v1/admin/templates → createTemplate (with validation: slug format, unique check)
+  - GET /v1/admin/templates/{slug} → getTemplateBySlug
+  - PUT /v1/admin/templates/{slug} → updateTemplate (cannot change slug)
+  - DELETE /v1/admin/templates/{slug} → deleteTemplate (with file cleanup)
+  - POST /v1/admin/templates/{slug}/publish → publishTemplate (validates thumbnail_url exists)
+  - POST /v1/admin/templates/{slug}/unpublish → unpublishTemplate
+  - POST /v1/admin/templates/{slug}/assets → uploadAsset (multer file upload, auto-cleanup old files)
+- File handling:
+  - Uploads saved to public/thumbnails/ with pattern: {slug}-{kind}-{timestamp}.{ext}
+  - Old thumbnail deleted automatically when uploading new one
+  - All files deleted when template is deleted
+  - Static files served via ServeStaticModule at /public/*
 
 Observability (dev)
-- Logging middleware records status, duration, and error envelopes.
-- Temporary debug logs (dev-only):
-  - internal/api/admin_templates.go adds cause in error details to surface DB failures during local debug.
-  - internal/database/postgres.go logs DSN (masked) and ping errors for connection diagnosis.
-- Remove/guard these logs before production.
+- NestJS built-in logging with request/response tracking.
+- Global exception filter maps HTTP exceptions to envelope errors.
+- Envelope interceptor wraps all successful responses.
+- Prisma query logging available in development mode.
 
 Containers
 - docker/docker-compose.yml:
   - services:
     - db (postgres:15) exposed on host 5432 with persistent volume.
-    - backend (runtime image built from build/imageai-backend, port 8080) with envs for DB and DevAuth.
+    - server (NestJS runtime image, port 8080) with envs for DB and DevAuth.
     - web_cms and web_cms_preview (optional dev HMR/preview).
     - pgadmin (optional).
-- backend/Dockerfile.runtime (scratch + CA certs + static binary).
+- server/Dockerfile (Node.js + NestJS build process).
 
 References
 - .documents/workflows/run-tests.md → Admin API E2E (Docker + DevAuth).
 - .documents/troubleshooting/db-auth.md → DB auth issues and fixes.
-- backend/internal/database/admin_templates.go → SQL details.
-- backend/internal/api/admin_templates.go → request handling and validation.
+- server/src/templates/templates.service.ts → Prisma query details.
+- server/src/templates/templates.controller.ts → request handling and validation.
+- .implementation_plan/nest-migration-plan.md → Migration from Go to NestJS.

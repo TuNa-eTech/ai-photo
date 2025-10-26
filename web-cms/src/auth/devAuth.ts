@@ -1,50 +1,67 @@
-export const isDevAuth = String(import.meta.env.VITE_DEV_AUTH || '').trim() === '1' || String(import.meta.env.VITE_DEV_AUTH || '').toLowerCase() === 'true';
+/**
+ * DevAuth - Development Authentication
+ * 
+ * Simple token-based authentication for local development
+ * bypasses Firebase when VITE_DEV_AUTH=1
+ * 
+ * Based on: .documents/tech.md
+ */
 
-const TOKEN_KEY = 'dev_admin_token';
+import type { User } from '../types'
 
-export function setDevToken(token: string) {
-  localStorage.setItem(TOKEN_KEY, token);
+export interface DevAuthConfig {
+  enabled: boolean
+  token: string
 }
 
-export function getDevToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-export function clearDevToken() {
-  localStorage.removeItem(TOKEN_KEY);
-}
-
-export type DevLoginResponse = {
-  token: string;
-  email: string;
-  role: string;
-};
-
-export async function devLogin(baseURL: string, email: string, password: string): Promise<DevLoginResponse> {
-  const res = await fetch(`${baseURL.replace(/\/$/, '')}/v1/dev/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `Login failed (${res.status})`);
+/**
+ * Get DevAuth config from environment
+ */
+export function getDevAuthConfig(): DevAuthConfig {
+  return {
+    enabled: import.meta.env.VITE_DEV_AUTH === '1' || import.meta.env.VITE_DEV_AUTH === 'true',
+    token: import.meta.env.VITE_DEV_AUTH_TOKEN || 'dev',
   }
-  const env = await res.json();
-  if (!env?.success || !env?.data?.token) {
-    throw new Error(env?.error?.message || 'Login failed');
-  }
-  return env.data as DevLoginResponse;
 }
 
-export async function devWhoAmI(baseURL: string, token: string) {
-  const res = await fetch(`${baseURL.replace(/\/$/, '')}/v1/dev/whoami`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return null;
-  const env = await res.json();
-  if (!env?.success) return null;
-  return env.data as { email: string; role: string };
+/**
+ * Check if DevAuth is enabled
+ */
+export function isDevAuthEnabled(): boolean {
+  return getDevAuthConfig().enabled
 }
+
+/**
+ * Get DevAuth token
+ */
+export function getDevAuthToken(): string | null {
+  const config = getDevAuthConfig()
+  return config.enabled ? config.token : null
+}
+
+/**
+ * Mock user for DevAuth
+ */
+export function getDevAuthUser(): User {
+  return {
+    uid: 'dev-user-id',
+    email: 'dev@example.com',
+    displayName: 'Dev User',
+    photoURL: null,
+  }
+}
+
+/**
+ * Simulate login with DevAuth
+ */
+export function devAuthLogin(): Promise<User> {
+  return Promise.resolve(getDevAuthUser())
+}
+
+/**
+ * Simulate logout with DevAuth
+ */
+export function devAuthLogout(): Promise<void> {
+  return Promise.resolve()
+}
+
