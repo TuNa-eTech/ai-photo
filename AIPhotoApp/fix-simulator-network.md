@@ -83,3 +83,4 @@ Sau khi restart app, check Xcode console:
 
 Nếu vẫn thấy "Failed: ..." → check firewall hoặc network settings.
 
+

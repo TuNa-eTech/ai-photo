@@ -270,3 +270,4 @@ private struct CategoryChipButton: View {
     AllTemplatesView(home: home)
 }
 
+
