@@ -30,5 +30,8 @@ enum AppConfig {
         static let registerUser = "/v1/users/register"
         static let templates = "/v1/templates"
         static let trendingTemplates = "/v1/templates/trending"
+        static let processImage = "/v1/images/process"
     }
+    
+    static let baseURL: String = baseURLString
 }

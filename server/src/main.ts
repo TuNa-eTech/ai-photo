@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
+import { json } from 'express';
 import { EnvelopeInterceptor } from './common/interceptors/envelope.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { HttpEnvelopeExceptionFilter } from './common/filters/http-exception.filter';
@@ -16,6 +17,9 @@ async function bootstrap() {
   });
 
   const logger = new Logger('Bootstrap');
+
+  // Increase JSON body size limit for base64 image uploads (20MB)
+  app.use(json({ limit: '20mb' }));
 
   // Global validation
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true, forbidUnknownValues: false }));

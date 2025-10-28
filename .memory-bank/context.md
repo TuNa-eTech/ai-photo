@@ -1,8 +1,27 @@
 # Context
 
-Last updated: 2025-10-26
+Last updated: 2025-10-27
 
 Current work focus
+- **🔄 Gemini Image Processing (Phase 1: Long HTTP + Background URLSession):** 🚧 IN PROGRESS
+  - **Approach Selected:** Long HTTP request (60s timeout) + Background URLSession for iOS
+  - **User Flow:** Upload image → Background processing → Local notification → View result
+  - **Key Benefits:** No Redis/BullMQ needed, works when app killed, zero additional cost
+  - **Timeline:** 5-7 days (Backend 2-3 days, iOS 3-4 days)
+  - **Documents Created:**
+    - `.documents/features/gemini-image-processing.md` - Feature specification
+    - `.documents/integrations/gemini-api-nestjs.md` - Gemini API integration guide
+    - `.documents/platform-guides/ios-background-processing.md` - Background URLSession guide
+    - `.implementation_plan/gemini-image-processing-plan.md` - Detailed implementation checklist
+  - **Status:** Planning complete, ready to start implementation
+  - **Next Steps:**
+    1. Setup Gemini API key in backend
+    2. Create Gemini module (service, controller, DTOs)
+    3. Create Images module with POST /v1/images/process
+    4. Implement BackgroundImageProcessor for iOS
+    5. Add AppDelegate background session handler
+    6. Create local notification support
+    7. Build UI components (ImageProcessingView, MyProjectsView)
 - **iOS Login Screen Redesign:** ✅ COMPLETED - Liquid Glass Beige authentication experience
   - Redesigned AuthLandingView with premium glass aesthetic matching Home screen
   - Implemented animated beige gradient background with organic blob motion
@@ -12,12 +31,11 @@ Current work focus
   - Backend security fixes and enhancements implemented
   - iOS app fully integrated with real API data
   - Comprehensive unit tests: 85 total (38 backend + 47 iOS) - all passing
-- **Web CMS Professional Redesign:** Completed comprehensive UI/UX redesign with Material-UI v7, professional theme, and modern components.
-- **Template Detail Page:** Implemented full template detail view with AI image generation testing capabilities.
-- Admin CRUD endpoints fully implemented and tested.
-- Web CMS fully functional with templates management, testing, and professional interface.
-- File upload system working with thumbnail management and automatic cleanup.
-- Local development setup optimized (DB in Docker, server and web-cms run locally).
+- **Web CMS Professional Redesign:** ✅ COMPLETED - Comprehensive UI/UX redesign with Material-UI v7, professional theme, and modern components.
+- **Template Detail Page:** ✅ COMPLETED - Implemented full template detail view with AI image generation testing capabilities.
+- **Admin CRUD Endpoints:** ✅ COMPLETED - Fully implemented and tested.
+- **Web CMS:** ✅ COMPLETED - Fully functional with templates management, testing, and professional interface.
+- **File Upload System:** ✅ COMPLETED - Working with thumbnail management and automatic cleanup.
 
 Recent changes (latest first)
 - ✅ **Trending Templates API & iOS Home Screen Simplification (2025-10-26):**
@@ -195,16 +213,23 @@ Decisions and Key Learnings
   - Disable parallel testing on iOS (`-parallel-testing-enabled NO`) for deterministic results
 
 Next steps
-- **iOS Integration Testing:** Test real API integration with Firebase auth on simulator/device
-- **End-to-End iOS Tests:** Implement UI tests for template browsing and favorites flow
-- **Test Template Detail page with real backend API** (image processing endpoint)
-- **Implement async job queue for image processing** (polling every 2s)
-- Implement file upload endpoint (/v1/images/upload) for image generator
-- Add test history storage and display
-- Implement template_versions table for prompt management (Phase 2)
-- Add template_assets table for multiple asset types (preview, cover)
-- Add E2E tests for Web CMS
-- Deploy backend and configure production Firebase credentials
+- **🔄 Gemini Image Processing Implementation** (IN PROGRESS):
+  - Backend: Setup Gemini module và Images endpoint
+  - iOS: Implement Background URLSession processor
+  - iOS: Create local notification support
+  - iOS: Build ImageProcessingView và MyProjectsView
+  - Testing: Unit + E2E tests cho cả backend và iOS
+- **Future Enhancements** (Phase 2):
+  - Implement async job queue với Redis/BullMQ (alternative approach)
+  - Add FCM push notifications (fully async workflow)
+  - Add test history storage và display
+  - Implement template_versions table cho prompt management
+  - Add template_assets table cho multiple asset types
+  - Add E2E tests for Web CMS
+- **Deployment:**
+  - Deploy backend và configure production Firebase credentials
+  - iOS: Test Firebase auth on simulator/device
+  - End-to-End: Test complete user flows
 
 References
 - **iOS Login Screen Redesign:**

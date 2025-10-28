@@ -15,6 +15,11 @@ struct AIPhotoAppApp: App {
 
     init() {
         FirebaseApp.configure()
+        
+        // Request notification permissions
+        Task {
+            await NotificationManager.shared.requestPermissions()
+        }
     }
 
     var body: some Scene {
@@ -22,6 +27,13 @@ struct AIPhotoAppApp: App {
             RootRouterView(model: authModel)
                 .onOpenURL { url in
                     GIDSignIn.sharedInstance.handle(url)
+                }
+                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { userActivity in
+                    // Handle background URLSession
+                    if let url = userActivity.webpageURL {
+                        // Background download completion handled by BackgroundImageProcessor
+                        print("Background session completed")
+                    }
                 }
         }
     }

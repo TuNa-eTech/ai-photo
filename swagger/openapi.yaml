@@ -148,6 +148,363 @@ paths:
       security:
         - bearerAuth: []
 
+  /v1/images/process:
+    post:
+      summary: Xử lý ảnh với AI template (Async với FCM Push Notification)
+      description: |
+        Xử lý ảnh gốc với template AI đã chọn (async mode).
+        Backend tạo job và xử lý trong background, gửi push notification khi hoàn tất.
+        
+        **Flow:**
+        1. Client gửi ảnh gốc (base64), template_id và device_token (FCM)
+        2. Backend tạo job và trả về job_id ngay lập tức (202 Accepted)
+        3. Backend xử lý trong background với BullMQ
+        4. Backend gửi push notification khi xong
+        5. Client nhận push, gọi GET /v1/images/jobs/{job_id} để lấy kết quả
+        6. Client lưu ảnh locally
+        
+        **Response time:** < 500ms (job creation)
+        **Processing time:** 5-30 seconds (background)
+        **Max image size:** 10MB (decoded)
+      tags:
+        - Images
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessImageRequestAsync'
+            example:
+              template_id: "anime-style-uuid"
+              image_base64: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+              options:
+                width: 1024
+                height: 1024
+                quality: "standard"
+      responses:
+        '202':
+          description: Job đã được tạo và đang xử lý (Accepted)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeJobCreated'
+              example:
+                success: true
+                data:
+                  job_id: "job-uuid-123"
+                  status: "pending"
+                  estimated_time_seconds: 15
+                  message: "Processing started. You will receive a notification when complete."
+                meta:
+                  requestId: "req_abc123xyz"
+                  timestamp: "2025-10-27T10:30:45Z"
+        '400':
+          description: Yêu cầu không hợp lệ (invalid format, dimensions, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+              example:
+                success: false
+                error:
+                  code: "invalid_image_format"
+                  message: "Image format not supported. Please use JPEG or PNG."
+                  details:
+                    supported_formats: ["image/jpeg", "image/png"]
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-10-27T10:30:45Z"
+        '401':
+          description: Chưa xác thực
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+              example:
+                success: false
+                error:
+                  code: "unauthorized"
+                  message: "Please sign in again"
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-10-27T10:30:45Z"
+        '404':
+          description: Template không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+              example:
+                success: false
+                error:
+                  code: "invalid_template"
+                  message: "Template with ID 'xyz' not found or not published"
+                  details:
+                    template_id: "xyz"
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-10-27T10:30:45Z"
+        '413':
+          description: Ảnh quá lớn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+              example:
+                success: false
+                error:
+                  code: "image_too_large"
+                  message: "Image is too large. Maximum 10MB."
+                  details:
+                    max_size_mb: 10
+                    current_size_mb: 15
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-10-27T10:30:45Z"
+        '422':
+          description: Nội dung không phù hợp (content policy violation)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+              example:
+                success: false
+                error:
+                  code: "inappropriate_content"
+                  message: "This image cannot be processed due to content policy"
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-10-27T10:30:45Z"
+        '429':
+          description: Vượt quá giới hạn (rate limit exceeded)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+              example:
+                success: false
+                error:
+                  code: "rate_limit_exceeded"
+                  message: "Monthly limit reached. Upgrade to continue."
+                  details:
+                    limit: 50
+                    reset_at: "2025-11-01T00:00:00Z"
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-10-27T10:30:45Z"
+        '502':
+          description: Gemini API lỗi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+              example:
+                success: false
+                error:
+                  code: "gemini_api_error"
+                  message: "AI service unavailable. Please try again."
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-10-27T10:30:45Z"
+        '504':
+          description: Timeout (processing quá lâu)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+              example:
+                success: false
+                error:
+                  code: "processing_timeout"
+                  message: "Processing took too long. Please try again."
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-10-27T10:30:45Z"
+      security:
+        - bearerAuth: []
+
+  /v1/images/jobs/{jobId}:
+    get:
+      summary: Lấy trạng thái và kết quả của job
+      description: |
+        Lấy thông tin chi tiết về job xử lý ảnh, bao gồm trạng thái và kết quả (nếu đã hoàn tất).
+        
+        **Use cases:**
+        - Polling để check status khi chưa nhận push notification
+        - Fetch kết quả sau khi nhận push notification
+        - Xem lại kết quả của job cũ (trong 24h)
+      tags:
+        - Images
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: UUID của job
+      responses:
+        '200':
+          description: Thông tin job (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeJobStatus'
+              examples:
+                pending:
+                  summary: Job đang chờ xử lý
+                  value:
+                    success: true
+                    data:
+                      job_id: "job-uuid-123"
+                      status: "pending"
+                      created_at: "2025-10-27T10:00:00Z"
+                    meta:
+                      requestId: "req_xyz"
+                      timestamp: "2025-10-27T10:00:05Z"
+                processing:
+                  summary: Job đang xử lý
+                  value:
+                    success: true
+                    data:
+                      job_id: "job-uuid-123"
+                      status: "processing"
+                      created_at: "2025-10-27T10:00:00Z"
+                      started_at: "2025-10-27T10:00:02Z"
+                    meta:
+                      requestId: "req_xyz"
+                      timestamp: "2025-10-27T10:00:10Z"
+                completed:
+                  summary: Job hoàn tất
+                  value:
+                    success: true
+                    data:
+                      job_id: "job-uuid-123"
+                      status: "completed"
+                      created_at: "2025-10-27T10:00:00Z"
+                      started_at: "2025-10-27T10:00:02Z"
+                      completed_at: "2025-10-27T10:00:15Z"
+                      result:
+                        processed_image_base64: "data:image/jpeg;base64,..."
+                        metadata:
+                          template_id: "anime-style"
+                          template_name: "Anime Style"
+                          model_used: "imagen-3-fast"
+                          generation_time_ms: 8500
+                          processed_dimensions:
+                            width: 1024
+                            height: 1024
+                    meta:
+                      requestId: "req_xyz"
+                      timestamp: "2025-10-27T10:00:16Z"
+                failed:
+                  summary: Job thất bại
+                  value:
+                    success: true
+                    data:
+                      job_id: "job-uuid-123"
+                      status: "failed"
+                      created_at: "2025-10-27T10:00:00Z"
+                      completed_at: "2025-10-27T10:00:15Z"
+                      error:
+                        code: "gemini_api_error"
+                        message: "AI service unavailable"
+                    meta:
+                      requestId: "req_xyz"
+                      timestamp: "2025-10-27T10:00:16Z"
+        '404':
+          description: Job không tồn tại hoặc đã hết hạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+              example:
+                success: false
+                error:
+                  code: "job_not_found"
+                  message: "Job not found or expired (jobs expire after 24 hours)"
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-10-27T10:00:00Z"
+        '403':
+          description: Không có quyền truy cập job này
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+              example:
+                success: false
+                error:
+                  code: "forbidden"
+                  message: "You don't have permission to access this job"
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-10-27T10:00:00Z"
+      security:
+        - bearerAuth: []
+
+  /v1/images/jobs:
+    get:
+      summary: Lấy danh sách jobs của user
+      description: |
+        Lấy danh sách tất cả jobs xử lý ảnh của user hiện tại.
+        Jobs được sắp xếp theo thời gian tạo (mới nhất trước).
+        Chỉ trả về metadata (không có kết quả ảnh).
+      tags:
+        - Images
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Số lượng jobs trả về
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Vị trí bắt đầu
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum:
+              - pending
+              - processing
+              - completed
+              - failed
+          description: Lọc theo trạng thái
+      responses:
+        '200':
+          description: Danh sách jobs (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeJobsList'
+              example:
+                success: true
+                data:
+                  jobs:
+                    - job_id: "job-uuid-123"
+                      status: "completed"
+                      template_id: "anime-style"
+                      created_at: "2025-10-27T10:00:00Z"
+                      completed_at: "2025-10-27T10:00:15Z"
+                    - job_id: "job-uuid-456"
+                      status: "pending"
+                      template_id: "portrait-style"
+                      created_at: "2025-10-27T09:50:00Z"
+                  total: 2
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-10-27T10:05:00Z"
+      security:
+        - bearerAuth: []
+
 components:
   schemas:
     Template:
@@ -232,6 +589,285 @@ components:
           $ref: '#/components/schemas/APIError'
         meta:
           $ref: '#/components/schemas/Meta'
+
+    # Image Processing Schemas (Async với FCM)
+    ProcessImageRequestAsync:
+      type: object
+      required:
+        - template_id
+        - image_base64
+      properties:
+        template_id:
+          type: string
+          description: UUID của template AI
+          example: "anime-style-uuid"
+        image_base64:
+          type: string
+          description: Ảnh gốc encoded base64, có thể có data URI prefix
+          example: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+        device_token:
+          type: string
+          description: FCM device token để gửi push notification (optional)
+          example: "fcm-token-abc123..."
+        options:
+          type: object
+          properties:
+            width:
+              type: integer
+              minimum: 512
+              maximum: 2048
+              default: 1024
+              description: Chiều rộng ảnh output (phải là bội số của 64)
+            height:
+              type: integer
+              minimum: 512
+              maximum: 2048
+              default: 1024
+              description: Chiều cao ảnh output (phải là bội số của 64)
+            quality:
+              type: string
+              enum:
+                - standard
+                - high
+              default: standard
+              description: Chất lượng ảnh output
+    
+    JobCreatedData:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          description: UUID của job
+          example: "job-uuid-123"
+        status:
+          type: string
+          enum:
+            - pending
+          description: Trạng thái job lúc tạo (luôn là pending)
+          example: "pending"
+        estimated_time_seconds:
+          type: integer
+          description: Thời gian xử lý ước tính (seconds)
+          example: 15
+        message:
+          type: string
+          description: Thông báo cho user
+          example: "Processing started. You will receive a notification when complete."
+      required:
+        - job_id
+        - status
+        - estimated_time_seconds
+    
+    EnvelopeJobCreated:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/JobCreatedData'
+        meta:
+          $ref: '#/components/schemas/Meta'
+      required:
+        - success
+        - data
+        - meta
+    
+    JobStatusData:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          example: "job-uuid-123"
+        status:
+          type: string
+          enum:
+            - pending
+            - processing
+            - completed
+            - failed
+          example: "completed"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-10-27T10:00:00Z"
+        started_at:
+          type: string
+          format: date-time
+          example: "2025-10-27T10:00:02Z"
+        completed_at:
+          type: string
+          format: date-time
+          example: "2025-10-27T10:00:15Z"
+        result:
+          type: object
+          description: Kết quả xử lý (chỉ có khi status = completed)
+          properties:
+            processed_image_base64:
+              type: string
+              example: "data:image/jpeg;base64,..."
+            metadata:
+              $ref: '#/components/schemas/ProcessImageMetadata'
+        error:
+          type: object
+          description: Thông tin lỗi (chỉ có khi status = failed)
+          properties:
+            code:
+              type: string
+              example: "gemini_api_error"
+            message:
+              type: string
+              example: "AI service unavailable"
+      required:
+        - job_id
+        - status
+        - created_at
+    
+    EnvelopeJobStatus:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/JobStatusData'
+        meta:
+          $ref: '#/components/schemas/Meta'
+      required:
+        - success
+        - data
+        - meta
+    
+    JobListItem:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          example: "job-uuid-123"
+        status:
+          type: string
+          enum:
+            - pending
+            - processing
+            - completed
+            - failed
+          example: "completed"
+        template_id:
+          type: string
+          example: "anime-style"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-10-27T10:00:00Z"
+        completed_at:
+          type: string
+          format: date-time
+          example: "2025-10-27T10:00:15Z"
+      required:
+        - job_id
+        - status
+        - template_id
+        - created_at
+    
+    JobsListData:
+      type: object
+      properties:
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobListItem'
+        total:
+          type: integer
+          description: Tổng số jobs
+          example: 25
+      required:
+        - jobs
+        - total
+    
+    EnvelopeJobsList:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/JobsListData'
+        meta:
+          $ref: '#/components/schemas/Meta'
+      required:
+        - success
+        - data
+        - meta
+
+    ImageDimensions:
+      type: object
+      properties:
+        width:
+          type: integer
+          example: 1920
+        height:
+          type: integer
+          example: 1080
+      required:
+        - width
+        - height
+
+    ProcessImageMetadata:
+      type: object
+      properties:
+        template_id:
+          type: string
+          example: "anime-style-uuid"
+        template_name:
+          type: string
+          example: "Anime Style"
+        model_used:
+          type: string
+          example: "imagen-3-fast"
+        generation_time_ms:
+          type: integer
+          description: Thời gian xử lý (milliseconds)
+          example: 8500
+        original_dimensions:
+          $ref: '#/components/schemas/ImageDimensions'
+        processed_dimensions:
+          $ref: '#/components/schemas/ImageDimensions'
+      required:
+        - template_id
+        - template_name
+        - model_used
+        - generation_time_ms
+
+    ProcessImageResult:
+      type: object
+      properties:
+        processed_image_base64:
+          type: string
+          description: Ảnh đã xử lý encoded base64 với data URI prefix
+          example: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+        metadata:
+          $ref: '#/components/schemas/ProcessImageMetadata'
+      required:
+        - processed_image_base64
+        - metadata
+
+    EnvelopeProcessImageSuccess:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/ProcessImageResult'
+        meta:
+          $ref: '#/components/schemas/Meta'
+      required:
+        - success
+        - data
+        - meta
 
   securitySchemes:
     bearerAuth:

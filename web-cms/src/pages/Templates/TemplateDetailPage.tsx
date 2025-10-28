@@ -93,7 +93,7 @@ export function TemplateDetailPage(): React.ReactElement {
     }
   }
 
-  const handleGenerate = async (imagePath: string): Promise<void> => {
+  const handleGenerate = async (imageBase64: string): Promise<void> => {
     if (!template) return
 
     setIsGenerating(true)
@@ -101,17 +101,29 @@ export function TemplateDetailPage(): React.ReactElement {
     setGeneratedImageUrl('')
 
     try {
-      // Store original image URL for comparison
-      setOriginalImageUrl(imagePath)
+      // Store original image for comparison
+      setOriginalImageUrl(imageBase64)
 
       // Call process image API
       const result = await processImage({
         template_id: template.id,
-        image_path: imagePath,
+        image_base64: imageBase64,
+        options: {
+          width: 1024,
+          height: 1024,
+          quality: 'standard',
+        },
       })
 
-      setGeneratedImageUrl(result.processed_image_url)
-      showSnackbar('Image generated successfully!', 'success')
+      setGeneratedImageUrl(result.processed_image_base64)
+      
+      // Show success message with metadata
+      const metadata = result.metadata
+      const generationTime = (metadata.generation_time_ms / 1000).toFixed(1)
+      showSnackbar(
+        `Image generated successfully in ${generationTime}s using ${metadata.model_used}!`,
+        'success'
+      )
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate image'
       setError(errorMessage)

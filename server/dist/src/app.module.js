@@ -13,6 +13,7 @@ const app_service_1 = require("./app.service");
 const prisma_module_1 = require("./prisma/prisma.module");
 const templates_module_1 = require("./templates/templates.module");
 const users_module_1 = require("./users/users.module");
+const images_module_1 = require("./images/images.module");
 const config_1 = require("@nestjs/config");
 const serve_static_1 = require("@nestjs/serve-static");
 const path_1 = require("path");
@@ -36,6 +37,7 @@ exports.AppModule = AppModule = __decorate([
             prisma_module_1.PrismaModule,
             templates_module_1.TemplatesModule,
             users_module_1.UsersModule,
+            images_module_1.ImagesModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

@@ -21,9 +21,10 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import LinkIcon from '@mui/icons-material/Link'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import DeleteIcon from '@mui/icons-material/Delete'
+import { fileToBase64, validateImageFile, validateImageUrl, getFileSizeString } from '../../utils/imageHelper'
 
 export interface ImageGeneratorFormProps {
-  onGenerate: (imagePath: string) => Promise<void>
+  onGenerate: (imageBase64: string) => Promise<void>
   loading?: boolean
 }
 
@@ -51,15 +52,12 @@ export function ImageGeneratorForm({
     const file = event.target.files?.[0]
     if (!file) return
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setError('Please select a valid image file')
-      return
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setError('File size must be less than 10MB')
+    // Validate file
+    const validation = validateImageFile(file)
+    if (!validation.valid) {
+      setError(validation.error!)
+      setSelectedFile(null)
+      setPreviewUrl('')
       return
     }
 
@@ -79,9 +77,11 @@ export function ImageGeneratorForm({
     setImageUrl(url)
     setError('')
 
-    // Simple URL validation
-    if (url && !url.match(/^https?:\/\/.+/)) {
-      setError('Please enter a valid URL starting with http:// or https://')
+    // Validate URL
+    const validation = validateImageUrl(url)
+    if (url && !validation.valid) {
+      setError(validation.error!)
+      setPreviewUrl('')
     } else if (url) {
       setPreviewUrl(url)
     } else {
@@ -100,28 +100,28 @@ export function ImageGeneratorForm({
     setError('')
 
     try {
-      let imagePath = ''
+      let imageBase64 = ''
 
       if (inputMode === 'upload') {
         if (!selectedFile) {
           setError('Please select an image file')
           return
         }
-        // For now, use file name as path (backend will handle actual upload)
-        imagePath = selectedFile.name
+        
+        // Convert file to base64
+        imageBase64 = await fileToBase64(selectedFile)
       } else {
         if (!imageUrl) {
           setError('Please enter an image URL')
           return
         }
-        if (!imageUrl.match(/^https?:\/\/.+/)) {
-          setError('Please enter a valid URL')
-          return
-        }
-        imagePath = imageUrl
+        
+        // For URL input, use URL as-is (backend will handle fetching)
+        // Note: Backend currently expects base64, so URL mode may need adjustment
+        imageBase64 = imageUrl
       }
 
-      await onGenerate(imagePath)
+      await onGenerate(imageBase64)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate image')
     }
@@ -185,7 +185,7 @@ export function ImageGeneratorForm({
 
           {selectedFile && (
             <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
-              Selected: <strong>{selectedFile.name}</strong> ({(selectedFile.size / 1024).toFixed(1)} KB)
+              Selected: <strong>{selectedFile.name}</strong> ({getFileSizeString(selectedFile.size)})
             </Alert>
           )}
         </Stack>

@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2025-10-26
+Last updated: 2025-10-27
 
 System overview
 - iOS app (SwiftUI) consumes public APIs for browsing templates and processing images.
@@ -27,6 +27,13 @@ Key code paths (backend)
   - server/src/templates/templates-admin.controller.ts (Admin templates CRUD).
   - server/src/templates/templates.service.ts (business logic with security filters).
   - server/src/templates/dto/ (request/response DTOs with validation).
+- **Image Processing (NEW - In Progress):**
+  - server/src/gemini/gemini.module.ts (Gemini API integration module).
+  - server/src/gemini/gemini.service.ts (Call Gemini API, parse responses, handle timeouts).
+  - server/src/gemini/exceptions/ (GeminiAPIException, ContentPolicyException).
+  - server/src/images/images.module.ts (Image processing module).
+  - server/src/images/images.controller.ts (POST /v1/images/process with 60s timeout).
+  - server/src/images/dto/ (ProcessImageDto, ProcessImageResponse).
 - Auth:
   - server/src/auth/bearer-auth.guard.ts (Firebase token verification + DevAuth).
   - server/src/auth/firebase-admin.ts (Firebase Admin SDK initialization).
@@ -41,6 +48,9 @@ Key code paths (backend)
 - Testing:
   - server/src/templates/templates.service.spec.ts (23 unit tests with mocked Prisma).
   - server/test/templates.e2e-spec.ts (15 e2e tests with DevAuth).
+  - server/src/gemini/gemini.service.spec.ts (NEW - Gemini service tests).
+  - server/src/images/images.controller.spec.ts (NEW - Images controller tests).
+  - server/test/images.e2e-spec.ts (NEW - Images E2E tests).
 
 Database schema (PostgreSQL)
 - Tables (see server/prisma/schema.prisma):
@@ -131,17 +141,29 @@ iOS app architecture (AIPhotoApp/)
   - Models/DTOs/ → Data transfer objects matching backend API schema
     - TemplatesDTOs.swift → TemplateDTO with computed properties (isNew, isTrending)
     - AuthDTOs.swift → UserRegisterRequest/Response for backend registration
+    - ProcessImageRequest.swift → (NEW) Image processing request DTO
+    - ProcessImageResponse.swift → (NEW) Image processing response DTO
+    - Project.swift → (NEW) Local project model for "My Projects"
   - Repositories/ → API client layer with protocol-based architecture
     - TemplatesRepository.swift → Implements TemplatesRepositoryProtocol for testability
     - UserRepository.swift → User registration API with envelope handling
+    - ImageProcessingAPIClient.swift → (NEW) Image processing API client with 60s timeout
+    - ProjectsStorageManager.swift → (NEW) Local project storage (save/load/delete projects)
   - ViewModels/ → Observable view models for business logic
     - HomeViewModel.swift → Manages template state, fetching, filtering, favorites
     - AuthViewModel.swift → Firebase authentication and user registration
+    - ImageProcessingViewModel.swift → (NEW) Handles image processing flow with background support
   - Views/ → SwiftUI views with liquid glass design
     - Home/ → Template browsing
       - TemplatesHomeView.swift → Simplified MVP home with trending templates
       - SimpleHeader.swift → Minimal header (avatar + greeting + settings)
       - AllTemplatesView.swift → Full templates list with search/filters
+    - ImageProcessing/ → (NEW) Image processing UI
+      - ImageProcessingView.swift → Processing screen with progress and states
+      - ProcessingResultView.swift → Before/after comparison view
+    - Projects/ → (NEW) User projects
+      - MyProjectsView.swift → Grid view of user's processed images
+      - ProjectDetailView.swift → Detailed view of single project
     - Common/ → Reusable components (GlassComponents, GlassBackgroundView, BootstrapViews)
     - Authentication/ → Login/signup flows
       - AuthLandingView.v2.swift → Premium login screen with Liquid Glass Beige design
@@ -152,9 +174,13 @@ iOS app architecture (AIPhotoApp/)
   - Utilities/ → Shared utilities
     - Networking/ → APIClient with envelope handling and 401 retry
     - Constants/ → Design tokens (GlassTokens with beige color palette)
+    - BackgroundImageProcessor.swift → (NEW) Background URLSession processor for long-running requests
+    - Extensions/UIImage+Compression.swift → (NEW) Image compression utilities
 - Testing:
   - AIPhotoAppTests/TemplateDTOsTests.swift → 20 tests for DTO decoding and computed properties
   - AIPhotoAppTests/HomeViewModelTests.swift → 27 tests for ViewModel logic and API integration
+  - AIPhotoAppTests/ImageProcessingViewModelTests.swift → (NEW) Image processing ViewModel tests
+  - AIPhotoAppTests/ProjectsStorageManagerTests.swift → (NEW) Storage manager tests
   - Uses MockTemplatesRepository conforming to TemplatesRepositoryProtocol for isolated testing
 - Key patterns:
   - Repository Protocol pattern for dependency injection and testability

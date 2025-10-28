@@ -8,11 +8,32 @@ import { apiClient } from './client'
 
 export interface ProcessImageRequest {
   template_id: string
-  image_path: string
+  image_base64: string
+  options?: {
+    width?: number
+    height?: number
+    quality?: 'standard' | 'high'
+  }
+}
+
+export interface ProcessImageMetadata {
+  template_id: string
+  template_name: string
+  model_used: string
+  generation_time_ms: number
+  original_dimensions?: {
+    width: number
+    height: number
+  }
+  processed_dimensions: {
+    width: number
+    height: number
+  }
 }
 
 export interface ProcessImageResponse {
-  processed_image_url: string
+  processed_image_base64: string
+  metadata: ProcessImageMetadata
 }
 
 /**
@@ -25,25 +46,5 @@ export async function processImage(
     '/v1/images/process',
     request
   )
-}
-
-/**
- * Upload an image file to the server
- * Returns the image path for use in processImage
- */
-export async function uploadImage(file: File): Promise<string> {
-  const formData = new FormData()
-  formData.append('image', file)
-
-  const response = await apiClient.post<{ image_path: string }>(
-    '/v1/images/upload',
-    formData,
-    {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    }
-  )
-  return response.image_path
 }
 
