@@ -48,6 +48,7 @@ final class HomeViewModel {
 
     // MARK: - Outputs (data)
     var trendingTemplates: [TemplateItem] = []
+    var newTemplates: [TemplateItem] = []
     var userProjects: [Project] = []
     var allTemplates: [TemplateItem] = [] // For AllTemplatesView
     
@@ -70,6 +71,19 @@ final class HomeViewModel {
     
     var displayTrendingTemplates: [TemplateItem] {
         Array(trendingTemplates.prefix(trendingLimit))
+    }
+    
+    // Hero Template: #1 Trending (first template in the list)
+    var heroTemplate: TemplateItem? {
+        trendingTemplates.first
+    }
+    
+    // Trending Now: Templates from index 1 onwards (3-5 templates)
+    var trendingNowTemplates: [TemplateItem] {
+        guard trendingTemplates.count > 1 else { return [] }
+        // Return templates from index 1 to 5 (max 5 templates)
+        let endIndex = min(6, trendingTemplates.count)
+        return Array(trendingTemplates[1..<endIndex])
     }
 
     // MARK: - Actions
@@ -179,12 +193,12 @@ final class HomeViewModel {
     }
     
     // Load all templates from API (/v1/templates) - for AllTemplatesView and SearchView
-    func fetchAllTemplatesFromAPI(repo: TemplatesRepositoryProtocol, bearerIDToken: String, limit: Int? = nil, offset: Int? = nil, query: String? = nil, tokenProvider: (() async throws -> String)? = nil) {
+    func fetchAllTemplatesFromAPI(repo: TemplatesRepositoryProtocol, bearerIDToken: String, limit: Int? = nil, offset: Int? = nil, query: String? = nil, sort: String? = nil, tokenProvider: (() async throws -> String)? = nil) {
         isLoading = true
         errorMessage = nil
         Task {
             do {
-                let resp = try await repo.listTemplates(limit: limit, offset: offset, query: query, bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
+                let resp = try await repo.listTemplates(limit: limit, offset: offset, query: query, sort: sort, bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
                 let items: [TemplateItem] = resp.templates.map { dto in
                     // Map DTO to TemplateItem with real data
                     TemplateItem(
@@ -201,6 +215,46 @@ final class HomeViewModel {
                 }
                 await MainActor.run {
                     self.allTemplates = items
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.isLoading = false
+                    self.errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+    
+    // Load new templates from API (/v1/templates?sort=newest)
+    func fetchNewTemplatesFromAPI(repo: TemplatesRepositoryProtocol, bearerIDToken: String, limit: Int? = 6, tokenProvider: (() async throws -> String)? = nil) {
+        isLoading = true
+        errorMessage = nil
+        Task {
+            do {
+                let resp = try await repo.listTemplates(limit: limit, offset: 0, query: nil, sort: "newest", bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
+                let items: [TemplateItem] = resp.templates.map { dto in
+                    #if DEBUG
+                    print("📦 New Template DTO: \(dto.name)")
+                    print("   - thumbnailURL: \(dto.thumbnailURL?.absoluteString ?? "nil")")
+                    print("   - isNew: \(dto.isNew), isTrending: \(dto.isTrending)")
+                    #endif
+                    
+                    // Map DTO to TemplateItem with real data
+                    return TemplateItem(
+                        slug: dto.id,
+                        title: dto.name,
+                        subtitle: subtitleText(for: dto),
+                        tag: tagText(for: dto),
+                        isNew: dto.isNew,
+                        isTrending: dto.isTrending,
+                        thumbnailURL: dto.thumbnailURL,
+                        thumbnailSymbol: "photo",  // Fallback icon
+                        dto: dto
+                    )
+                }
+                await MainActor.run {
+                    self.newTemplates = items
                     self.isLoading = false
                 }
             } catch {

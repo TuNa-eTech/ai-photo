@@ -23,6 +23,8 @@ final class MockTemplatesRepository: TemplatesRepositoryProtocol {
     func listTemplates(
         limit: Int?,
         offset: Int?,
+        query: String?,
+        sort: String?,
         bearerIDToken: String,
         tokenProvider: (() async throws -> String)?
     ) async throws -> TemplatesListResponse {

@@ -14,41 +14,30 @@ struct HomeView: View {
 
     // UI local state
     @State private var showProfile: Bool = false
+    @State private var showSearch: Bool = false
     @State private var showAllTemplates: Bool = false
     @State private var selectedTemplate: TemplateDTO?
-    @State private var showImageProcessing: Bool = false
-
-    private let gridCols: [GridItem] = [
-        GridItem(.flexible(), spacing: 12, alignment: .top),
-        GridItem(.flexible(), spacing: 12, alignment: .top)
-    ]
 
     var body: some View {
         ZStack {
             GlassBackgroundView()
 
-            VStack(spacing: 0) {
-                // Simple header
-                SimpleHeader(
-                    userName: greetingName(),
-                    avatarURL: model.avatarURL?.absoluteString,
-                    showSettings: $showProfile
-                )
-                
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 24) {
-                        // User projects section (if exists)
-                        if home.shouldShowProjects {
-                            projectsSection
-                        }
-                        
-                        // Trending templates section
-                        trendingSection
-                    }
-                    .padding(.bottom, 24)
-                    .padding(.top, 16)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    // Hero Section: #1 Trending Template
+                    heroSection
+                    
+                    // Trending Now Section: Horizontal scroll
+                    trendingNowSection
+                        .padding(.top, 24)
+                    
+                    // New Section: Latest templates
+                    newSection
+                        .padding(.top, 24)
+                        .padding(.bottom, 24)
                 }
             }
+            .ignoresSafeArea(edges: .top)
             .overlay(alignment: .top) {
                 // Loading / Error banners
                 if home.isLoading {
@@ -73,7 +62,7 @@ struct HomeView: View {
                     home.fetchTrendingFromAPI(
                         repo: repo,
                         bearerIDToken: token,
-                        limit: 20,
+                        limit: 6, // Get 6 templates: 1 for hero + 5 for trending now
                         tokenProvider: { try await model.fetchFreshIDToken() }
                     )
                 } else {
@@ -81,9 +70,25 @@ struct HomeView: View {
                     home.fetchInitial()
                 }
             }
+            
+            // Load new templates for home screen
+            if home.newTemplates.isEmpty {
+                if let token = model.loadToken() {
+                    let repo = TemplatesRepository()
+                    home.fetchNewTemplatesFromAPI(
+                        repo: repo,
+                        bearerIDToken: token,
+                        limit: 6, // Get 6 new templates
+                        tokenProvider: { try await model.fetchFreshIDToken() }
+                    )
+                }
+            }
         }
         .fullScreenCover(isPresented: $showProfile) {
             ProfileView(model: model)
+        }
+        .fullScreenCover(isPresented: $showSearch) {
+            SearchView(model: model)
         }
         .sheet(isPresented: $showAllTemplates) {
             AllTemplatesView(home: home)
@@ -95,40 +100,33 @@ struct HomeView: View {
 
     // MARK: - Sections
     
-    private var projectsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("My Projects")
-                .font(.title2.weight(.bold))
-                .foregroundStyle(GlassTokens.textPrimary)
-                .padding(.horizontal, 20)
-            
-            VStack(spacing: 12) {
-                ForEach(home.userProjects) { project in
-                    ProjectCard(project: project)
-                        .onTapGesture {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            // TODO: Navigate to project detail
+    private var heroSection: some View {
+        Group {
+            if let hero = home.heroTemplate {
+                HeroTemplateCard(
+                    template: hero,
+                    onTap: {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        if let dto = hero.dto {
+                            selectedTemplate = dto
                         }
-                }
+                    }
+                )
+                .ignoresSafeArea(edges: .top)
+            } else if !home.isLoading {
+                // Empty state for hero
+                HeroPlaceholder()
+                    .ignoresSafeArea(edges: .top)
             }
-            .padding(.horizontal, 20)
         }
     }
     
-    private var trendingSection: some View {
+    private var trendingNowSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Trending Templates")
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(GlassTokens.textPrimary)
-                    
-                    if !home.displayTrendingTemplates.isEmpty {
-                        Text("\(home.displayTrendingTemplates.count) templates")
-                            .font(.subheadline)
-                            .foregroundStyle(GlassTokens.textSecondary)
-                    }
-                }
+                Text("Trending Now")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(GlassTokens.textPrimary)
                 
                 Spacer()
                 
@@ -152,52 +150,121 @@ struct HomeView: View {
             }
             .padding(.horizontal, 20)
             
-            if home.displayTrendingTemplates.isEmpty && !home.isLoading {
+            if home.trendingNowTemplates.isEmpty && !home.isLoading {
                 // Empty state
                 VStack(spacing: 16) {
                     Image(systemName: "sparkles")
                         .font(.system(size: 48, weight: .light))
                         .foregroundStyle(GlassTokens.textSecondary.opacity(0.6))
-                    Text("No trending templates yet")
+                    Text("No more trending templates")
                         .font(.subheadline)
                         .foregroundStyle(GlassTokens.textSecondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 48)
             } else {
-                LazyVGrid(columns: gridCols, spacing: 16) {
-                    ForEach(home.displayTrendingTemplates) { item in
-                        CardGlassSmall(
-                            title: item.title,
-                            tag: item.tag,
-                            thumbnailURL: item.thumbnailURL,
-                            thumbnailSymbol: item.thumbnailSymbol
-                        )
-                        .onTapGesture {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            if let dto = item.dto {
-                                selectedTemplate = dto
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(home.trendingNowTemplates) { item in
+                            CardGlassSmall(
+                                title: item.title,
+                                tag: item.tag,
+                                thumbnailURL: item.thumbnailURL,
+                                thumbnailSymbol: item.thumbnailSymbol
+                            )
+                            .frame(width: 180, height: 240) // 3:4 aspect ratio
+                            .onTapGesture {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                if let dto = item.dto {
+                                    selectedTemplate = dto
+                                }
                             }
-                        }
-                        .contextMenu {
-                            Button("Preview", systemImage: "eye") {}
-                            Button(home.isFavorite(item) ? "Remove Favorite" : "Add Favorite",
-                                   systemImage: home.isFavorite(item) ? "heart.slash" : "heart") {
-                                home.toggleFavorite(item)
+                            .contextMenu {
+                                Button("Preview", systemImage: "eye") {}
+                                Button(home.isFavorite(item) ? "Remove Favorite" : "Add Favorite",
+                                       systemImage: home.isFavorite(item) ? "heart.slash" : "heart") {
+                                    home.toggleFavorite(item)
+                                }
                             }
                         }
                     }
+                    .padding(.horizontal, 20)
                 }
-                .padding(.horizontal, 20)
             }
         }
     }
-
-    // MARK: - Helpers
     
-    private func greetingName() -> String {
-        let trimmed = model.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "bạn" : trimmed
+    private var newSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .center) {
+                Text("New")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(GlassTokens.textPrimary)
+                
+                Spacer()
+                
+                Button(action: {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    showAllTemplates = true
+                }) {
+                    HStack(spacing: 4) {
+                        Text("See All")
+                            .font(.subheadline.weight(.medium))
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .foregroundStyle(GlassTokens.textPrimary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial.opacity(0.85), in: Capsule())
+                    .overlay(Capsule().stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 20)
+            
+            if home.newTemplates.isEmpty && !home.isLoading {
+                // Empty state
+                VStack(spacing: 16) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 48, weight: .light))
+                        .foregroundStyle(GlassTokens.textSecondary.opacity(0.6))
+                    Text("No new templates")
+                        .font(.subheadline)
+                        .foregroundStyle(GlassTokens.textSecondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 48)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(home.newTemplates) { item in
+                            CardGlassSmall(
+                                title: item.title,
+                                tag: item.tag,
+                                thumbnailURL: item.thumbnailURL,
+                                thumbnailSymbol: item.thumbnailSymbol
+                            )
+                            .frame(width: 180, height: 240) // 3:4 aspect ratio
+                            .onTapGesture {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                if let dto = item.dto {
+                                    selectedTemplate = dto
+                                }
+                            }
+                            .contextMenu {
+                                Button("Preview", systemImage: "eye") {}
+                                Button(home.isFavorite(item) ? "Remove Favorite" : "Add Favorite",
+                                       systemImage: home.isFavorite(item) ? "heart.slash" : "heart") {
+                                    home.toggleFavorite(item)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
+        }
     }
     
 }
@@ -332,6 +399,144 @@ private struct ProjectCard: View {
         case .failed:
             return .red
         }
+    }
+}
+
+// MARK: - Hero Template Card
+
+private enum HeroConstants {
+    static let heightMultiplier: CGFloat = 0.5
+}
+
+private struct HeroTemplateCard: View {
+    let template: HomeViewModel.TemplateItem
+    let onTap: () -> Void
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let screenHeight = UIScreen.main.bounds.height
+            let heroHeight = screenHeight * HeroConstants.heightMultiplier
+            let safeAreaTop = geometry.safeAreaInsets.top
+            let totalHeight = heroHeight + safeAreaTop
+            
+            ZStack(alignment: .bottomLeading) {
+                // Background image - extends to top edge including status bar area
+                Group {
+                    if let url = template.thumbnailURL {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                            case .failure, .empty:
+                                fallbackImage
+                            @unknown default:
+                                fallbackImage
+                            }
+                        }
+                    } else {
+                        fallbackImage
+                    }
+                }
+                .frame(width: geometry.size.width, height: totalHeight)
+                .clipped()
+                .offset(y: -safeAreaTop)
+                
+                // Gradient overlay for better text readability - extends to top
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0.3),
+                        Color.black.opacity(0.6)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(width: geometry.size.width, height: totalHeight)
+                .offset(y: -safeAreaTop)
+                
+                // Bottom content: Template info and CTA - positioned at bottom left
+                VStack(alignment: .leading, spacing: 12) {
+                    if let tag = template.tag {
+                        GlassChip(text: tag, systemImage: "flame.fill")
+                    }
+                    
+                    Text(template.title)
+                        .font(.largeTitle.weight(.bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .shadow(color: .black.opacity(0.5), radius: 4, x: 0, y: 2)
+                    
+                    if let subtitle = template.subtitle {
+                        Text(subtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.9))
+                            .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                    }
+                    
+                    Button(action: onTap) {
+                        HStack(spacing: 8) {
+                            Text("Sử dụng mẫu này")
+                                .font(.headline.weight(.semibold))
+                            Image(systemName: "arrow.right")
+                                .font(.headline.weight(.semibold))
+                        }
+                        .foregroundStyle(GlassTokens.textPrimary)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 16)
+                        .background(.ultraThinMaterial.opacity(0.95), in: Capsule())
+                        .overlay(Capsule().stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 8)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onTap()
+            }
+            .ignoresSafeArea(edges: .top)
+        }
+        .frame(height: UIScreen.main.bounds.height * HeroConstants.heightMultiplier)
+    }
+    
+    private var fallbackImage: some View {
+        ZStack {
+            LinearGradient(
+                colors: [GlassTokens.primary1, GlassTokens.accent1],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Image(systemName: template.thumbnailSymbol ?? "photo")
+                .font(.system(size: 80))
+                .foregroundStyle(.white.opacity(0.5))
+        }
+    }
+}
+
+// MARK: - Hero Placeholder
+
+private struct HeroPlaceholder: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [GlassTokens.primary1, GlassTokens.accent1],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            
+            VStack(spacing: 16) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 64, weight: .light))
+                    .foregroundStyle(GlassTokens.textSecondary.opacity(0.6))
+                Text("Loading trending template...")
+                    .font(.headline)
+                    .foregroundStyle(GlassTokens.textSecondary)
+            }
+        }
+        .frame(height: UIScreen.main.bounds.height * HeroConstants.heightMultiplier)
     }
 }
 

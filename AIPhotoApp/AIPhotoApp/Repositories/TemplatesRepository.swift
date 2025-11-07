@@ -14,6 +14,7 @@ protocol TemplatesRepositoryProtocol {
         limit: Int?,
         offset: Int?,
         query: String?,
+        sort: String?,
         bearerIDToken: String,
         tokenProvider: (() async throws -> String)?
     ) async throws -> TemplatesListResponse
@@ -66,6 +67,7 @@ final class TemplatesRepository: TemplatesRepositoryProtocol {
     func listTemplates(limit: Int? = nil,
                        offset: Int? = nil,
                        query: String? = nil,
+                       sort: String? = nil,
                        bearerIDToken: String,
                        tokenProvider: (() async throws -> String)? = nil) async throws -> TemplatesListResponse {
         var req = APIRequest(method: "GET", path: AppConfig.APIPath.templates)
@@ -74,6 +76,9 @@ final class TemplatesRepository: TemplatesRepositoryProtocol {
         if let offset { items.append(URLQueryItem(name: "offset", value: String(offset))) }
         if let query, !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             items.append(URLQueryItem(name: "q", value: query.trimmingCharacters(in: .whitespacesAndNewlines)))
+        }
+        if let sort, !sort.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            items.append(URLQueryItem(name: "sort", value: sort.trimmingCharacters(in: .whitespacesAndNewlines)))
         }
         req.queryItems = items
 

@@ -215,9 +215,9 @@ struct CardGlassSmall: View {
                         }
                     }
                     .onAppear {
-                        #if DEBUG
-                        print("🖼️ Loading image: \(url.absoluteString)")
-                        #endif
+                        // #if DEBUG
+                        // print("🖼️ Loading image: \(url.absoluteString)")
+                        // #endif
                     }
                 } else {
                     ZStack {
