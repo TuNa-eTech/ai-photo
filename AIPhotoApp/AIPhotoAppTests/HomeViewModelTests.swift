@@ -14,6 +14,7 @@ import Foundation
 @MainActor
 final class MockTemplatesRepository: TemplatesRepositoryProtocol {
     var mockResponse: TemplatesListResponse?
+    var mockTrendingResponse: TemplatesListResponse?
     var mockError: Error?
     var lastBearerToken: String?
     var lastLimit: Int?
@@ -40,6 +41,63 @@ final class MockTemplatesRepository: TemplatesRepositoryProtocol {
         
         return mockResponse ?? TemplatesListResponse(templates: [])
     }
+    
+    func listTrendingTemplates(
+        limit: Int?,
+        offset: Int?,
+        bearerIDToken: String,
+        tokenProvider: (() async throws -> String)?
+    ) async throws -> TemplatesListResponse {
+        // Capture parameters for verification
+        lastBearerToken = bearerIDToken
+        lastLimit = limit
+        lastOffset = offset
+        
+        // Simulate network delay
+        try? await Task.sleep(nanoseconds: 10_000_000) // 0.01 seconds
+        
+        // Return mock response or throw error
+        if let error = mockError {
+            throw error
+        }
+        
+        // Use trending-specific response if provided, otherwise fall back to general response
+        return mockTrendingResponse ?? mockResponse ?? TemplatesListResponse(templates: [])
+    }
+}
+
+// MARK: - Test Helpers
+
+extension TemplateDTO {
+    @MainActor
+    static func mock(
+        id: String,
+        name: String,
+        thumbnailURL: URL? = nil,
+        publishedAt: Date? = nil,
+        usageCount: Int? = nil
+    ) -> TemplateDTO {
+        var fields: [String] = []
+        fields.append("\"id\":\"\(id)\"")
+        fields.append("\"name\":\"\(name)\"")
+        if let url = thumbnailURL?.absoluteString {
+            fields.append("\"thumbnail_url\":\"\(url)\"")
+        }
+        if let date = publishedAt {
+            let formatter = ISO8601DateFormatter()
+            let dateStr = formatter.string(from: date)
+            fields.append("\"published_at\":\"\(dateStr)\"")
+        }
+        if let count = usageCount {
+            fields.append("\"usage_count\":\(count)")
+        }
+        let json = "{" + fields.joined(separator: ",") + "}"
+        let data = Data(json.utf8)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        // Force try in tests; if it crashes, the test will fail visibly
+        return try! decoder.decode(TemplateDTO.self, from: data)
+    }
 }
 
 // MARK: - HomeViewModel Tests
@@ -52,33 +110,33 @@ struct HomeViewModelInitializationTests {
     func testInitialState() {
         let vm = HomeViewModel()
         
-        #expect(vm.searchText == "")
-        #expect(vm.selectedFilter == .all)
-        #expect(vm.selectedCategory == .all)
         #expect(vm.isLoading == false)
         #expect(vm.errorMessage == nil)
-        #expect(vm.featured.isEmpty)
+        #expect(vm.trendingTemplates.isEmpty)
+        #expect(vm.userProjects.isEmpty)
         #expect(vm.allTemplates.isEmpty)
         #expect(vm.favorites.isEmpty)
+        #expect(vm.shouldShowProjects == false)
+        #expect(vm.trendingLimit == 6) // Default limit when no projects
     }
 }
 
-@Suite("HomeViewModel fetchFromAPI")
+@Suite("HomeViewModel fetchTrendingFromAPI")
 @MainActor
-struct HomeViewModelFetchFromAPITests {
+struct HomeViewModelFetchTrendingFromAPITests {
     
-    @Test("fetchFromAPI sets isLoading during fetch")
+    @Test("fetchTrendingFromAPI sets isLoading during fetch")
     func testLoadingStateDuringFetch() async {
         let vm = HomeViewModel()
         let mockRepo = MockTemplatesRepository()
         
         // Setup mock response with delay
-        mockRepo.mockResponse = TemplatesListResponse(templates: [
-            TemplateDTO(id: "test", name: "Test", thumbnailURL: nil, publishedAt: nil, usageCount: nil)
+        mockRepo.mockTrendingResponse = TemplatesListResponse(templates: [
+            TemplateDTO.mock(id: "test", name: "Test")
         ])
         
-        // Call fetchFromAPI (starts Task internally)
-        vm.fetchFromAPI(repo: mockRepo, bearerIDToken: "test-token")
+        // Call fetchTrendingFromAPI (starts Task internally)
+        vm.fetchTrendingFromAPI(repo: mockRepo, bearerIDToken: "test-token")
         
         // Check loading state immediately (should be true)
         try? await Task.sleep(nanoseconds: 1_000_000) // 0.001 seconds
@@ -91,33 +149,21 @@ struct HomeViewModelFetchFromAPITests {
         #expect(vm.isLoading == false)
     }
     
-    @Test("fetchFromAPI populates templates on success")
+    @Test("fetchAllTemplatesFromAPI populates templates on success")
     func testSuccessfulFetch() async {
         let vm = HomeViewModel()
         let mockRepo = MockTemplatesRepository()
         
         let today = Date()
         mockRepo.mockResponse = TemplatesListResponse(templates: [
-            TemplateDTO(
-                id: "anime",
-                name: "Anime Style",
-                thumbnailURL: URL(string: "https://example.com/anime.jpg"),
-                publishedAt: today,
-                usageCount: 120
-            ),
-            TemplateDTO(
-                id: "cartoon",
-                name: "Cartoon",
-                thumbnailURL: URL(string: "https://example.com/cartoon.jpg"),
-                publishedAt: today,
-                usageCount: 50
-            )
+            TemplateDTO.mock(id: "anime", name: "Anime Style", thumbnailURL: URL(string: "https://example.com/anime.jpg"), publishedAt: today, usageCount: 120),
+            TemplateDTO.mock(id: "cartoon", name: "Cartoon", thumbnailURL: URL(string: "https://example.com/cartoon.jpg"), publishedAt: today, usageCount: 50)
         ])
         
-        vm.fetchFromAPI(repo: mockRepo, bearerIDToken: "test-token")
+        vm.fetchAllTemplatesFromAPI(repo: mockRepo, bearerIDToken: "test-token")
         
-        // Wait for fetch to complete (mock has 10ms delay + processing)
-        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        // Wait for fetch to complete (increase to 200ms to avoid flakiness on CI)
+        try? await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
         
         #expect(vm.allTemplates.count == 2)
         #expect(vm.allTemplates[0].title == "Anime Style")
@@ -126,28 +172,7 @@ struct HomeViewModelFetchFromAPITests {
         #expect(vm.isLoading == false)
     }
     
-    @Test("fetchFromAPI populates featured templates")
-    func testFeaturedTemplatesPopulated() async {
-        let vm = HomeViewModel()
-        let mockRepo = MockTemplatesRepository()
-        
-        let today = Date()
-        mockRepo.mockResponse = TemplatesListResponse(templates: [
-            TemplateDTO(id: "trending", name: "Trending", thumbnailURL: nil, publishedAt: today, usageCount: 200),
-            TemplateDTO(id: "new", name: "New", thumbnailURL: nil, publishedAt: today, usageCount: 10),
-            TemplateDTO(id: "old", name: "Old", thumbnailURL: nil, publishedAt: Calendar.current.date(byAdding: .day, value: -30, to: today), usageCount: 5)
-        ])
-        
-        vm.fetchFromAPI(repo: mockRepo, bearerIDToken: "test-token")
-        
-        try? await Task.sleep(nanoseconds: 100_000_000)
-        
-        // Featured should be populated (trending/new items prioritized)
-        #expect(vm.featured.count <= 3)
-        #expect(!vm.featured.isEmpty)
-    }
-    
-    @Test("fetchFromAPI handles error correctly")
+    @Test("fetchAllTemplatesFromAPI handles error correctly")
     func testFetchError() async {
         let vm = HomeViewModel()
         let mockRepo = MockTemplatesRepository()
@@ -158,53 +183,53 @@ struct HomeViewModelFetchFromAPITests {
         
         mockRepo.mockError = TestError()
         
-        vm.fetchFromAPI(repo: mockRepo, bearerIDToken: "test-token")
+        vm.fetchAllTemplatesFromAPI(repo: mockRepo, bearerIDToken: "test-token")
         
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        try? await Task.sleep(nanoseconds: 200_000_000)
         
         #expect(vm.errorMessage != nil)
         #expect(vm.isLoading == false)
         #expect(vm.allTemplates.isEmpty)
     }
     
-    @Test("fetchFromAPI passes bearer token correctly")
+    @Test("fetchAllTemplatesFromAPI passes bearer token correctly")
     func testBearerTokenPassed() async {
         let vm = HomeViewModel()
         let mockRepo = MockTemplatesRepository()
         
         mockRepo.mockResponse = TemplatesListResponse(templates: [])
         
-        vm.fetchFromAPI(repo: mockRepo, bearerIDToken: "my-secret-token")
+        vm.fetchAllTemplatesFromAPI(repo: mockRepo, bearerIDToken: "my-secret-token")
         
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        try? await Task.sleep(nanoseconds: 200_000_000)
         
         #expect(mockRepo.lastBearerToken == "my-secret-token")
     }
     
-    @Test("fetchFromAPI respects limit parameter")
+    @Test("fetchAllTemplatesFromAPI respects limit parameter")
     func testLimitParameter() async {
         let vm = HomeViewModel()
         let mockRepo = MockTemplatesRepository()
         
         mockRepo.mockResponse = TemplatesListResponse(templates: [])
         
-        vm.fetchFromAPI(repo: mockRepo, bearerIDToken: "token", limit: 50)
+        vm.fetchAllTemplatesFromAPI(repo: mockRepo, bearerIDToken: "token", limit: 50)
         
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        try? await Task.sleep(nanoseconds: 200_000_000)
         
         #expect(mockRepo.lastLimit == 50)
     }
     
-    @Test("fetchFromAPI respects offset parameter")
+    @Test("fetchAllTemplatesFromAPI respects offset parameter")
     func testOffsetParameter() async {
         let vm = HomeViewModel()
         let mockRepo = MockTemplatesRepository()
         
         mockRepo.mockResponse = TemplatesListResponse(templates: [])
         
-        vm.fetchFromAPI(repo: mockRepo, bearerIDToken: "token", offset: 20)
+        vm.fetchAllTemplatesFromAPI(repo: mockRepo, bearerIDToken: "token", offset: 20)
         
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        try? await Task.sleep(nanoseconds: 200_000_000)
         
         #expect(mockRepo.lastOffset == 20)
     }
@@ -221,16 +246,10 @@ struct HomeViewModelTemplateMappingTests {
         
         let today = Date()
         mockRepo.mockResponse = TemplatesListResponse(templates: [
-            TemplateDTO(
-                id: "test-id",
-                name: "Test Template",
-                thumbnailURL: URL(string: "https://example.com/thumb.jpg"),
-                publishedAt: today,
-                usageCount: 150
-            )
+            TemplateDTO.mock(id: "test-id", name: "Test Template", thumbnailURL: URL(string: "https://example.com/thumb.jpg"), publishedAt: today, usageCount: 150)
         ])
         
-        vm.fetchFromAPI(repo: mockRepo, bearerIDToken: "token")
+        vm.fetchAllTemplatesFromAPI(repo: mockRepo, bearerIDToken: "token")
         
         try? await Task.sleep(nanoseconds: 100_000_000)
         
@@ -240,7 +259,7 @@ struct HomeViewModelTemplateMappingTests {
         #expect(item?.title == "Test Template")
         #expect(item?.thumbnailURL?.absoluteString == "https://example.com/thumb.jpg")
         #expect(item?.isNew == true) // Published today
-        #expect(item?.isTrending == true) // Usage count >= 100
+        #expect(item?.isTrending == false) // Trending requires usageCount >= 500
     }
     
     @Test("Generates subtitle from template data")
@@ -249,10 +268,10 @@ struct HomeViewModelTemplateMappingTests {
         let mockRepo = MockTemplatesRepository()
         
         mockRepo.mockResponse = TemplatesListResponse(templates: [
-            TemplateDTO(id: "test", name: "Test", thumbnailURL: nil, publishedAt: Date(), usageCount: 150)
+            TemplateDTO.mock(id: "test", name: "Test", publishedAt: Date(), usageCount: 150)
         ])
         
-        vm.fetchFromAPI(repo: mockRepo, bearerIDToken: "token")
+        vm.fetchAllTemplatesFromAPI(repo: mockRepo, bearerIDToken: "token")
         
         try? await Task.sleep(nanoseconds: 100_000_000)
         
@@ -267,11 +286,11 @@ struct HomeViewModelTemplateMappingTests {
         let mockRepo = MockTemplatesRepository()
         
         mockRepo.mockResponse = TemplatesListResponse(templates: [
-            TemplateDTO(id: "new", name: "New Template", thumbnailURL: nil, publishedAt: Date(), usageCount: 10),
-            TemplateDTO(id: "trending", name: "Trending Template", thumbnailURL: nil, publishedAt: Calendar.current.date(byAdding: .day, value: -30, to: Date()), usageCount: 200)
+            TemplateDTO.mock(id: "new", name: "New Template", publishedAt: Date(), usageCount: 10),
+            TemplateDTO.mock(id: "trending", name: "Trending Template", publishedAt: Calendar.current.date(byAdding: .day, value: -30, to: Date()), usageCount: 200)
         ])
         
-        vm.fetchFromAPI(repo: mockRepo, bearerIDToken: "token")
+        vm.fetchAllTemplatesFromAPI(repo: mockRepo, bearerIDToken: "token")
         
         try? await Task.sleep(nanoseconds: 100_000_000)
         
@@ -279,7 +298,7 @@ struct HomeViewModelTemplateMappingTests {
         let trendingItem = vm.allTemplates.first { $0.slug == "trending" }
         
         #expect(newItem?.tag == "New")
-        #expect(trendingItem?.tag == "Trending")
+        #expect(trendingItem?.tag == "Popular") // usageCount > 50 but < 500 → Popular
     }
     
     @Test("Uses fallback symbol when thumbnailURL is nil")
@@ -288,10 +307,10 @@ struct HomeViewModelTemplateMappingTests {
         let mockRepo = MockTemplatesRepository()
         
         mockRepo.mockResponse = TemplatesListResponse(templates: [
-            TemplateDTO(id: "test", name: "Test", thumbnailURL: nil, publishedAt: nil, usageCount: nil)
+            TemplateDTO.mock(id: "test", name: "Test")
         ])
         
-        vm.fetchFromAPI(repo: mockRepo, bearerIDToken: "token")
+        vm.fetchAllTemplatesFromAPI(repo: mockRepo, bearerIDToken: "token")
         
         try? await Task.sleep(nanoseconds: 100_000_000)
         
@@ -300,78 +319,7 @@ struct HomeViewModelTemplateMappingTests {
     }
 }
 
-@Suite("HomeViewModel Filtering")
-@MainActor
-struct HomeViewModelFilteringTests {
-    
-    @Test("filteredTemplates returns all when no filters applied")
-    func testNoFiltering() {
-        let vm = HomeViewModel()
-        vm.allTemplates = [
-            HomeViewModel.TemplateItem(slug: "test1", title: "Test 1", thumbnailURL: nil),
-            HomeViewModel.TemplateItem(slug: "test2", title: "Test 2", thumbnailURL: nil)
-        ]
-        
-        let filtered = vm.filteredTemplates
-        #expect(filtered.count == 2)
-    }
-    
-    @Test("filteredTemplates respects selectedFilter=new")
-    func testFilterByNew() {
-        let vm = HomeViewModel()
-        vm.allTemplates = [
-            HomeViewModel.TemplateItem(slug: "new", title: "New", isNew: true, isTrending: false, thumbnailURL: nil),
-            HomeViewModel.TemplateItem(slug: "old", title: "Old", isNew: false, isTrending: false, thumbnailURL: nil)
-        ]
-        vm.selectedFilter = .new
-        
-        let filtered = vm.filteredTemplates
-        #expect(filtered.count == 1)
-        #expect(filtered.first?.slug == "new")
-    }
-    
-    @Test("filteredTemplates respects selectedFilter=favorites")
-    func testFilterByFavorites() {
-        let vm = HomeViewModel()
-        let item1 = HomeViewModel.TemplateItem(slug: "fav", title: "Favorite", thumbnailURL: nil)
-        let item2 = HomeViewModel.TemplateItem(slug: "not-fav", title: "Not Favorite", thumbnailURL: nil)
-        
-        vm.allTemplates = [item1, item2]
-        // Use public method to add favorite instead of direct mutation
-        vm.toggleFavorite(item1)
-        vm.selectedFilter = .favorites
-        
-        let filtered = vm.filteredTemplates
-        #expect(filtered.count == 1)
-        #expect(filtered.first?.slug == "fav")
-    }
-    
-    @Test("filteredTemplates respects search text")
-    func testSearchFiltering() {
-        let vm = HomeViewModel()
-        vm.allTemplates = [
-            HomeViewModel.TemplateItem(slug: "anime", title: "Anime Style", thumbnailURL: nil),
-            HomeViewModel.TemplateItem(slug: "cartoon", title: "Cartoon", thumbnailURL: nil)
-        ]
-        vm.searchText = "anime"
-        
-        let filtered = vm.filteredTemplates
-        #expect(filtered.count == 1)
-        #expect(filtered.first?.slug == "anime")
-    }
-    
-    @Test("Search is case insensitive")
-    func testCaseInsensitiveSearch() {
-        let vm = HomeViewModel()
-        vm.allTemplates = [
-            HomeViewModel.TemplateItem(slug: "test", title: "Anime Style", thumbnailURL: nil)
-        ]
-        vm.searchText = "ANIME"
-        
-        let filtered = vm.filteredTemplates
-        #expect(filtered.count == 1)
-    }
-}
+// Filtering and search removed in MVP Home; tests deleted accordingly.
 
 @Suite("HomeViewModel Favorites")
 @MainActor
@@ -412,51 +360,38 @@ struct HomeViewModelFavoritesTests {
     }
 }
 
-@Suite("HomeViewModel Featured Templates Logic")
+@Suite("HomeViewModel Trending Logic")
 @MainActor
-struct HomeViewModelFeaturedLogicTests {
+struct HomeViewModelTrendingLogicTests {
     
-    @Test("Featured prioritizes trending and new templates")
-    func testFeaturedPriority() async {
+    @Test("displayTrendingTemplates respects trendingLimit and projects state")
+    func testDisplayTrendingLimit() async {
         let vm = HomeViewModel()
         let mockRepo = MockTemplatesRepository()
         
-        let oldDate = Calendar.current.date(byAdding: .day, value: -30, to: Date())!
-        
-        mockRepo.mockResponse = TemplatesListResponse(templates: [
-            TemplateDTO(id: "normal", name: "Normal", thumbnailURL: nil, publishedAt: oldDate, usageCount: 10),
-            TemplateDTO(id: "trending", name: "Trending", thumbnailURL: nil, publishedAt: oldDate, usageCount: 200),
-            TemplateDTO(id: "new", name: "New", thumbnailURL: nil, publishedAt: Date(), usageCount: 5)
+        mockRepo.mockTrendingResponse = TemplatesListResponse(templates: [
+            TemplateDTO.mock(id: "t1", name: "T1", publishedAt: Date(), usageCount: 200),
+            TemplateDTO.mock(id: "t2", name: "T2", publishedAt: Date(), usageCount: 180),
+            TemplateDTO.mock(id: "t3", name: "T3", publishedAt: Date(), usageCount: 160),
+            TemplateDTO.mock(id: "t4", name: "T4", publishedAt: Date(), usageCount: 140),
+            TemplateDTO.mock(id: "t5", name: "T5", publishedAt: Date(), usageCount: 120),
+            TemplateDTO.mock(id: "t6", name: "T6", publishedAt: Date(), usageCount: 110)
         ])
         
-        vm.fetchFromAPI(repo: mockRepo, bearerIDToken: "token")
-        
+        vm.fetchTrendingFromAPI(repo: mockRepo, bearerIDToken: "token")
         try? await Task.sleep(nanoseconds: 100_000_000)
         
-        // Featured should contain trending and new, not normal
-        let featuredSlugs = Set(vm.featured.map(\.slug))
-        #expect(featuredSlugs.contains("trending"))
-        #expect(featuredSlugs.contains("new"))
-    }
-    
-    @Test("Featured limited to maximum 3 items")
-    func testFeaturedLimitedToThree() async {
-        let vm = HomeViewModel()
-        let mockRepo = MockTemplatesRepository()
+        // No projects → trendingLimit = 6
+        #expect(vm.trendingLimit == 6)
+        #expect(vm.displayTrendingTemplates.count == 6)
         
-        mockRepo.mockResponse = TemplatesListResponse(templates: [
-            TemplateDTO(id: "t1", name: "T1", thumbnailURL: nil, publishedAt: Date(), usageCount: 200),
-            TemplateDTO(id: "t2", name: "T2", thumbnailURL: nil, publishedAt: Date(), usageCount: 180),
-            TemplateDTO(id: "t3", name: "T3", thumbnailURL: nil, publishedAt: Date(), usageCount: 160),
-            TemplateDTO(id: "t4", name: "T4", thumbnailURL: nil, publishedAt: Date(), usageCount: 140),
-            TemplateDTO(id: "t5", name: "T5", thumbnailURL: nil, publishedAt: Date(), usageCount: 120)
-        ])
-        
-        vm.fetchFromAPI(repo: mockRepo, bearerIDToken: "token")
-        
-        try? await Task.sleep(nanoseconds: 100_000_000)
-        
-        #expect(vm.featured.count <= 3)
+        // With projects → trendingLimit = 4
+        #if DEBUG
+        vm.userProjects = vm.mockProjects()
+        #else
+        vm.userProjects = [Project(templateId: "x", templateName: "X", createdAt: Date(), status: .completed)]
+        #endif
+        #expect(vm.trendingLimit == 4)
+        #expect(vm.displayTrendingTemplates.count == 4)
     }
 }
-

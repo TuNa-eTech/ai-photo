@@ -35,8 +35,8 @@ struct RootRouterView: View {
             if !model.isBootstrapped {
                 SplashView(model: model)
             } else if model.isAuthenticated {
-                // Go straight to Home when authenticated
-                TemplatesHomeView(model: model)
+                // Show MainTabView when authenticated
+                MainTabView(authViewModel: model)
             } else {
                 // Otherwise show the login landing (V2 with Liquid Glass design)
                 AuthLandingViewV2(model: model)

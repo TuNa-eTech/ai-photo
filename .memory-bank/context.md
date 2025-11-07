@@ -1,8 +1,30 @@
 # Context
 
-Last updated: 2025-10-27
+Last updated: 2025-11-07
 
 Current work focus
+- **✅ iOS Tab Bar Navigation & Search Implementation:** ✅ COMPLETED
+  - Implemented MainTabView with TabView containing 4 tabs: Home, Projects, Profile, Search
+  - Used `Tab(value:role:)` wrapper for all tabs with `role: .search` for Search tab
+  - Added `.searchable(placement: .navigationBarDrawer)` to SearchView and AllTemplatesView
+  - Implemented `.tabBarMinimizeBehavior(.onScrollDown)` for automatic tab bar hiding
+  - Removed custom search bars, replaced with native SwiftUI `.searchable()` modifier
+  - Removed FAB (Floating Action Button) from HomeView
+  - Improved visual hierarchy and spacing throughout home screen
+  - All changes follow Liquid Glass Beige Minimalist design system
+- **🔄 Remove Mock Data & Improve Error/Empty States:** 🚧 IN PROGRESS
+  - Plan to remove all mock data from HomeViewModel.fetchInitial()
+  - Improve error handling with categorized error messages
+  - Enhance empty states with glass effects, icons, and retry buttons
+  - Document error handling patterns in .documents/platform-guides/ios-error-handling.md
+- **✅ Mock Image Mode for Development:** ✅ COMPLETED
+  - Added `USE_MOCK_IMAGE` environment variable to enable/disable mock mode
+  - When enabled, returns `mock_dev/test_img.png` instead of calling GeminiService
+  - Saves API costs during development and testing
+  - Updated `gemini.config.ts` to include `useMockImage` flag
+  - Updated `images.service.ts` to check flag and use mock image when enabled
+  - Mock response matches real API format with `model_used: 'mock'` in metadata
+  - Simulates processing time (100-500ms) for realistic behavior
 - **🔄 Gemini Image Processing (Phase 1: Long HTTP + Background URLSession):** 🚧 IN PROGRESS
   - **Approach Selected:** Long HTTP request (60s timeout) + Background URLSession for iOS
   - **User Flow:** Upload image → Background processing → Local notification → View result
@@ -38,6 +60,69 @@ Current work focus
 - **File Upload System:** ✅ COMPLETED - Working with thumbnail management and automatic cleanup.
 
 Recent changes (latest first)
+- ✅ **iOS Tab Bar Navigation & Search Implementation (2025-11-07):**
+  - **MainTabView Implementation:**
+    - Created MainTabView with TabView containing 4 tabs: Home, Projects, Profile, Search
+    - Used `Tab(value:role:)` wrapper for all tabs (SwiftUI best practice)
+    - Search tab uses `Tab(value: TabItem.search, role: .search)` for proper role assignment
+    - Implemented `.tabBarMinimizeBehavior(.onScrollDown)` for automatic tab bar hiding when scrolling
+    - Custom tab bar appearance with glass effects and beige color scheme
+  - **SearchView Implementation:**
+    - Created new SearchView.swift with full search functionality
+    - Uses `.searchable(placement: .navigationBarDrawer(displayMode: .always))` for native search
+    - Implements debouncing (0.5s delay) to reduce API calls
+    - API integration with query parameter support
+    - Category filters and filter segments (All/Trending/New)
+    - Empty state and loading state with glass design
+    - Updated TemplatesRepository to support `query` parameter in listTemplates()
+  - **AllTemplatesView Updates:**
+    - Removed custom search bar, replaced with `.searchable()` modifier
+    - Consistent search experience across SearchView and AllTemplatesView
+  - **HomeView Improvements:**
+    - Removed FAB (Floating Action Button)
+    - Improved spacing and visual hierarchy
+    - Removed search bar (moved to Search tab)
+  - **Files Created/Modified:**
+    - New: `AIPhotoApp/AIPhotoApp/Views/Search/SearchView.swift`
+    - New: `AIPhotoApp/AIPhotoApp/Views/Common/MainTabView.swift`
+    - Modified: `AIPhotoApp/AIPhotoApp/Views/Home/HomeView.swift` (renamed from TemplatesHomeView)
+    - Modified: `AIPhotoApp/AIPhotoApp/Views/Home/AllTemplatesView.swift` (removed custom search)
+    - Modified: `AIPhotoApp/AIPhotoApp/Repositories/TemplatesRepository.swift` (added query param)
+    - Modified: `AIPhotoApp/AIPhotoApp/ViewModels/HomeViewModel.swift` (added query param support)
+    - Modified: `AIPhotoApp/AIPhotoApp/Views/Common/BootstrapViews.swift` (wrapped in MainTabView)
+  - **Status:** Fully implemented, build successful, ready for testing
+- ✅ **Remove Mock Data & Improve Error/Empty States (2025-11-07):**
+  - **Documentation Created:**
+    - Created `.documents/platform-guides/ios-error-handling.md` - Comprehensive guide for error handling and empty states
+    - Documents error categories, empty state patterns, loading states, and design system compliance
+  - **Planned Implementation:**
+    - Remove all mock data from `HomeViewModel.fetchInitial()` (no fallback to mock trending templates)
+    - Improve error handling with categorized error messages:
+      - Unauthorized (401): "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+      - Server Error: "Lỗi server: {message}"
+      - Network Error: "Không thể kết nối đến server. Kiểm tra kết nối mạng."
+      - Generic Error: "Không thể tải templates. Vui lòng thử lại."
+    - Enhance empty states with glass effects, icons, and retry buttons
+    - Separate loading state from empty state for better UX
+    - Update error banner with proper retry functionality
+  - **Status:** Documentation complete, implementation pending user approval
+- ✅ **Mock Image Mode for Development (2025-10-27):**
+  - **Added Development Cost-Saving Feature:**
+    - Backend: Added `USE_MOCK_IMAGE` environment variable flag in `gemini.config.ts`
+    - Backend: Updated `ImagesService` to check mock flag and return `mock_dev/test_img.png` when enabled
+    - Backend: Created `getMockImageBase64()` private method to read and convert mock image
+    - Mock mode works independently of GeminiService configuration
+    - Returns same `ProcessImageResponse` structure with `model_used: 'mock'` in metadata
+    - Simulates processing time (100-500ms) for realistic development experience
+    - Logs when mock mode is active for visibility
+  - **Files Updated:**
+    - `server/src/config/gemini.config.ts` - Added `useMockImage` config flag
+    - `server/src/images/images.service.ts` - Added mock mode logic and file reading
+  - **Usage:**
+    - Set `USE_MOCK_IMAGE=true` in `.env` or `.env.local` to enable
+    - When enabled, all `/v1/images/process` requests return mock image
+    - Saves Gemini API costs during development and testing
+  - **Status:** Fully implemented and ready for use
 - ✅ **Trending Templates API & iOS Home Screen Simplification (2025-10-26):**
   - **Implemented `/v1/templates/trending` endpoint:**
     - Backend: Added `listTrendingTemplates()` in TemplatesService (usage_count >= 500, sorted DESC)

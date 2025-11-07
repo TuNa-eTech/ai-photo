@@ -12,6 +12,9 @@ var ImagesService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ImagesService = void 0;
 const common_1 = require("@nestjs/common");
+const config_1 = require("@nestjs/config");
+const fs_1 = require("fs");
+const path_1 = require("path");
 const gemini_service_1 = require("../gemini/gemini.service");
 const templates_service_1 = require("../templates/templates.service");
 const prisma_service_1 = require("../prisma/prisma.service");
@@ -19,15 +22,63 @@ let ImagesService = ImagesService_1 = class ImagesService {
     geminiService;
     templatesService;
     prisma;
+    configService;
     logger = new common_1.Logger(ImagesService_1.name);
-    constructor(geminiService, templatesService, prisma) {
+    constructor(geminiService, templatesService, prisma, configService) {
         this.geminiService = geminiService;
         this.templatesService = templatesService;
         this.prisma = prisma;
+        this.configService = configService;
+    }
+    getMockImageBase64() {
+        const mockImagePath = (0, path_1.join)(process.cwd(), 'mock_dev', 'test_img.png');
+        if (!(0, fs_1.existsSync)(mockImagePath)) {
+            throw new Error(`Mock image not found at ${mockImagePath}`);
+        }
+        try {
+            const imageBuffer = (0, fs_1.readFileSync)(mockImagePath);
+            return imageBuffer.toString('base64');
+        }
+        catch (error) {
+            this.logger.error(`Failed to read mock image: ${error instanceof Error ? error.message : error}`);
+            throw new Error('Failed to read mock image file');
+        }
     }
     async processImage(dto) {
         const startTime = Date.now();
         try {
+            const useMockImage = this.configService.get('gemini.useMockImage', false);
+            if (useMockImage) {
+                this.logger.log('🔄 Mock image mode enabled - using mock_dev/test_img.png');
+                const validation = this.geminiService.validateImageBase64(dto.image_base64);
+                if (!validation.valid) {
+                    throw new Error(validation.error || 'Invalid image');
+                }
+                const template = await this.prisma.template.findUnique({
+                    where: { id: dto.template_id },
+                });
+                if (!template) {
+                    throw new common_1.NotFoundException('Template not found');
+                }
+                const mockImageBase64 = this.getMockImageBase64();
+                const simulatedProcessingTime = Math.floor(Math.random() * 400) + 100;
+                await new Promise(resolve => setTimeout(resolve, simulatedProcessingTime));
+                const processingTime = Date.now() - startTime;
+                this.logger.log(`Mock image processing completed in ${processingTime}ms`);
+                return {
+                    processed_image_base64: `data:image/jpeg;base64,${mockImageBase64}`,
+                    metadata: {
+                        template_id: dto.template_id,
+                        template_name: template.name,
+                        model_used: 'mock',
+                        generation_time_ms: processingTime,
+                        processed_dimensions: {
+                            width: dto.options?.width || 1024,
+                            height: dto.options?.height || 1024,
+                        },
+                    },
+                };
+            }
             const validation = this.geminiService.validateImageBase64(dto.image_base64);
             if (!validation.valid) {
                 throw new Error(validation.error || 'Invalid image');
@@ -75,6 +126,7 @@ exports.ImagesService = ImagesService = ImagesService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [gemini_service_1.GeminiService,
         templates_service_1.TemplatesService,
-        prisma_service_1.PrismaService])
+        prisma_service_1.PrismaService,
+        config_1.ConfigService])
 ], ImagesService);
 //# sourceMappingURL=images.service.js.map

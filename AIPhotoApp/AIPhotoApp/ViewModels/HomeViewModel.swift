@@ -21,6 +21,7 @@ final class HomeViewModel {
         let isTrending: Bool
         let thumbnailURL: URL?           // Real image URL from backend
         let thumbnailSymbol: String?     // Fallback SF Symbol for UI mock
+        let dto: TemplateDTO?            // Original DTO for navigation
 
         init(id: UUID = UUID(),
              slug: String,
@@ -30,7 +31,8 @@ final class HomeViewModel {
              isNew: Bool = false,
              isTrending: Bool = false,
              thumbnailURL: URL? = nil,
-             thumbnailSymbol: String? = nil) {
+             thumbnailSymbol: String? = nil,
+             dto: TemplateDTO? = nil) {
             self.id = id
             self.slug = slug
             self.title = title
@@ -40,6 +42,7 @@ final class HomeViewModel {
             self.isTrending = isTrending
             self.thumbnailURL = thumbnailURL
             self.thumbnailSymbol = thumbnailSymbol
+            self.dto = dto
         }
     }
 
@@ -157,7 +160,8 @@ final class HomeViewModel {
                         isNew: dto.isNew,
                         isTrending: dto.isTrending,
                         thumbnailURL: dto.thumbnailURL,
-                        thumbnailSymbol: "photo"  // Fallback icon
+                        thumbnailSymbol: "photo",  // Fallback icon
+                        dto: dto
                     )
                 }
                 await MainActor.run {
@@ -174,13 +178,13 @@ final class HomeViewModel {
         }
     }
     
-    // Load all templates from API (/v1/templates) - for AllTemplatesView
-    func fetchAllTemplatesFromAPI(repo: TemplatesRepositoryProtocol, bearerIDToken: String, limit: Int? = nil, offset: Int? = nil, tokenProvider: (() async throws -> String)? = nil) {
+    // Load all templates from API (/v1/templates) - for AllTemplatesView and SearchView
+    func fetchAllTemplatesFromAPI(repo: TemplatesRepositoryProtocol, bearerIDToken: String, limit: Int? = nil, offset: Int? = nil, query: String? = nil, tokenProvider: (() async throws -> String)? = nil) {
         isLoading = true
         errorMessage = nil
         Task {
             do {
-                let resp = try await repo.listTemplates(limit: limit, offset: offset, bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
+                let resp = try await repo.listTemplates(limit: limit, offset: offset, query: query, bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
                 let items: [TemplateItem] = resp.templates.map { dto in
                     // Map DTO to TemplateItem with real data
                     TemplateItem(
@@ -191,7 +195,8 @@ final class HomeViewModel {
                         isNew: dto.isNew,
                         isTrending: dto.isTrending,
                         thumbnailURL: dto.thumbnailURL,
-                        thumbnailSymbol: "photo"  // Fallback icon
+                        thumbnailSymbol: "photo",  // Fallback icon
+                        dto: dto
                     )
                 }
                 await MainActor.run {

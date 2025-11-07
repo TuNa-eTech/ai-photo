@@ -9,6 +9,13 @@ import Foundation
 import UIKit
 import UserNotifications
 
+fileprivate func stripDataURLPrefix(_ s: String) -> String {
+    if let range = s.range(of: "base64,") {
+        return String(s[range.upperBound...])
+    }
+    return s
+}
+
 /// Processes images in the background using URLSession configuration
 /// Allows processing to continue even when app is killed or backgrounded
 final class BackgroundImageProcessor: NSObject {
@@ -142,19 +149,23 @@ final class BackgroundImageProcessor: NSObject {
     // MARK: - Notifications
     
     private func notifyCompletion(requestId: String, project: Project) {
-        NotificationCenter.default.post(
-            name: .imageProcessingCompleted,
-            object: nil,
-            userInfo: ["requestId": requestId, "project": project]
-        )
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: .imageProcessingCompleted,
+                object: nil,
+                userInfo: ["requestId": requestId, "project": project]
+            )
+        }
     }
     
     private func notifyError(requestId: String, error: Error) {
-        NotificationCenter.default.post(
-            name: .imageProcessingFailed,
-            object: nil,
-            userInfo: ["requestId": requestId, "error": error]
-        )
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: .imageProcessingFailed,
+                object: nil,
+                userInfo: ["requestId": requestId, "error": error]
+            )
+        }
     }
     
     private func showLocalNotification(templateName: String) {
@@ -172,13 +183,63 @@ extension BackgroundImageProcessor: URLSessionDelegate, URLSessionDownloadDelega
     ) {
         guard let requestId = downloadTask.taskDescription else { return }
         
+        // Validate HTTP status code and log server payload if non-2xx
+        if let http = downloadTask.response as? HTTPURLResponse {
+            let code = http.statusCode
+            if !(200...299).contains(code) {
+                let data = try? Data(contentsOf: location)
+                let snippet = data.flatMap { String(data: $0, encoding: .utf8) } ?? "<binary>"
+                print("❌ HTTP \\(code) from process endpoint: \\(snippet)")
+                notifyError(requestId: requestId, error: ProcessingError.invalidResponse)
+                return
+            }
+        }
+        
         do {
-            // Read response data
+            // Read response data (tolerant decode: envelope or direct payload)
             let data = try Data(contentsOf: location)
             let decoder = JSONDecoder()
-            let envelopeResponse = try decoder.decode(ProcessImageEnvelopeResponse.self, from: data)
-            
-            guard let imageData = envelopeResponse.data else {
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            var payload: ProcessImageResponse
+            if let env = try? decoder.decode(ProcessImageEnvelopeResponse.self, from: data),
+               let d = env.data {
+                payload = d
+            } else if let direct = try? decoder.decode(ProcessImageResponse.self, from: data) {
+                payload = direct
+            } else if
+                let jsonObj = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
+            {
+                // Fallback: extract from plain JSON
+                func buildMeta(from meta: [String: Any]) -> ProcessImageResponse.ProcessImageMetadata {
+                    let dims = (meta["processed_dimensions"] as? [String: Any]) ?? [:]
+                    return .init(
+                        templateId: meta["template_id"] as? String ?? "",
+                        templateName: meta["template_name"] as? String ?? "",
+                        modelUsed: meta["model_used"] as? String ?? "",
+                        generationTimeMs: meta["generation_time_ms"] as? Int ?? 0,
+                        processedDimensions: .init(
+                            width: dims["width"] as? Int ?? 0,
+                            height: dims["height"] as? Int ?? 0
+                        )
+                    )
+                }
+                
+                if let b64 = jsonObj["processed_image_base64"] as? String,
+                   let meta = jsonObj["metadata"] as? [String: Any]
+                {
+                    payload = .init(processedImageBase64: b64, metadata: buildMeta(from: meta))
+                } else if
+                    let dataDict = jsonObj["data"] as? [String: Any],
+                    let b64 = dataDict["processed_image_base64"] as? String,
+                    let meta = dataDict["metadata"] as? [String: Any]
+                {
+                    payload = .init(processedImageBase64: b64, metadata: buildMeta(from: meta))
+                } else {
+                    print("❌ Response decode failed (json keys missing): \(jsonObj)")
+                    throw ProcessingError.invalidResponse
+                }
+            } else {
+                print("❌ Response decode failed: \(String(data: data, encoding: .utf8) ?? "<binary>")")
                 throw ProcessingError.invalidResponse
             }
             
@@ -190,10 +251,9 @@ extension BackgroundImageProcessor: URLSessionDelegate, URLSessionDownloadDelega
             }
             
             // Decode processed image
-            let base64 = imageData.processedImageBase64
-                .replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
+            let base64String = stripDataURLPrefix(payload.processedImageBase64)
             
-            guard let imageData = Data(base64Encoded: base64),
+            guard let imageData = Data(base64Encoded: base64String),
                   let processedImage = UIImage(data: imageData) else {
                 print("❌ Failed to decode processed image")
                 return
@@ -207,15 +267,27 @@ extension BackgroundImageProcessor: URLSessionDelegate, URLSessionDownloadDelega
                 status: .completed
             )
             
+            // Persist processed image and project
+            do {
+                try ProjectsStorageManager.shared.saveProject(project, with: processedImage)
+            } catch {
+                print("❌ Failed to save project: \(error)")
+                clearPendingTask(requestId: requestId)
+                notifyError(requestId: requestId, error: error)
+                return
+            }
+            
             // Clean up pending task
             clearPendingTask(requestId: requestId)
             
-            // Notify app
+            // Notify app (on main thread inside method)
             notifyCompletion(requestId: requestId, project: project)
             
-            // Show notification if app in background
-            if UIApplication.shared.applicationState != .active {
-                showLocalNotification(templateName: taskInfo.templateName)
+            // Show notification if app in background (must check on main thread)
+            DispatchQueue.main.async { [weak self] in
+                if UIApplication.shared.applicationState != .active {
+                    self?.showLocalNotification(templateName: taskInfo.templateName)
+                }
             }
             
         } catch {
@@ -268,4 +340,3 @@ extension Notification.Name {
     static let imageProcessingCompleted = Notification.Name("imageProcessingCompleted")
     static let imageProcessingFailed = Notification.Name("imageProcessingFailed")
 }
-

@@ -16,11 +16,23 @@ enum AppConfig {
     // 3. Use "http://localhost:8080" only when running on physical device with USB debugging
     //
     // TODO: Replace "localhost" with your Mac's IP address for Simulator testing
-    private static let baseURLString = "http://localhost:8080"  // ← Change this to your Mac IP!
+    // Support runtime override via:
+    // - Environment variable: API_BASE_URL (set in Xcode Scheme → Run → Arguments → Environment)
+    // - UserDefaults key: "API_BASE_URL" (for hot switching without rebuild)
+    private static let defaultBaseURLString = "http://localhost:8080"  // Simulator: override via API_BASE_URL
+    private static let selectedBaseURLString: String = {
+        if let env = ProcessInfo.processInfo.environment["API_BASE_URL"], !env.isEmpty {
+            return env
+        }
+        if let override = UserDefaults.standard.string(forKey: "API_BASE_URL"), !override.isEmpty {
+            return override
+        }
+        return defaultBaseURLString
+    }()
     
     static let backendBaseURL: URL = {
-        guard let url = URL(string: baseURLString) else {
-            fatalError("Invalid backend base URL: \(baseURLString)")
+        guard let url = URL(string: selectedBaseURLString) else {
+            fatalError("Invalid backend base URL: \(selectedBaseURLString)")
         }
         return url
     }()
@@ -33,5 +45,5 @@ enum AppConfig {
         static let processImage = "/v1/images/process"
     }
     
-    static let baseURL: String = baseURLString
+    static let baseURL: String = selectedBaseURLString
 }

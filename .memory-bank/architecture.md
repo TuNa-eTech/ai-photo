@@ -27,13 +27,15 @@ Key code paths (backend)
   - server/src/templates/templates-admin.controller.ts (Admin templates CRUD).
   - server/src/templates/templates.service.ts (business logic with security filters).
   - server/src/templates/dto/ (request/response DTOs with validation).
-- **Image Processing (NEW - In Progress):**
+- **Image Processing:**
   - server/src/gemini/gemini.module.ts (Gemini API integration module).
   - server/src/gemini/gemini.service.ts (Call Gemini API, parse responses, handle timeouts).
   - server/src/gemini/exceptions/ (GeminiAPIException, ContentPolicyException).
   - server/src/images/images.module.ts (Image processing module).
   - server/src/images/images.controller.ts (POST /v1/images/process with 60s timeout).
+  - server/src/images/images.service.ts (Business logic with mock mode support via USE_MOCK_IMAGE env flag).
   - server/src/images/dto/ (ProcessImageDto, ProcessImageResponse).
+  - Mock mode: When `USE_MOCK_IMAGE=true`, returns `mock_dev/test_img.png` instead of calling GeminiService (cost-saving for development).
 - Auth:
   - server/src/auth/bearer-auth.guard.ts (Firebase token verification + DevAuth).
   - server/src/auth/firebase-admin.ts (Firebase Admin SDK initialization).
@@ -145,32 +147,37 @@ iOS app architecture (AIPhotoApp/)
     - ProcessImageResponse.swift → (NEW) Image processing response DTO
     - Project.swift → (NEW) Local project model for "My Projects"
   - Repositories/ → API client layer with protocol-based architecture
-    - TemplatesRepository.swift → Implements TemplatesRepositoryProtocol for testability
+    - TemplatesRepository.swift → Implements TemplatesRepositoryProtocol for testability, supports query parameter for search
     - UserRepository.swift → User registration API with envelope handling
     - ImageProcessingAPIClient.swift → (NEW) Image processing API client with 60s timeout
     - ProjectsStorageManager.swift → (NEW) Local project storage (save/load/delete projects)
   - ViewModels/ → Observable view models for business logic
-    - HomeViewModel.swift → Manages template state, fetching, filtering, favorites
+    - HomeViewModel.swift → Manages template state, fetching, filtering, favorites, supports query parameter for search
     - AuthViewModel.swift → Firebase authentication and user registration
     - ImageProcessingViewModel.swift → (NEW) Handles image processing flow with background support
   - Views/ → SwiftUI views with liquid glass design
+    - Common/ → Reusable components and navigation
+      - MainTabView.swift → (NEW) Tab-based navigation with 4 tabs (Home, Projects, Profile, Search), uses Tab(value:role:) wrapper
+      - GlassComponents.swift → Glass design components (GlassTokens, GlassCardModifier, GlassChip, etc.)
+      - GlassBackgroundView.swift → Animated beige gradient background
+      - BootstrapViews.swift → Root router (Splash → Login → MainTabView)
     - Home/ → Template browsing
-      - TemplatesHomeView.swift → Simplified MVP home with trending templates
+      - HomeView.swift → (Renamed from TemplatesHomeView) Simplified MVP home with trending templates
       - SimpleHeader.swift → Minimal header (avatar + greeting + settings)
-      - AllTemplatesView.swift → Full templates list with search/filters
+      - AllTemplatesView.swift → Full templates list with `.searchable()` modifier, category filters, and filter segments
+    - Search/ → (NEW) Search functionality
+      - SearchView.swift → Dedicated search view with `.searchable(placement: .navigationBarDrawer)`, debouncing, API integration
     - ImageProcessing/ → (NEW) Image processing UI
       - ImageProcessingView.swift → Processing screen with progress and states
-      - ProcessingResultView.swift → Before/after comparison view
+      - ResultView.swift → (Renamed from ProcessingResultView) Before/after comparison view
+      - TemplateSelectionView.swift → Template selection and image picker
     - Projects/ → (NEW) User projects
       - MyProjectsView.swift → Grid view of user's processed images
-      - ProjectDetailView.swift → Detailed view of single project
-    - Common/ → Reusable components (GlassComponents, GlassBackgroundView, BootstrapViews)
     - Authentication/ → Login/signup flows
       - AuthLandingView.v2.swift → Premium login screen with Liquid Glass Beige design
       - ProfileCompletionView.swift → Profile editing modal
       - Components/ → Authentication-specific components
-    - Profile/ → User profile and settings
-      - ProfileView.swift → Profile screen with card-based layout
+    - Home/ProfileView.swift → User profile and settings (part of tab navigation)
   - Utilities/ → Shared utilities
     - Networking/ → APIClient with envelope handling and 401 retry
     - Constants/ → Design tokens (GlassTokens with beige color palette)
@@ -190,6 +197,22 @@ iOS app architecture (AIPhotoApp/)
   - AsyncImage for loading thumbnails from URLs with fallback SF Symbols
   - Dynamic subtitle/tag generation based on template metadata
   - Reusable glass components for consistent UI across authentication and main app
+  - Tab-based navigation using `Tab(value:role:)` wrapper (SwiftUI best practice)
+  - Native `.searchable()` modifier for search functionality (replaces custom search bars)
+  - `.tabBarMinimizeBehavior(.onScrollDown)` for automatic tab bar hiding
+  - Error handling with categorized messages and retry actions
+  - Empty states with glass effects, icons, and action buttons
+- Navigation Structure:
+  - MainTabView: Root navigation with 4 tabs using `Tab(value:role:)` wrapper
+    - Home Tab: HomeView with trending templates
+    - Projects Tab: MyProjectsView with user's processed images
+    - Profile Tab: ProfileView with user settings
+    - Search Tab: SearchView with `role: .search` for proper tab bar placement
+  - Tab Bar Features:
+    - `.tabBarMinimizeBehavior(.onScrollDown)` - Auto-hide when scrolling down
+    - Custom appearance with glass effects and beige color scheme
+    - Selected tab: Dark brown (GlassTokens.textPrimary) for better contrast
+    - Unselected tab: Soft brown (GlassTokens.textSecondary)
 - MVP Home Screen UX:
   - Simplified design focused on trending templates
   - New users: Only "Trending Templates" section with "See All" button
@@ -197,7 +220,15 @@ iOS app architecture (AIPhotoApp/)
   - Clear template thumbnails with gradient overlay for text readability
   - Card height: 200pt, spacing: 14pt for breathable layout
   - SimpleHeader: Avatar + greeting + settings (no search/filters on home)
-  - AllTemplatesView: Full templates with search, category filters, and sort options
+  - AllTemplatesView: Full templates with `.searchable()` modifier, category filters, and filter segments
+- Search Experience:
+  - SearchView: Dedicated search tab with full functionality
+    - `.searchable(placement: .navigationBarDrawer(displayMode: .always))` for native search
+    - Debouncing (0.5s delay) to reduce API calls
+    - Category filters and filter segments
+    - Empty state and loading state
+  - AllTemplatesView: Also uses `.searchable()` for consistent experience
+  - API Integration: TemplatesRepository supports `query` parameter for server-side search
 - Authentication UI (AuthLandingView.v2):
   - Animated beige gradient background with 2 organic blobs (13s & 15s motion cycles)
   - BrandLogoView: Glass circle (100x100) with gradient sparkles icon and scale animation
@@ -208,6 +239,15 @@ iOS app architecture (AIPhotoApp/)
   - Integrated with BootstrapViews router for seamless flow (Splash → Login → Home)
 
 References
+- **iOS Navigation & Search:**
+  - AIPhotoApp/AIPhotoApp/Views/Common/MainTabView.swift → Tab-based navigation with Tab(value:role:) wrapper
+  - AIPhotoApp/AIPhotoApp/Views/Search/SearchView.swift → Dedicated search view with .searchable() modifier
+  - AIPhotoApp/AIPhotoApp/Views/Home/AllTemplatesView.swift → Full templates with .searchable() modifier
+  - AIPhotoApp/AIPhotoApp/Repositories/TemplatesRepository.swift → API client with query parameter support
+- **iOS Error Handling:**
+  - .documents/platform-guides/ios-error-handling.md → Comprehensive error handling and empty state guide
+  - AIPhotoApp/AIPhotoApp/ViewModels/HomeViewModel.swift → Error categorization and handling logic
+  - AIPhotoApp/AIPhotoApp/Views/Home/HomeView.swift → Error banner and empty state UI
 - **iOS Authentication:**
   - .implementation_plan/login-redesign-plan.md → Login screen redesign plan
   - .implementation_plan/login-mockup.md → Visual mockup with specs
@@ -216,11 +256,9 @@ References
 - **iOS Home Screen:**
   - .implementation_plan/trending-templates-api-plan.md → Trending API implementation plan
   - SIMULATOR_NETWORK_FIX.md → iOS Simulator network troubleshooting guide
-  - AIPhotoApp/AIPhotoApp/Views/Home/TemplatesHomeView.swift → Simplified MVP home
+  - AIPhotoApp/AIPhotoApp/Views/Home/HomeView.swift → (Renamed from TemplatesHomeView) Simplified MVP home
   - AIPhotoApp/AIPhotoApp/Views/Home/SimpleHeader.swift → Minimal header component
-  - AIPhotoApp/AIPhotoApp/Views/Home/AllTemplatesView.swift → Full templates with filters
   - AIPhotoApp/AIPhotoApp/Models/DTOs/TemplatesDTOs.swift → Custom decoder implementation
-  - AIPhotoApp/AIPhotoApp/Repositories/TemplatesRepository.swift → Custom JSONDecoder
 - **Web CMS:**
   - .implementation_plan/ui-ux-redesign-summary.md → Web CMS redesign details
   - .implementation_plan/template-detail-page-summary.md → Template detail implementation

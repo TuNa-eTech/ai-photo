@@ -9,6 +9,7 @@ import SwiftUI
 import Observation
 import FirebaseAuth
 
+@MainActor
 @Observable
 final class ImageProcessingViewModel {
     // MARK: - State
@@ -192,4 +193,3 @@ final class ImageProcessingViewModel {
         currentImage = nil
     }
 }
-

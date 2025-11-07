@@ -15,7 +15,7 @@ import {
   Snackbar,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import { getAdminTemplate } from '../../api/templates'
+import { getAdminTemplate, updateTemplate } from '../../api/templates'
 import { processImage } from '../../api/images'
 import { TemplateInfoCard } from '../../components/templates/TemplateInfoCard'
 import { ImageGeneratorForm } from '../../components/templates/ImageGeneratorForm'
@@ -78,8 +78,11 @@ export function TemplateDetailPage(): React.ReactElement {
 
   const handleEditSubmit = async (data: UpdateTemplateRequest): Promise<void> => {
     try {
-      // TODO: Implement update API call
-      console.log('Update template:', data)
+      if (!slug) {
+        throw new Error('Template slug is required')
+      }
+      
+      await updateTemplate(slug, data)
       showSnackbar('Template updated successfully', 'success')
       setIsEditDialogOpen(false)
       

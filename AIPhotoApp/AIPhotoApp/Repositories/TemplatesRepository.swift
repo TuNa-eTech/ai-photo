@@ -13,6 +13,7 @@ protocol TemplatesRepositoryProtocol {
     func listTemplates(
         limit: Int?,
         offset: Int?,
+        query: String?,
         bearerIDToken: String,
         tokenProvider: (() async throws -> String)?
     ) async throws -> TemplatesListResponse
@@ -64,12 +65,16 @@ final class TemplatesRepository: TemplatesRepositoryProtocol {
     // GET /v1/templates (Bearer required per OpenAPI)
     func listTemplates(limit: Int? = nil,
                        offset: Int? = nil,
+                       query: String? = nil,
                        bearerIDToken: String,
                        tokenProvider: (() async throws -> String)? = nil) async throws -> TemplatesListResponse {
         var req = APIRequest(method: "GET", path: AppConfig.APIPath.templates)
         var items: [URLQueryItem] = []
         if let limit { items.append(URLQueryItem(name: "limit", value: String(limit))) }
         if let offset { items.append(URLQueryItem(name: "offset", value: String(offset))) }
+        if let query, !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            items.append(URLQueryItem(name: "q", value: query.trimmingCharacters(in: .whitespacesAndNewlines)))
+        }
         req.queryItems = items
 
         do {

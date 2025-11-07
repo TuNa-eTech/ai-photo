@@ -35,11 +35,6 @@ struct AllTemplatesView: View {
                 GlassBackgroundView()
                 
                 VStack(spacing: 0) {
-                    // Search bar
-                    searchSection
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-                    
                     // Category filters
                     categorySection
                     
@@ -84,6 +79,13 @@ struct AllTemplatesView: View {
             }
             .navigationTitle("All Templates")
             .navigationBarTitleDisplayMode(.inline)
+            .searchable(
+                text: $searchText,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: "Search templates…"
+            )
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
@@ -96,30 +98,6 @@ struct AllTemplatesView: View {
     }
     
     // MARK: - Sections
-    
-    private var searchSection: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(GlassTokens.textSecondary)
-            TextField("Search templates…", text: $searchText)
-                .textInputAutocapitalization(.never)
-                .disableAutocorrection(true)
-                .foregroundStyle(GlassTokens.textPrimary)
-            if !searchText.isEmpty {
-                Button {
-                    searchText = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(GlassTokens.textSecondary)
-                }
-                .accessibilityLabel(Text("Clear search"))
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial.opacity(0.85), in: Capsule())
-        .overlay(Capsule().stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8))
-    }
     
     private var categorySection: some View {
         ScrollView(.horizontal, showsIndicators: false) {

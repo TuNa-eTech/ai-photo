@@ -69,6 +69,53 @@ struct ProcessImageEnvelopeResponse: Codable {
         let code: String
         let message: String
         let details: [String: String]?
+        
+        enum CodingKeys: String, CodingKey {
+            case code
+            case message
+            case details
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            code = try container.decode(String.self, forKey: .code)
+            
+            // Handle message as string or nested object
+            if let stringMessage = try? container.decode(String.self, forKey: .message) {
+                message = stringMessage
+            } else if let dictMessage = try? container.decode([String: String].self, forKey: .message) {
+                // If it's a dict, try to extract error message
+                message = dictMessage["error"] ?? dictMessage["message"] ?? "Unknown error"
+            } else {
+                message = "Unknown error"
+            }
+            
+            details = try? container.decodeIfPresent([String: String].self, forKey: .details)
+        }
+    }
+    
+    // MARK: - Helper for Any Value
+    struct AnyCodable: Codable {
+        let value: String
+        
+        init(_ value: String) {
+            self.value = value
+        }
+        
+        init(from decoder: Decoder) throws {
+            if let string = try? decoder.singleValueContainer().decode(String.self) {
+                value = string
+            } else if let number = try? decoder.singleValueContainer().decode(Double.self) {
+                value = "\(number)"
+            } else {
+                value = "Unknown"
+            }
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.singleValueContainer()
+            try container.encode(value)
+        }
     }
     
     struct EnvelopeMeta: Codable {

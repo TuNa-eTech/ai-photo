@@ -25,23 +25,9 @@ struct SimpleHeader: View {
                 .lineLimit(1)
             
             Spacer()
-            
-            // Settings button only
-            Button(action: {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                showSettings = true
-            }) {
-                Image(systemName: "gearshape")
-                    .font(.title3)
-                    .foregroundStyle(GlassTokens.textPrimary)
-                    .frame(width: 36, height: 36)
-                    .background(.ultraThinMaterial.opacity(0.85), in: Circle())
-                    .overlay(Circle().stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8))
-            }
-            .accessibilityLabel(Text("Settings"))
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
     }
     
     @ViewBuilder

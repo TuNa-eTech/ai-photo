@@ -11,10 +11,13 @@ struct MyProjectsView: View {
     @State private var projects: [Project] = []
     @State private var selectedProject: Project?
     @State private var selectedImage: UIImage?
+    @State private var showAllTemplates: Bool = false
     
     var body: some View {
         NavigationStack {
             ZStack {
+                GlassBackgroundView()
+                
                 if projects.isEmpty {
                     emptyStateView
                 } else {
@@ -22,6 +25,7 @@ struct MyProjectsView: View {
                 }
             }
             .navigationTitle("My Projects")
+            .navigationBarTitleDisplayMode(.large)
             .onAppear {
                 loadProjects()
             }
@@ -30,16 +34,19 @@ struct MyProjectsView: View {
                     ProjectDetailView(project: project, image: image)
                 }
             }
+            .sheet(isPresented: $showAllTemplates) {
+                AllTemplatesView(home: HomeViewModel())
+            }
         }
     }
     
     // MARK: - Views
     
     private var projectsGrid: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
+                GridItem(.flexible(), spacing: 16),
+                GridItem(.flexible(), spacing: 16)
             ], spacing: 16) {
                 ForEach(projects) { project in
                     ProjectGridView(project: project) {
@@ -47,25 +54,36 @@ struct MyProjectsView: View {
                     }
                 }
             }
-            .padding()
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
         }
     }
     
     private var emptyStateView: some View {
         VStack(spacing: 24) {
             Image(systemName: "photo.stack")
-                .font(.system(size: 80))
-                .foregroundStyle(.gray)
+                .font(.system(size: 64, weight: .light))
+                .foregroundStyle(GlassTokens.textSecondary.opacity(0.6))
             
             Text("No Projects Yet")
-                .font(.title2.bold())
+                .font(.title2.weight(.bold))
+                .foregroundStyle(GlassTokens.textPrimary)
             
             Text("Start creating amazing images with AI templates!")
                 .font(.subheadline)
-                .foregroundStyle(.gray)
+                .foregroundStyle(GlassTokens.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
+            
+            Button {
+                showAllTemplates = true
+            } label: {
+                Label("Explore Templates", systemImage: "sparkles")
+                    .font(.headline)
+            }
+            .buttonStyle(GlassCTAButtonStyle())
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     private func loadProjects() {
@@ -93,27 +111,28 @@ struct ProjectGridView: View {
                         .aspectRatio(contentMode: .fill)
                         .frame(height: 180)
                         .clipped()
-                        .cornerRadius(12)
+                        .clipShape(RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous))
                 } else {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.gray.opacity(0.3))
+                    RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                        .fill(GlassTokens.primary1.opacity(0.3))
                         .frame(height: 180)
                         .overlay(
                             Image(systemName: "photo")
-                                .font(.largeTitle)
-                                .foregroundStyle(.gray)
+                                .font(.title)
+                                .foregroundStyle(GlassTokens.textSecondary)
                         )
                 }
                 
                 // Info
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(project.templateName)
-                        .font(.subheadline.bold())
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(GlassTokens.textPrimary)
                         .lineLimit(2)
                     
                     Text(project.createdAt, style: .date)
                         .font(.caption)
-                        .foregroundStyle(.gray)
+                        .foregroundStyle(GlassTokens.textSecondary)
                 }
                 
                 // Status badge
@@ -122,22 +141,14 @@ struct ProjectGridView: View {
                     statusBadge
                 }
             }
-            .padding(8)
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-            .shadow(color: .black.opacity(0.1), radius: 4)
+            .padding(12)
+            .glassCard()
         }
         .buttonStyle(.plain)
     }
     
     private var statusBadge: some View {
-        Text(project.status.rawValue)
-            .font(.caption2.bold())
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(statusColor.opacity(0.2))
-            .foregroundStyle(statusColor)
-            .cornerRadius(6)
+        GlassChip(text: project.status.rawValue)
     }
     
     private var statusColor: Color {
@@ -215,4 +226,3 @@ struct ProjectDetailView: View {
         }
     }
 }
-

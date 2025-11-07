@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
 
 struct ImageProcessingView: View {
     let template: TemplateDTO
@@ -22,9 +24,9 @@ struct ImageProcessingView: View {
     
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            GlassBackgroundView()
             
-            VStack(spacing: 32) {
+            VStack(spacing: 24) {
                 // Processing animation
                 processingAnimation
                 
@@ -38,15 +40,17 @@ struct ImageProcessingView: View {
                 actionButtons
             }
             .padding(24)
+            .glassCard()
         }
         .task {
             await viewModel.processImage(template: template, image: image)
         }
         .onChange(of: viewModel.processingState) { oldValue, newValue in
             if case .completed = newValue {
-                // Small delay before dismissing
-                Task {
-                    try? await Task.sleep(for: .seconds(1))
+                Task { @MainActor in
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    // Present on next runloop tick to avoid race with current layout transaction
+                    try? await Task.sleep(for: .milliseconds(50))
                     dismiss()
                 }
             }
@@ -57,13 +61,14 @@ struct ImageProcessingView: View {
     
     private var processingAnimation: some View {
         ZStack {
-            // Background circle
+            // Background circle with better contrast
             Circle()
                 .fill(
                     RadialGradient(
                         colors: [
-                            Color.blue.opacity(0.3),
-                            Color.purple.opacity(0.1)
+                            GlassTokens.accent1.opacity(0.4),
+                            GlassTokens.accent2.opacity(0.25),
+                            GlassTokens.primary1.opacity(0.15)
                         ],
                         center: .center,
                         startRadius: 0,
@@ -71,13 +76,22 @@ struct ImageProcessingView: View {
                     )
                 )
                 .frame(width: 240, height: 240)
+                .shadow(
+                    color: GlassTokens.shadowColor.opacity(0.5),
+                    radius: 20,
+                    x: 0,
+                    y: 10
+                )
             
-            // Processing icon
+            // Processing icon with better contrast
             Image(systemName: imageProcessingIcon)
-                .font(.system(size: 80))
+                .font(.system(size: 80, weight: .medium))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [.blue, .purple],
+                        colors: [
+                            GlassTokens.textPrimary,
+                            GlassTokens.textSecondary
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -104,16 +118,19 @@ struct ImageProcessingView: View {
     }
     
     private var statusText: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             Text(processingTitle)
                 .font(.title2.bold())
-                .foregroundStyle(.white)
+                .foregroundStyle(GlassTokens.textPrimary)
             
             Text(processingMessage)
                 .font(.subheadline)
-                .foregroundStyle(.gray)
+                .foregroundStyle(GlassTokens.textSecondary)
                 .multilineTextAlignment(.center)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .padding(.horizontal, 8)
     }
     
     private var processingTitle: String {
@@ -156,15 +173,15 @@ struct ImageProcessingView: View {
     
     private var progressBar: some View {
         VStack(spacing: 12) {
-            ProgressView(value: viewModel.progress)
-                .progressViewStyle(.linear)
-                .tint(.blue)
-            
-            Text("\(Int(viewModel.progress * 100))%")
-                .font(.caption)
-                .foregroundStyle(.gray)
+            // Indeterminate spinner while uploading/processing
+            ProgressView()
+                .progressViewStyle(.circular)
+                .tint(GlassTokens.textPrimary)
+                .scaleEffect(1.2)
         }
+        .frame(height: 40)
         .opacity(viewModel.processingState.canShowProgress ? 1 : 0)
+        .animation(.easeInOut(duration: 0.3), value: viewModel.processingState.canShowProgress)
     }
     
     private var actionButtons: some View {
@@ -175,7 +192,7 @@ struct ImageProcessingView: View {
                         await viewModel.processImage(template: template, image: image)
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(GlassCTAButtonStyle())
                 .controlSize(.large)
             }
             
@@ -183,7 +200,8 @@ struct ImageProcessingView: View {
                 dismiss()
             }
             .buttonStyle(.bordered)
-            .foregroundStyle(.white)
+            .foregroundStyle(GlassTokens.textPrimary)
+            .controlSize(.large)
         }
     }
 }
@@ -198,4 +216,4 @@ extension ImageProcessingViewModel.ProcessingState {
         }
     }
 }
-
+#endif

@@ -31,6 +31,11 @@ Environment & Configuration
   - Dev Auth (local only):
     - DEV_AUTH_ENABLED=1
     - DEV_AUTH_TOKEN=dev-secret-token-123
+  - Gemini API:
+    - GEMINI_API_KEY (Google Gemini API key for image processing).
+    - GEMINI_MODEL (default: gemini-2.5-flash-image).
+    - GEMINI_TIMEOUT_MS (default: 45000).
+    - USE_MOCK_IMAGE (set to 'true' to use mock_dev/test_img.png instead of real API - saves costs in development).
   - CORS: CORS_ALLOWED_ORIGINS (comma-separated origins).
   - Server: PORT=8080
 - Ports:
@@ -223,6 +228,7 @@ Constraints & Notes
 - Prisma migrations are version-controlled and applied via CLI.
 - Web CMS theme customizable via src/theme/theme.ts (Material-UI createTheme).
 - Image processing currently synchronous (10-30s timeout), async job queue planned for Phase 2.
+- Mock image mode: Set `USE_MOCK_IMAGE=true` to bypass GeminiService and return `mock_dev/test_img.png` (saves API costs during development).
 
 iOS-Specific Best Practices
 - **JSONDecoder + CodingKeys Pattern:**

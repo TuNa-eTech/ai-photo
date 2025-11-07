@@ -54,18 +54,8 @@ struct ProfileView: View {
                 }
             }
             .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(GlassTokens.textPrimary)
-                    }
-                }
-                
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         showEditProfile = true

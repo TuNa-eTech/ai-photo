@@ -1,4 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
 import { GeminiService } from '../gemini/gemini.service';
 import { TemplatesService } from '../templates/templates.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -12,12 +15,81 @@ export class ImagesService {
     private readonly geminiService: GeminiService,
     private readonly templatesService: TemplatesService,
     private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
   ) {}
+
+  /**
+   * Read mock image from mock_dev/test_img.png and convert to base64
+   * @returns Base64 string without data URI prefix
+   */
+  private getMockImageBase64(): string {
+    const mockImagePath = join(process.cwd(), 'mock_dev', 'test_img.png');
+    
+    if (!existsSync(mockImagePath)) {
+      throw new Error(`Mock image not found at ${mockImagePath}`);
+    }
+
+    try {
+      const imageBuffer = readFileSync(mockImagePath);
+      return imageBuffer.toString('base64');
+    } catch (error) {
+      this.logger.error(`Failed to read mock image: ${error instanceof Error ? error.message : error}`);
+      throw new Error('Failed to read mock image file');
+    }
+  }
 
   async processImage(dto: ProcessImageDto): Promise<ProcessImageResponse> {
     const startTime = Date.now();
     
     try {
+      // Check if mock mode is enabled
+      const useMockImage = this.configService.get<boolean>('gemini.useMockImage', false);
+      
+      if (useMockImage) {
+        this.logger.log('🔄 Mock image mode enabled - using mock_dev/test_img.png');
+        
+        // 1. Validate image (still validate input even in mock mode)
+        const validation = this.geminiService.validateImageBase64(dto.image_base64);
+        if (!validation.valid) {
+          throw new Error(validation.error || 'Invalid image');
+        }
+
+        // 2. Get template by ID
+        const template = await this.prisma.template.findUnique({
+          where: { id: dto.template_id },
+        });
+        
+        if (!template) {
+          throw new NotFoundException('Template not found');
+        }
+
+        // 3. Get mock image
+        const mockImageBase64 = this.getMockImageBase64();
+        
+        // Simulate processing time (100-500ms)
+        const simulatedProcessingTime = Math.floor(Math.random() * 400) + 100;
+        await new Promise(resolve => setTimeout(resolve, simulatedProcessingTime));
+        
+        const processingTime = Date.now() - startTime;
+        this.logger.log(`Mock image processing completed in ${processingTime}ms`);
+
+        // 4. Return mock result
+        return {
+          processed_image_base64: `data:image/jpeg;base64,${mockImageBase64}`,
+          metadata: {
+            template_id: dto.template_id,
+            template_name: template.name,
+            model_used: 'mock',
+            generation_time_ms: processingTime,
+            processed_dimensions: {
+              width: dto.options?.width || 1024,
+              height: dto.options?.height || 1024,
+            },
+          },
+        };
+      }
+
+      // Original flow when mock mode is disabled
       // 1. Validate image
       const validation = this.geminiService.validateImageBase64(dto.image_base64);
       if (!validation.valid) {

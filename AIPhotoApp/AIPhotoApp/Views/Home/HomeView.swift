@@ -1,5 +1,5 @@
 //
-//  TemplatesHomeView.swift
+//  HomeView.swift
 //  AIPhotoApp
 //
 //  Home screen MVP: Simple layout with trending templates + user projects
@@ -8,13 +8,15 @@
 import SwiftUI
 import Observation
 
-struct TemplatesHomeView: View {
+struct HomeView: View {
     let model: AuthViewModel
     @State private var home = HomeViewModel()
 
     // UI local state
     @State private var showProfile: Bool = false
     @State private var showAllTemplates: Bool = false
+    @State private var selectedTemplate: TemplateDTO?
+    @State private var showImageProcessing: Bool = false
 
     private let gridCols: [GridItem] = [
         GridItem(.flexible(), spacing: 12, alignment: .top),
@@ -43,8 +45,8 @@ struct TemplatesHomeView: View {
                         // Trending templates section
                         trendingSection
                     }
-                    .padding(.bottom, 96) // leave space for FAB
-                    .padding(.top, 8)
+                    .padding(.bottom, 24)
+                    .padding(.top, 16)
                 }
             }
             .overlay(alignment: .top) {
@@ -59,20 +61,6 @@ struct TemplatesHomeView: View {
                     }
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .padding(.top, 8)
-                }
-            }
-
-            // Floating Create button
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    GlassFloatingButton(systemImage: "sparkles") {
-                        // TODO: Wire into create flow
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    }
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 28)
                 }
             }
         }
@@ -100,18 +88,21 @@ struct TemplatesHomeView: View {
         .sheet(isPresented: $showAllTemplates) {
             AllTemplatesView(home: home)
         }
+        .sheet(item: $selectedTemplate) { template in
+            TemplateSelectionView(template: template, authViewModel: model)
+        }
     }
 
     // MARK: - Sections
     
     private var projectsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("My Projects")
                 .font(.title2.weight(.bold))
                 .foregroundStyle(GlassTokens.textPrimary)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 20)
             
-            VStack(spacing: 10) {
+            VStack(spacing: 12) {
                 ForEach(home.userProjects) { project in
                     ProjectCard(project: project)
                         .onTapGesture {
@@ -120,21 +111,21 @@ struct TemplatesHomeView: View {
                         }
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 20)
         }
     }
     
     private var trendingSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Trending Templates")
                         .font(.title2.weight(.bold))
                         .foregroundStyle(GlassTokens.textPrimary)
                     
                     if !home.displayTrendingTemplates.isEmpty {
                         Text("\(home.displayTrendingTemplates.count) templates")
-                            .font(.caption)
+                            .font(.subheadline)
                             .foregroundStyle(GlassTokens.textSecondary)
                     }
                 }
@@ -151,28 +142,30 @@ struct TemplatesHomeView: View {
                         Image(systemName: "chevron.right")
                             .font(.caption.weight(.semibold))
                     }
-                    .foregroundStyle(GlassTokens.textSecondary)
+                    .foregroundStyle(GlassTokens.textPrimary)
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(.ultraThinMaterial.opacity(0.5), in: Capsule())
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial.opacity(0.85), in: Capsule())
+                    .overlay(Capsule().stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8))
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 20)
             
             if home.displayTrendingTemplates.isEmpty && !home.isLoading {
                 // Empty state
-                VStack(spacing: 12) {
+                VStack(spacing: 16) {
                     Image(systemName: "sparkles")
-                        .font(.system(size: 48))
-                        .foregroundStyle(GlassTokens.textSecondary)
+                        .font(.system(size: 48, weight: .light))
+                        .foregroundStyle(GlassTokens.textSecondary.opacity(0.6))
                     Text("No trending templates yet")
                         .font(.subheadline)
                         .foregroundStyle(GlassTokens.textSecondary)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
+                .padding(.vertical, 48)
             } else {
-                LazyVGrid(columns: gridCols, spacing: 14) {
+                LazyVGrid(columns: gridCols, spacing: 16) {
                     ForEach(home.displayTrendingTemplates) { item in
                         CardGlassSmall(
                             title: item.title,
@@ -182,7 +175,9 @@ struct TemplatesHomeView: View {
                         )
                         .onTapGesture {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            // TODO: Navigate to template detail
+                            if let dto = item.dto {
+                                selectedTemplate = dto
+                            }
                         }
                         .contextMenu {
                             Button("Preview", systemImage: "eye") {}
@@ -193,7 +188,7 @@ struct TemplatesHomeView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 20)
             }
         }
     }
@@ -204,6 +199,7 @@ struct TemplatesHomeView: View {
         let trimmed = model.name.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? "bạn" : trimmed
     }
+    
 }
 
 // MARK: - Reusable Overlays
@@ -259,7 +255,7 @@ private struct ProjectCard: View {
     let project: Project
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 16) {
             // Thumbnail
             Group {
                 if let url = project.thumbnailURL {
@@ -278,26 +274,26 @@ private struct ProjectCard: View {
                 }
             }
             .frame(width: 80, height: 80)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous))
             
             // Info
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(project.templateName)
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(GlassTokens.textPrimary)
                     .lineLimit(1)
                 
                 Text(project.createdAt, style: .date)
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(GlassTokens.textSecondary)
                 
                 // Status badge
-                HStack(spacing: 4) {
+                HStack(spacing: 6) {
                     Circle()
                         .fill(statusColor)
-                        .frame(width: 6, height: 6)
+                        .frame(width: 8, height: 8)
                     Text(project.status.rawValue)
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(GlassTokens.textSecondary)
                 }
             }
@@ -305,10 +301,10 @@ private struct ProjectCard: View {
             Spacer()
             
             Image(systemName: "chevron.right")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(GlassTokens.textSecondary)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(GlassTokens.textSecondary.opacity(0.6))
         }
-        .padding(12)
+        .padding(16)
         .glassCard()
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text("Project: \(project.templateName)"))
@@ -343,5 +339,5 @@ private struct ProjectCard: View {
 
 #Preview("Home") {
     let auth = AuthViewModel(authService: AuthService(), userRepository: UserRepository())
-    TemplatesHomeView(model: auth)
+    HomeView(model: auth)
 }

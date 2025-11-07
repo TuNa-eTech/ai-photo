@@ -77,7 +77,21 @@ export async function getAdminTemplate(slug: string): Promise<TemplateAdmin> {
  * POST /v1/admin/templates
  */
 export async function createTemplate(data: CreateTemplateRequest): Promise<TemplateAdmin> {
-  return apiClient.post<TemplateAdmin>('/v1/admin/templates', data)
+  // Transform snake_case to camelCase for API compatibility
+  const apiData = {
+    slug: data.slug,
+    name: data.name,
+    description: data.description,
+    prompt: data.prompt,
+    negativePrompt: data.negative_prompt,
+    modelProvider: data.model_provider,
+    modelName: data.model_name,
+    status: data.status,
+    visibility: data.visibility,
+    tags: data.tags,
+  }
+  
+  return apiClient.post<TemplateAdmin>('/v1/admin/templates', apiData)
 }
 
 /**
@@ -88,7 +102,20 @@ export async function updateTemplate(
   slug: string,
   data: UpdateTemplateRequest
 ): Promise<TemplateAdmin> {
-  return apiClient.put<TemplateAdmin>(`/v1/admin/templates/${slug}`, data)
+  // Transform snake_case to camelCase for API compatibility
+  const apiData = {
+    name: data.name,
+    description: data.description,
+    prompt: data.prompt,
+    negativePrompt: data.negative_prompt,
+    modelProvider: data.model_provider,
+    modelName: data.model_name,
+    status: data.status,
+    visibility: data.visibility,
+    tags: data.tags,
+  }
+  
+  return apiClient.put<TemplateAdmin>(`/v1/admin/templates/${slug}`, apiData)
 }
 
 /**

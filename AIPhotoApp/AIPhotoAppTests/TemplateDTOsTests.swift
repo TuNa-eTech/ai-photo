@@ -10,6 +10,7 @@ import Foundation
 @testable import AIPhotoApp
 
 @Suite("TemplateDTO Tests")
+@MainActor
 struct TemplateDTOsTests {
     
     // MARK: - Decoding Tests
@@ -220,13 +221,13 @@ struct TemplateDTOsTests {
     
     // MARK: - isTrending Property Tests
     
-    @Test("isTrending returns true for usage count >= 100")
+    @Test("isTrending returns true for usage count >= 500")
     func testIsTrendingForHighUsageCount() throws {
         let json = """
         {
             "id": "test",
             "name": "Test",
-            "usage_count": 100
+            "usage_count": 500
         }
         """
         
@@ -318,7 +319,7 @@ struct TemplateDTOsTests {
             "id": "test",
             "name": "Test",
             "published_at": "\(ISO8601DateFormatter().string(from: Date()))",
-            "usage_count": 150
+            "usage_count": 600
         }
         """
         
@@ -354,6 +355,7 @@ struct TemplateDTOsTests {
 }
 
 @Suite("TemplatesListResponse Tests")
+@MainActor
 struct TemplatesListResponseTests {
     
     @Test("Decode TemplatesListResponse with multiple templates")
@@ -432,6 +434,7 @@ struct TemplatesListResponseTests {
 }
 
 @Suite("TemplateDTO Identifiable Conformance")
+@MainActor
 struct TemplateDTOIdentifiableTests {
     
     @Test("TemplateDTO conforms to Identifiable")
@@ -478,6 +481,7 @@ struct TemplateDTOIdentifiableTests {
 }
 
 @Suite("TemplateDTO Hashable Conformance")
+@MainActor
 struct TemplateDTOHashableTests {
     
     @Test("Two templates with same id are equal")
@@ -532,4 +536,3 @@ struct TemplateDTOHashableTests {
         #expect(uniqueIds.count == 2) // id1 and id2
     }
 }
-

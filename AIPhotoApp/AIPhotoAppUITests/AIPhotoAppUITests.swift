@@ -23,12 +23,35 @@ final class AIPhotoAppUITests: XCTestCase {
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testAuthLanding_ShowsHeroAndGoogleButton() throws {
         let app = XCUIApplication()
         app.launch()
+        // Verify hero title appears
+        XCTAssertTrue(app.staticTexts["Biến ảnh thành phong cách AI"].waitForExistence(timeout: 5))
+        // Verify Google sign-in button exists
+        XCTAssertTrue(app.buttons["Tiếp tục với Google"].exists)
+    }
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+    @MainActor
+    func testAuthLanding_ShowsTermsLinks() throws {
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Điều khoản"].exists)
+        XCTAssertTrue(app.staticTexts["Chính sách bảo mật"].exists)
+    }
+
+    @MainActor
+    func testAuthLanding_LoadingOverlayNotVisibleOnLaunch() throws {
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertFalse(app.staticTexts["Đang xử lý"].exists)
+    }
+
+    @MainActor
+    func testAuthLanding_ErrorBannerNotVisibleOnLaunch() throws {
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertFalse(app.staticTexts["Thông báo lỗi"].exists)
     }
 
     @MainActor
