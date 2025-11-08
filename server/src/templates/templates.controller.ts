@@ -17,4 +17,9 @@ export class TemplatesController {
   async listTrending(@Query() query: QueryTemplatesDto) {
     return this.templatesService.listTrendingTemplates(query);
   }
+
+  @Get('categories')
+  async listCategories() {
+    return this.templatesService.listCategories();
+  }
 }

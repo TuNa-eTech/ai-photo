@@ -95,9 +95,28 @@ export function TemplateFormDialog({
   })
 
   const [tagsInput, setTagsInput] = useState<string>('')
+  const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
+
+  // Category-to-tags mapping (matching server mapping)
+  const CATEGORY_TO_TAGS: Record<string, string[]> = {
+    portrait: ['portrait', 'chân dung', 'person', 'people'],
+    landscape: ['landscape', 'phong cảnh', 'scenery', 'nature'],
+    artistic: ['artistic', 'nghệ thuật', 'art', 'creative'],
+    vintage: ['vintage', 'cổ điển', 'classic', 'retro'],
+    abstract: ['abstract', 'trừu tượng', 'geometric', 'pattern'],
+  }
+
+  const CATEGORY_OPTIONS = [
+    { value: '', label: 'None' },
+    { value: 'portrait', label: 'Portrait' },
+    { value: 'landscape', label: 'Landscape' },
+    { value: 'artistic', label: 'Artistic' },
+    { value: 'vintage', label: 'Vintage' },
+    { value: 'abstract', label: 'Abstract' },
+  ]
 
   useEffect(() => {
     if (template) {
@@ -116,6 +135,7 @@ export function TemplateFormDialog({
       setTagsInput(template.tags?.join(', ') || '')
       setThumbnailPreview(template.thumbnail_url || null)
       setThumbnailFile(null)
+      setSelectedCategory('') // Reset category on edit (we don't store it)
       setActiveTab(0)
     } else {
       setFormData({
@@ -133,10 +153,32 @@ export function TemplateFormDialog({
       setTagsInput('')
       setThumbnailPreview(null)
       setThumbnailFile(null)
+      setSelectedCategory('')
       setActiveTab(0)
     }
     setErrors({})
   }, [template, open])
+
+  // Handle category change - auto-populate tags
+  const handleCategoryChange = (category: string): void => {
+    setSelectedCategory(category)
+    if (category && CATEGORY_TO_TAGS[category]) {
+      const suggestedTags = CATEGORY_TO_TAGS[category]
+      // If tagsInput is empty, populate with suggested tags
+      // Otherwise, append suggested tags that aren't already present
+      if (!tagsInput.trim()) {
+        setTagsInput(suggestedTags.join(', '))
+      } else {
+        const existingTags = tagsInput.split(',').map((t) => t.trim().toLowerCase())
+        const newTags = suggestedTags.filter(
+          (tag) => !existingTags.includes(tag.toLowerCase())
+        )
+        if (newTags.length > 0) {
+          setTagsInput(`${tagsInput}, ${newTags.join(', ')}`)
+        }
+      }
+    }
+  }
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
@@ -336,6 +378,25 @@ export function TemplateFormDialog({
                 disabled={loading}
                 placeholder="Transform photos into beautiful anime-style portraits..."
               />
+
+              <FormControl fullWidth>
+                <InputLabel>Category</InputLabel>
+                <Select
+                  value={selectedCategory}
+                  label="Category"
+                  onChange={(e) => handleCategoryChange(e.target.value)}
+                  disabled={loading}
+                >
+                  {CATEGORY_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                  Selecting a category will suggest relevant tags. You can add additional tags.
+                </Typography>
+              </FormControl>
 
               <TextField
                 fullWidth

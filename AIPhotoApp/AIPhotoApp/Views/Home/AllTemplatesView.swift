@@ -11,7 +11,9 @@ struct AllTemplatesView: View {
     let home: HomeViewModel
     
     @Environment(\.dismiss) private var dismiss
+    @Environment(AuthViewModel.self) private var authModel
     
+    @State private var categoryManager = CategoryManager()
     @State private var searchText: String = ""
     @State private var selectedCategory: TemplateCategory = .all
     @State private var selectedFilter: FilterType = .all
@@ -86,6 +88,15 @@ struct AllTemplatesView: View {
             )
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
+            .onAppear {
+                // Load categories from API
+                if let token = authModel.loadToken() {
+                    categoryManager.loadCategories(
+                        bearerIDToken: token,
+                        tokenProvider: { try await authModel.fetchFreshIDToken() }
+                    )
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
@@ -101,8 +112,8 @@ struct AllTemplatesView: View {
     
     private var categorySection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(TemplateCategory.allCategories) { category in
+            HStack(spacing: 12) {
+                ForEach(categoryManager.allCategories) { category in
                     CategoryChipButton(
                         category: category,
                         isSelected: selectedCategory.id == category.id
@@ -116,6 +127,7 @@ struct AllTemplatesView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
+        .scrollClipDisabled(false)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("Category filters"))
     }
@@ -164,80 +176,47 @@ struct AllTemplatesView: View {
     }
 }
 
-// MARK: - Category Chip Button
+// MARK: - Category Chip Button (iOS Design Standards)
 
 private struct CategoryChipButton: View {
     let category: TemplateCategory
     let isSelected: Bool
     let action: () -> Void
     
-    @State private var isPressed = false
-    
     var body: some View {
         Button(action: {
+            #if canImport(UIKit)
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            #endif
             action()
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }) {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Image(systemName: category.icon)
-                    .imageScale(.small)
-                    .foregroundStyle(iconColor)
+                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
                 
                 Text(category.name)
-                    .font(.subheadline.weight(isSelected ? .semibold : .regular))
-                    .foregroundStyle(GlassTokens.textPrimary)
+                    .font(.system(size: 15, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(backgroundView)
-            .overlay(borderOverlay)
-            .shadow(
-                color: isSelected ? category.gradient[0].opacity(0.4) : .clear,
-                radius: isSelected ? 8 : 0,
-                x: 0,
-                y: isSelected ? 4 : 0
-            )
-            .scaleEffect(isPressed ? 0.95 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background {
+                Capsule()
+                    .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+                    .overlay {
+                        Capsule()
+                            .strokeBorder(
+                                isSelected ? Color.accentColor.opacity(0.3) : Color.secondary.opacity(0.2),
+                                lineWidth: isSelected ? 1.5 : 1
+                            )
+                    }
+            }
         }
         .buttonStyle(.plain)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in isPressed = true }
-                .onEnded { _ in isPressed = false }
-        )
         .accessibilityLabel(Text(category.name))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-    }
-    
-    private var iconColor: AnyShapeStyle {
-        if isSelected {
-            AnyShapeStyle(category.linearGradient)
-        } else {
-            AnyShapeStyle(GlassTokens.textSecondary)
-        }
-    }
-    
-    @ViewBuilder
-    private var backgroundView: some View {
-        RoundedRectangle(cornerRadius: 20, style: .continuous)
-            .fill(isSelected ? .regularMaterial : .ultraThinMaterial)
-    }
-    
-    @ViewBuilder
-    private var borderOverlay: some View {
-        RoundedRectangle(cornerRadius: 20, style: .continuous)
-            .stroke(
-                isSelected
-                ? category.linearGradient
-                : LinearGradient(
-                    colors: [GlassTokens.borderColor.opacity(0.3)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                lineWidth: isSelected ? 2 : 0.8
-            )
     }
 }
 

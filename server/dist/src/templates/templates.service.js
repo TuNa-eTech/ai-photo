@@ -55,6 +55,20 @@ let TemplatesService = class TemplatesService {
     constructor(prisma) {
         this.prisma = prisma;
     }
+    CATEGORIES = [
+        { id: 'portrait', name: 'Chân dung' },
+        { id: 'landscape', name: 'Phong cảnh' },
+        { id: 'artistic', name: 'Nghệ thuật' },
+        { id: 'vintage', name: 'Cổ điển' },
+        { id: 'abstract', name: 'Trừu tượng' },
+    ];
+    CATEGORY_TO_TAGS = {
+        portrait: ['portrait', 'chân dung', 'person', 'people'],
+        landscape: ['landscape', 'phong cảnh', 'scenery', 'nature'],
+        artistic: ['artistic', 'nghệ thuật', 'art', 'creative'],
+        vintage: ['vintage', 'cổ điển', 'classic', 'retro'],
+        abstract: ['abstract', 'trừu tượng', 'geometric', 'pattern'],
+    };
     mapToApi(t) {
         return {
             id: t.id,
@@ -76,7 +90,7 @@ let TemplatesService = class TemplatesService {
         }
     }
     async listTemplates(query) {
-        const { limit, offset, q, tags, sort } = query;
+        const { limit, offset, q, tags, category, sort } = query;
         const where = {
             status: client_1.TemplateStatus.published,
             visibility: 'public',
@@ -91,15 +105,24 @@ let TemplatesService = class TemplatesService {
                 },
             ];
         }
+        let tagList = [];
+        if (category && category.trim()) {
+            const categoryTags = this.CATEGORY_TO_TAGS[category.toLowerCase()];
+            if (categoryTags) {
+                tagList.push(...categoryTags);
+            }
+        }
         if (tags && tags.trim()) {
-            const tagList = tags.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
-            if (tagList.length > 0) {
-                if (where.AND) {
-                    where.AND.push({ tags: { hasSome: tagList } });
-                }
-                else {
-                    where.AND = [{ tags: { hasSome: tagList } }];
-                }
+            const tagsFromParam = tags.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
+            tagList.push(...tagsFromParam);
+        }
+        tagList = [...new Set(tagList)];
+        if (tagList.length > 0) {
+            if (where.AND) {
+                where.AND.push({ tags: { hasSome: tagList } });
+            }
+            else {
+                where.AND = [{ tags: { hasSome: tagList } }];
             }
         }
         const orderBy = this.resolveOrder(sort);
@@ -117,6 +140,14 @@ let TemplatesService = class TemplatesService {
             },
         });
         return { templates: rows.map((r) => this.mapToApi(r)) };
+    }
+    async listCategories() {
+        return {
+            categories: this.CATEGORIES.map((cat) => ({
+                id: cat.id,
+                name: cat.name,
+            })),
+        };
     }
     async listTrendingTemplates(query) {
         const { limit = 20, offset = 0 } = query;

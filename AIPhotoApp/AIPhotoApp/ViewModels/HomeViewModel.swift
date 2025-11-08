@@ -120,12 +120,12 @@ final class HomeViewModel {
     }
     
     // Load all templates from API (/v1/templates) - for AllTemplatesView and SearchView
-    func fetchAllTemplatesFromAPI(bearerIDToken: String, limit: Int? = nil, offset: Int? = nil, query: String? = nil, sort: String? = nil, tokenProvider: (() async throws -> String)? = nil) {
+    func fetchAllTemplatesFromAPI(bearerIDToken: String, limit: Int? = nil, offset: Int? = nil, query: String? = nil, category: String? = nil, sort: String? = nil, tokenProvider: (() async throws -> String)? = nil) {
         isLoading = true
         errorMessage = nil
         Task {
             do {
-                let resp = try await repository.listTemplates(limit: limit, offset: offset, query: query, sort: sort, bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
+                let resp = try await repository.listTemplates(limit: limit, offset: offset, query: query, category: category, sort: sort, bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
                 let items: [TemplateItem] = resp.templates.map { dto in
                     // Map DTO to TemplateItem with real data
                     TemplateItem(
@@ -159,7 +159,7 @@ final class HomeViewModel {
         errorMessage = nil
         Task {
             do {
-                let resp = try await repository.listTemplates(limit: limit, offset: 0, query: nil, sort: "newest", bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
+                let resp = try await repository.listTemplates(limit: limit, offset: 0, query: nil, category: nil, sort: "newest", bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
                 let items: [TemplateItem] = resp.templates.map { dto in
                     // Map DTO to TemplateItem with real data
                     return TemplateItem(

@@ -4,6 +4,7 @@ import { QueryTemplatesDto, SortKey } from './dto/query-templates.dto';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { UpdateTemplateDto } from './dto/update-template.dto';
 import { AssetKind, AssetUploadResponse } from './dto/upload-asset.dto';
+import { ApiCategory } from './dto/category.dto';
 import { Template, TemplateStatus } from '@prisma/client';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -48,6 +49,24 @@ export type ApiTemplateAdmin = {
 export class TemplatesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Category definitions with metadata
+  private readonly CATEGORIES: Array<{ id: string; name: string }> = [
+    { id: 'portrait', name: 'Chân dung' },
+    { id: 'landscape', name: 'Phong cảnh' },
+    { id: 'artistic', name: 'Nghệ thuật' },
+    { id: 'vintage', name: 'Cổ điển' },
+    { id: 'abstract', name: 'Trừu tượng' },
+  ];
+
+  // Category-to-tags mapping for filtering
+  private readonly CATEGORY_TO_TAGS: Record<string, string[]> = {
+    portrait: ['portrait', 'chân dung', 'person', 'people'],
+    landscape: ['landscape', 'phong cảnh', 'scenery', 'nature'],
+    artistic: ['artistic', 'nghệ thuật', 'art', 'creative'],
+    vintage: ['vintage', 'cổ điển', 'classic', 'retro'],
+    abstract: ['abstract', 'trừu tượng', 'geometric', 'pattern'],
+  };
+
   private mapToApi(t: DbTemplate): ApiTemplate {
     return {
       id: t.id,
@@ -71,7 +90,7 @@ export class TemplatesService {
   }
 
   async listTemplates(query: QueryTemplatesDto): Promise<{ templates: ApiTemplate[] }> {
-    const { limit, offset, q, tags, sort } = query;
+    const { limit, offset, q, tags, category, sort } = query;
 
     // Security: Only return published + public templates to end users
     const where: any = {
@@ -91,16 +110,32 @@ export class TemplatesService {
       ];
     }
 
-    // Tags filter (if provided)
-    // TODO: tags filter requires taxonomy tables. Ignored for milestone 1.
+    // Build tags list from category and/or tags parameter
+    let tagList: string[] = [];
+
+    // If category is provided, map it to tags
+    if (category && category.trim()) {
+      const categoryTags = this.CATEGORY_TO_TAGS[category.toLowerCase()];
+      if (categoryTags) {
+        tagList.push(...categoryTags);
+      }
+    }
+
+    // If tags parameter is also provided, combine with category tags
     if (tags && tags.trim()) {
-      const tagList = tags.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
-      if (tagList.length > 0) {
-        if (where.AND) {
-          where.AND.push({ tags: { hasSome: tagList } });
-        } else {
-          where.AND = [{ tags: { hasSome: tagList } }];
-        }
+      const tagsFromParam = tags.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
+      tagList.push(...tagsFromParam);
+    }
+
+    // Remove duplicates from tagList
+    tagList = [...new Set(tagList)];
+
+    // Apply tags filter if we have any tags
+    if (tagList.length > 0) {
+      if (where.AND) {
+        where.AND.push({ tags: { hasSome: tagList } });
+      } else {
+        where.AND = [{ tags: { hasSome: tagList } }];
       }
     }
 
@@ -121,6 +156,15 @@ export class TemplatesService {
     });
 
     return { templates: rows.map((r) => this.mapToApi(r as DbTemplate)) };
+  }
+
+  async listCategories(): Promise<{ categories: ApiCategory[] }> {
+    return {
+      categories: this.CATEGORIES.map((cat) => ({
+        id: cat.id,
+        name: cat.name,
+      })),
+    };
   }
 
   async listTrendingTemplates(query: QueryTemplatesDto): Promise<{ templates: ApiTemplate[] }> {

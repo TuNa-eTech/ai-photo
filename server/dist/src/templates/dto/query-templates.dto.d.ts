@@ -4,5 +4,6 @@ export declare class QueryTemplatesDto {
     offset: number;
     q?: string;
     tags?: string;
+    category?: string;
     sort: SortKey;
 }

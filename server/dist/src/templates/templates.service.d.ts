@@ -3,6 +3,7 @@ import { QueryTemplatesDto } from './dto/query-templates.dto';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { UpdateTemplateDto } from './dto/update-template.dto';
 import { AssetKind, AssetUploadResponse } from './dto/upload-asset.dto';
+import { ApiCategory } from './dto/category.dto';
 export type ApiTemplate = {
     id: string;
     name: string;
@@ -31,10 +32,15 @@ export type ApiTemplateAdmin = {
 export declare class TemplatesService {
     private readonly prisma;
     constructor(prisma: PrismaService);
+    private readonly CATEGORIES;
+    private readonly CATEGORY_TO_TAGS;
     private mapToApi;
     private resolveOrder;
     listTemplates(query: QueryTemplatesDto): Promise<{
         templates: ApiTemplate[];
+    }>;
+    listCategories(): Promise<{
+        categories: ApiCategory[];
     }>;
     listTrendingTemplates(query: QueryTemplatesDto): Promise<{
         templates: ApiTemplate[];

@@ -43,6 +43,7 @@ enum AppConfig {
         static let getUserProfile = "/v1/users/me"
         static let templates = "/v1/templates"
         static let trendingTemplates = "/v1/templates/trending"
+        static let categories = "/v1/templates/categories"
         static let processImage = "/v1/images/process"
     }
     

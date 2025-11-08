@@ -9,4 +9,7 @@ export declare class TemplatesController {
     listTrending(query: QueryTemplatesDto): Promise<{
         templates: import("./templates.service").ApiTemplate[];
     }>;
+    listCategories(): Promise<{
+        categories: import("./dto/category.dto").ApiCategory[];
+    }>;
 }

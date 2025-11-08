@@ -14,6 +14,7 @@ protocol TemplatesRepositoryProtocol {
         limit: Int?,
         offset: Int?,
         query: String?,
+        category: String?,
         sort: String?,
         bearerIDToken: String,
         tokenProvider: (() async throws -> String)?
@@ -25,6 +26,11 @@ protocol TemplatesRepositoryProtocol {
         bearerIDToken: String,
         tokenProvider: (() async throws -> String)?
     ) async throws -> TemplatesListResponse
+    
+    func listCategories(
+        bearerIDToken: String,
+        tokenProvider: (() async throws -> String)?
+    ) async throws -> CategoriesListResponse
 }
 
 // MARK: - Implementation
@@ -67,6 +73,7 @@ final class TemplatesRepository: TemplatesRepositoryProtocol {
     func listTemplates(limit: Int? = nil,
                        offset: Int? = nil,
                        query: String? = nil,
+                       category: String? = nil,
                        sort: String? = nil,
                        bearerIDToken: String,
                        tokenProvider: (() async throws -> String)? = nil) async throws -> TemplatesListResponse {
@@ -76,6 +83,9 @@ final class TemplatesRepository: TemplatesRepositoryProtocol {
         if let offset { items.append(URLQueryItem(name: "offset", value: String(offset))) }
         if let query, !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             items.append(URLQueryItem(name: "q", value: query.trimmingCharacters(in: .whitespacesAndNewlines)))
+        }
+        if let category, !category.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            items.append(URLQueryItem(name: "category", value: category.trimmingCharacters(in: .whitespacesAndNewlines)))
         }
         if let sort, !sort.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             items.append(URLQueryItem(name: "sort", value: sort.trimmingCharacters(in: .whitespacesAndNewlines)))
@@ -158,6 +168,48 @@ final class TemplatesRepository: TemplatesRepositoryProtocol {
             #endif
             
             return result
+        } catch let apiErr as APIClientError {
+            switch apiErr {
+            case .httpStatus(let code, let body):
+                if code == 401 { throw NetworkError.unauthorized }
+                if let body, !body.isEmpty {
+                    throw NetworkError.serverError(body)
+                }
+                throw NetworkError.invalidResponse
+            case .decodingFailed:
+                throw NetworkError.decodingFailed
+            default:
+                throw NetworkError.invalidResponse
+            }
+        } catch {
+            throw NetworkError.invalidResponse
+        }
+    }
+    
+    // GET /v1/templates/categories (Bearer required)
+    func listCategories(
+        bearerIDToken: String,
+        tokenProvider: (() async throws -> String)? = nil
+    ) async throws -> CategoriesListResponse {
+        let req = APIRequest(method: "GET", path: AppConfig.APIPath.categories)
+        
+        do {
+            if let tokenProvider {
+                return try await client.sendEnvelopeRetry401(
+                    req,
+                    as: CategoriesListResponse.self,
+                    authToken: bearerIDToken,
+                    decoder: customDecoder,
+                    tokenProvider: tokenProvider
+                )
+            } else {
+                return try await client.sendEnvelope(
+                    req,
+                    as: CategoriesListResponse.self,
+                    authToken: bearerIDToken,
+                    decoder: customDecoder
+                )
+            }
         } catch let apiErr as APIClientError {
             switch apiErr {
             case .httpStatus(let code, let body):

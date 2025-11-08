@@ -8,6 +8,7 @@
 import SwiftUI
 #if canImport(UIKit)
 import UIKit
+import Photos
 #endif
 
 struct ResultView: View {
@@ -18,6 +19,7 @@ struct ResultView: View {
     @State private var processedImage: UIImage?
     @State private var mode: Mode = .after
     @State private var showSavedAlert: Bool = false
+    @State private var showPermissionDeniedAlert: Bool = false
     @State private var comparePosition: CGFloat = 0.5
     @State private var showZoomHint: Bool = true
     
@@ -174,15 +176,33 @@ struct ResultView: View {
         } message: {
             Text("Image has been saved to your Photos.")
         }
+        .alert("Permission Required", isPresented: $showPermissionDeniedAlert) {
+            Button("Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Please enable photo library access in Settings to save images.")
+        }
     }
     
     // MARK: - Save
     private func saveToPhotos(_ image: UIImage) {
-        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-        showSavedAlert = true
-        #if canImport(UIKit)
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        #endif
+        Task {
+            let success = await PhotoLibraryManager.shared.saveImage(image)
+            await MainActor.run {
+                if success {
+                    showSavedAlert = true
+                    #if canImport(UIKit)
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    #endif
+                } else {
+                    showPermissionDeniedAlert = true
+                }
+            }
+        }
     }
 }
 

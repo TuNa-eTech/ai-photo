@@ -29,6 +29,11 @@ export class QueryTemplatesDto {
   @Transform(({ value }) => (typeof value === 'string' ? value : undefined))
   tags?: string;
 
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.toLowerCase() : undefined))
+  category?: string;
+
   @IsIn(['newest', 'popular', 'name'])
   @Transform(({ value }) => {
     const v = String(value || '').toLowerCase();

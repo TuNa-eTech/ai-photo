@@ -17,6 +17,7 @@ class QueryTemplatesDto {
     offset = 0;
     q;
     tags;
+    category;
     sort = 'newest';
 }
 exports.QueryTemplatesDto = QueryTemplatesDto;
@@ -49,6 +50,12 @@ __decorate([
     (0, class_transformer_1.Transform)(({ value }) => (typeof value === 'string' ? value : undefined)),
     __metadata("design:type", String)
 ], QueryTemplatesDto.prototype, "tags", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_transformer_1.Transform)(({ value }) => (typeof value === 'string' ? value.toLowerCase() : undefined)),
+    __metadata("design:type", String)
+], QueryTemplatesDto.prototype, "category", void 0);
 __decorate([
     (0, class_validator_1.IsIn)(['newest', 'popular', 'name']),
     (0, class_transformer_1.Transform)(({ value }) => {

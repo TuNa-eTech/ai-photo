@@ -82,3 +82,14 @@ extension TemplateDTO {
 struct TemplatesListResponse: Codable, Sendable {
     let templates: [TemplateDTO]
 }
+
+// MARK: - Category DTO
+
+struct CategoryDTO: Codable, Sendable, Identifiable, Hashable {
+    let id: String
+    let name: String
+}
+
+struct CategoriesListResponse: Codable, Sendable {
+    let categories: [CategoryDTO]
+}
