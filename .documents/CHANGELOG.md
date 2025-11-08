@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2025-01-XX - Project Storage & Management
+
+#### Added - Project Delete Functionality ⭐
+- **iOS**: Delete projects from grid view and detail view
+  - Delete button (X icon) on each project card (top-right corner)
+  - Context menu (long press) for delete option
+  - Delete button in project detail view toolbar
+  - Confirmation dialog before deletion (prevents accidental deletion)
+  - Haptic feedback on delete action
+  - Error handling with alert messages
+  - Auto-refresh project list after deletion
+  - Image cache cleanup after deletion
+- **Implementation**: 
+  - `MyProjectsView`: Added delete UI (button, context menu, confirmation dialog)
+  - `ProjectDetailView`: Added delete button in toolbar
+  - `ProjectsViewModel.deleteProject()`: Enhanced error handling and logging
+  - `ProjectsStorageManager.deleteProject()`: Removes project and associated image files
+
+#### Fixed - Duplicate Project Creation 🐛
+- **Root Cause**: Background URLSession delegate called multiple times on app relaunch without duplicate checks
+- **Solution**: 
+  - Added `requestId` tracking in `UserDefaults` to prevent duplicate saves
+  - Check `requestId` before saving project
+  - Fallback duplicate detection by `templateId + createdAt` (within 5 seconds window)
+  - Reload from disk before duplicate check to ensure latest data
+- **Implementation**:
+  - `ProjectsStorageManager.saveProject()`: Added `requestId` parameter and duplicate detection
+  - `BackgroundImageProcessor`: Pass `requestId` when saving projects
+  - `savedRequestIds` stored in UserDefaults with cleanup (limits to 500 most recent)
+  - Automatic cleanup of old request IDs (>1000 entries)
+
+#### Fixed - Projects Not Appearing After App Restart 🐛
+- **Root Cause**: `getAllProjects()` only returned in-memory cache, not reloading from disk
+- **Solution**: 
+  - `getAllProjects()` now always reloads from disk before returning
+  - Added `reloadProjectsFromDisk()` public method for force reload
+  - Improved migration logic to preserve data if migration fails
+  - Better error handling: don't clear cache on decode failure (preserve existing data)
+- **Implementation**:
+  - `ProjectsStorageManager.getAllProjects()`: Calls `reloadProjectsFromDisk()` before returning
+  - `ProjectsStorageManager.reloadProjectsFromDisk()`: Public method with proper error handling
+  - Migration only removes old directory after successful verification
+  - Decode errors log warnings but preserve existing cache
+
+#### Added - Persistent Pending Tasks
+- **Background Processing**: Pending tasks now persist to UserDefaults
+  - Restore pending tasks on app restart
+  - Handle background URLSession delegate callbacks correctly
+  - Cleanup old pending tasks (>24 hours)
+  - Validation: Only restore tasks if temp files still exist
+- **Implementation**:
+  - `BackgroundImageProcessor.persistPendingTasks()`: Save to UserDefaults
+  - `BackgroundImageProcessor.restorePendingTasks()`: Restore on init
+  - `BackgroundImageProcessor.cleanupOldPendingTasks()`: Remove stale tasks
+
+#### Changed - Project Storage Location
+- **Migration**: Projects moved from Documents to Application Support directory
+  - Application Support: Hidden from Files app, better for app-specific data
+  - Automatic migration from old location on first launch
+  - File protection: `completeUntilFirstUserAuthentication` for privacy
+  - Safe migration: Only removes old directory after successful migration
+- **Storage Structure**:
+  - `Application Support/Projects/projects.json` - Project metadata
+  - `Application Support/Projects/{projectId}.jpg` - Processed images
+  - `Application Support/Projects/{projectId}-metadata.json` - Image metadata
+
 ### 2025-10-26 (PM) - Critical Fixes & Trending API
 
 #### Added - Trending Templates API ⭐

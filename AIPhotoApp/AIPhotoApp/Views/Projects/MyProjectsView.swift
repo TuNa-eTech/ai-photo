@@ -6,19 +6,23 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct MyProjectsView: View {
-    @State private var projects: [Project] = []
+    @State private var viewModel = ProjectsViewModel()
     @State private var selectedProject: Project?
-    @State private var selectedImage: UIImage?
     @State private var showAllTemplates: Bool = false
+    @State private var projectToDelete: Project?
+    @State private var showDeleteConfirmation: Bool = false
+    @State private var deleteError: String?
+    @State private var showDeleteError: Bool = false
     
     var body: some View {
         NavigationStack {
             ZStack {
                 GlassBackgroundView()
                 
-                if projects.isEmpty {
+                if viewModel.projects.isEmpty && !viewModel.isLoading {
                     emptyStateView
                 } else {
                     projectsGrid
@@ -27,11 +31,22 @@ struct MyProjectsView: View {
             .navigationTitle("My Projects")
             .navigationBarTitleDisplayMode(.large)
             .onAppear {
-                loadProjects()
+                viewModel.loadProjects()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .imageProcessingCompleted)) { _ in
+                // Refresh projects list when a new project is completed
+                viewModel.refreshProjects()
             }
             .sheet(item: $selectedProject) { project in
-                if let image = getProjectImage(project) {
-                    ProjectDetailView(project: project, image: image)
+                if let image = viewModel.getProjectImage(projectId: project.id.uuidString) {
+                    ProjectDetailView(
+                        project: project,
+                        image: image,
+                        onDelete: {
+                            selectedProject = nil
+                            deleteProject(project)
+                        }
+                    )
                 }
             }
             .sheet(isPresented: $showAllTemplates) {
@@ -48,14 +63,65 @@ struct MyProjectsView: View {
                 GridItem(.flexible(), spacing: 16),
                 GridItem(.flexible(), spacing: 16)
             ], spacing: 16) {
-                ForEach(projects) { project in
-                    ProjectGridView(project: project) {
+                ForEach(viewModel.projects) { project in
+                    ProjectGridView(
+                        project: project,
+                        image: viewModel.getProjectImage(projectId: project.id.uuidString),
+                        onDelete: {
+                            projectToDelete = project
+                            showDeleteConfirmation = true
+                        }
+                    ) {
                         selectedProject = project
+                    }
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            projectToDelete = project
+                            showDeleteConfirmation = true
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
                     }
                 }
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
+        }
+        .confirmationDialog(
+            "Delete Project",
+            isPresented: $showDeleteConfirmation,
+            presenting: projectToDelete
+        ) { project in
+            Button("Delete", role: .destructive) {
+                deleteProject(project)
+            }
+            Button("Cancel", role: .cancel) {
+                projectToDelete = nil
+            }
+        } message: { project in
+            Text("Are you sure you want to delete \"\(project.templateName)\"? This action cannot be undone.")
+        }
+        .alert("Delete Failed", isPresented: $showDeleteError) {
+            Button("OK", role: .cancel) {
+                deleteError = nil
+            }
+        } message: {
+            if let error = deleteError {
+                Text(error)
+            }
+        }
+    }
+    
+    private func deleteProject(_ project: Project) {
+        do {
+            try viewModel.deleteProject(project)
+            projectToDelete = nil
+            // Haptic feedback
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        } catch {
+            deleteError = error.localizedDescription
+            showDeleteError = true
+            print("❌ Failed to delete project: \(error)")
         }
     }
     
@@ -86,65 +152,77 @@ struct MyProjectsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
-    private func loadProjects() {
-        projects = ProjectsStorageManager.shared.getAllProjects()
-    }
-    
-    private func getProjectImage(_ project: Project) -> UIImage? {
-        return ProjectsStorageManager.shared.getProjectImage(projectId: project.id.uuidString)
-    }
 }
 
 // MARK: - Project Grid View
 
 struct ProjectGridView: View {
     let project: Project
+    let image: UIImage?
+    let onDelete: () -> Void
     let onTap: () -> Void
     
     var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 8) {
-                // Image
-                if let image = ProjectsStorageManager.shared.getProjectImage(projectId: project.id.uuidString) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(height: 180)
-                        .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous))
-                } else {
-                    RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
-                        .fill(GlassTokens.primary1.opacity(0.3))
-                        .frame(height: 180)
-                        .overlay(
-                            Image(systemName: "photo")
-                                .font(.title)
-                                .foregroundStyle(GlassTokens.textSecondary)
-                        )
-                }
-                
-                // Info
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(project.templateName)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(GlassTokens.textPrimary)
-                        .lineLimit(2)
+        ZStack(alignment: .topTrailing) {
+            // Card content (tap to view details)
+            Button(action: onTap) {
+                VStack(alignment: .leading, spacing: 8) {
+                    // Image
+                    if let image = image {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 180)
+                            .clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous))
+                    } else {
+                        RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                            .fill(GlassTokens.primary1.opacity(0.3))
+                            .frame(height: 180)
+                            .overlay(
+                                Image(systemName: "photo")
+                                    .font(.title)
+                                    .foregroundStyle(GlassTokens.textSecondary)
+                            )
+                    }
                     
-                    Text(project.createdAt, style: .date)
-                        .font(.caption)
-                        .foregroundStyle(GlassTokens.textSecondary)
+                    // Info
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(project.templateName)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(GlassTokens.textPrimary)
+                            .lineLimit(2)
+                        
+                        Text(project.createdAt, style: .date)
+                            .font(.caption)
+                            .foregroundStyle(GlassTokens.textSecondary)
+                    }
+                    
+                    // Status badge
+                    HStack {
+                        Spacer()
+                        statusBadge
+                    }
                 }
-                
-                // Status badge
-                HStack {
-                    Spacer()
-                    statusBadge
-                }
+                .padding(12)
+                .glassCard()
             }
-            .padding(12)
-            .glassCard()
+            .buttonStyle(.plain)
+            
+            // Delete button (top-right corner, above card content)
+            Button(action: {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                onDelete()
+            }) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.white)
+                    .background(Color.red.opacity(0.9), in: Circle())
+                    .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
+            }
+            .padding(8)
+            .zIndex(1) // Ensure delete button is on top
         }
-        .buttonStyle(.plain)
     }
     
     private var statusBadge: some View {
@@ -168,9 +246,11 @@ struct ProjectGridView: View {
 struct ProjectDetailView: View {
     let project: Project
     let image: UIImage
+    let onDelete: () -> Void
     
     @Environment(\.dismiss) private var dismiss
     @State private var showShareSheet = false
+    @State private var showDeleteConfirmation = false
     
     var body: some View {
         NavigationStack {
@@ -213,6 +293,15 @@ struct ProjectDetailView: View {
             .navigationTitle("Project Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                            .foregroundStyle(.red)
+                    }
+                }
+                
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Close") {
                         dismiss()
@@ -222,6 +311,19 @@ struct ProjectDetailView: View {
                 ToolbarItem(placement: .bottomBar) {
                     ShareLink(item: Image(uiImage: image), preview: SharePreview("My AI Image", image: Image(uiImage: image)))
                 }
+            }
+            .confirmationDialog(
+                "Delete Project",
+                isPresented: $showDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    dismiss()
+                    onDelete()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Are you sure you want to delete \"\(project.templateName)\"? This action cannot be undone.")
             }
         }
     }

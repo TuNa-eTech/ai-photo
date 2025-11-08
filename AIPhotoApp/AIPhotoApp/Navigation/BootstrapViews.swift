@@ -7,7 +7,7 @@
 import SwiftUI
 
 struct SplashView: View {
-    let model: AuthViewModel
+    @Environment(AuthViewModel.self) private var model
 
     var body: some View {
         ZStack {
@@ -28,18 +28,18 @@ struct SplashView: View {
 }
 
 struct RootRouterView: View {
-    let model: AuthViewModel
+    @Environment(AuthViewModel.self) private var model
 
     var body: some View {
         Group {
             if !model.isBootstrapped {
-                SplashView(model: model)
+                SplashView()
             } else if model.isAuthenticated {
                 // Show MainTabView when authenticated
-                MainTabView(authViewModel: model)
+                MainTabView()
             } else {
                 // Otherwise show the login landing (V2 with Liquid Glass design)
-                AuthLandingViewV2(model: model)
+                AuthLandingViewV2()
             }
         }
     }

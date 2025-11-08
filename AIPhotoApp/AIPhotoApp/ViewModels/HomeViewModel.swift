@@ -2,7 +2,7 @@
 //  HomeViewModel.swift
 //  AIPhotoApp
 //
-//  ViewModel for Home screen (MVP: trending templates + user projects)
+//  ViewModel for Home screen (MVP: trending templates + new templates)
 //
 
 import Foundation
@@ -10,6 +10,9 @@ import Observation
 
 @Observable
 final class HomeViewModel {
+    // MARK: - Dependencies
+    private let repository: TemplatesRepositoryProtocol
+    
     // MARK: - Types
     struct TemplateItem: Identifiable, Hashable {
         let id: UUID
@@ -20,7 +23,7 @@ final class HomeViewModel {
         let isNew: Bool
         let isTrending: Bool
         let thumbnailURL: URL?           // Real image URL from backend
-        let thumbnailSymbol: String?     // Fallback SF Symbol for UI mock
+        let thumbnailSymbol: String?     // Fallback SF Symbol when thumbnailURL is nil
         let dto: TemplateDTO?            // Original DTO for navigation
 
         init(id: UUID = UUID(),
@@ -49,7 +52,6 @@ final class HomeViewModel {
     // MARK: - Outputs (data)
     var trendingTemplates: [TemplateItem] = []
     var newTemplates: [TemplateItem] = []
-    var userProjects: [Project] = []
     var allTemplates: [TemplateItem] = [] // For AllTemplatesView
     
     // MARK: - Favorites
@@ -60,111 +62,36 @@ final class HomeViewModel {
     var errorMessage: String?
 
     // MARK: - Computed
-    var shouldShowProjects: Bool {
-        !userProjects.isEmpty
+    
+    /// Hero Templates: First 4 templates for carousel
+    var heroTemplates: [TemplateItem] {
+        Array(trendingTemplates.prefix(4))
     }
     
-    var trendingLimit: Int {
-        // Show fewer trending templates when user has projects
-        shouldShowProjects ? 4 : 6
-    }
-    
-    var displayTrendingTemplates: [TemplateItem] {
-        Array(trendingTemplates.prefix(trendingLimit))
-    }
-    
-    // Hero Template: #1 Trending (first template in the list)
-    var heroTemplate: TemplateItem? {
-        trendingTemplates.first
-    }
-    
-    // Trending Now: Templates from index 1 onwards (3-5 templates)
+    /// Trending Now: Templates after hero carousel (starting from index 4)
     var trendingNowTemplates: [TemplateItem] {
-        guard trendingTemplates.count > 1 else { return [] }
-        // Return templates from index 1 to 5 (max 5 templates)
-        let endIndex = min(6, trendingTemplates.count)
-        return Array(trendingTemplates[1..<endIndex])
+        guard trendingTemplates.count > 4 else { return [] }
+        // Return templates from index 4 onwards (max 5 templates)
+        let endIndex = min(9, trendingTemplates.count)
+        return Array(trendingTemplates[4..<endIndex])
+    }
+    
+    // MARK: - Initialization
+    
+    init(repository: TemplatesRepositoryProtocol = TemplatesRepository()) {
+        self.repository = repository
     }
 
     // MARK: - Actions
-    func fetchInitial() {
-        // Mock data for UI development; replace with APIClient integration later
-        isLoading = true
-        errorMessage = nil
-
-        // Simulate async load (quick)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            guard let self else { return }
-
-            // Trending templates
-            let trending: [TemplateItem] = [
-                .init(slug: "anime-style",
-                      title: "Anime Style",
-                      subtitle: "New • High Quality",
-                      tag: "New",
-                      isNew: true,
-                      isTrending: true,
-                      thumbnailSymbol: "moon.stars.fill"),
-                .init(slug: "cartoon-pop",
-                      title: "Cartoon Pop",
-                      subtitle: "Popular Pick",
-                      tag: "Popular",
-                      isNew: false,
-                      isTrending: true,
-                      thumbnailSymbol: "paintbrush.pointed.fill"),
-                .init(slug: "cyberpunk",
-                      title: "Cyberpunk",
-                      subtitle: "Neon • Futuristic",
-                      tag: "Trending",
-                      isNew: true,
-                      isTrending: true,
-                      thumbnailSymbol: "bolt.fill"),
-                .init(slug: "portrait-hq",
-                      title: "Portrait HQ",
-                      subtitle: "Natural tone",
-                      tag: "Studio",
-                      isNew: false,
-                      isTrending: true,
-                      thumbnailSymbol: "person.crop.square"),
-                .init(slug: "watercolor",
-                      title: "Watercolor",
-                      subtitle: "Soft & airy",
-                      tag: "Art",
-                      isNew: true,
-                      isTrending: true,
-                      thumbnailSymbol: "drop.fill"),
-                .init(slug: "pixelart",
-                      title: "Pixel Art",
-                      subtitle: "Retro 8-bit",
-                      tag: "Retro",
-                      isNew: false,
-                      isTrending: true,
-                      thumbnailSymbol: "gamecontroller.fill")
-            ]
-            self.trendingTemplates = trending
-            self.allTemplates = trending // For now, all templates = trending
-            
-            // Mock user projects (uncomment to test projects UI)
-            // self.userProjects = self.mockProjects()
-            
-            self.isLoading = false
-        }
-    }
 
     // Load trending templates from API (/v1/templates/trending) using repository and bearer token
-    func fetchTrendingFromAPI(repo: TemplatesRepositoryProtocol, bearerIDToken: String, limit: Int? = 20, tokenProvider: (() async throws -> String)? = nil) {
+    func fetchTrendingFromAPI(bearerIDToken: String, limit: Int? = 20, tokenProvider: (() async throws -> String)? = nil) {
         isLoading = true
         errorMessage = nil
         Task {
             do {
-                let resp = try await repo.listTrendingTemplates(limit: limit, offset: 0, bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
+                let resp = try await repository.listTrendingTemplates(limit: limit, offset: 0, bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
                 let items: [TemplateItem] = resp.templates.map { dto in
-                    #if DEBUG
-                    print("📦 DTO: \(dto.name)")
-                    print("   - thumbnailURL: \(dto.thumbnailURL?.absoluteString ?? "nil")")
-                    print("   - isNew: \(dto.isNew), isTrending: \(dto.isTrending)")
-                    #endif
-                    
                     // Map DTO to TemplateItem with real data
                     return TemplateItem(
                         slug: dto.id,
@@ -193,12 +120,12 @@ final class HomeViewModel {
     }
     
     // Load all templates from API (/v1/templates) - for AllTemplatesView and SearchView
-    func fetchAllTemplatesFromAPI(repo: TemplatesRepositoryProtocol, bearerIDToken: String, limit: Int? = nil, offset: Int? = nil, query: String? = nil, sort: String? = nil, tokenProvider: (() async throws -> String)? = nil) {
+    func fetchAllTemplatesFromAPI(bearerIDToken: String, limit: Int? = nil, offset: Int? = nil, query: String? = nil, sort: String? = nil, tokenProvider: (() async throws -> String)? = nil) {
         isLoading = true
         errorMessage = nil
         Task {
             do {
-                let resp = try await repo.listTemplates(limit: limit, offset: offset, query: query, sort: sort, bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
+                let resp = try await repository.listTemplates(limit: limit, offset: offset, query: query, sort: sort, bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
                 let items: [TemplateItem] = resp.templates.map { dto in
                     // Map DTO to TemplateItem with real data
                     TemplateItem(
@@ -227,19 +154,13 @@ final class HomeViewModel {
     }
     
     // Load new templates from API (/v1/templates?sort=newest)
-    func fetchNewTemplatesFromAPI(repo: TemplatesRepositoryProtocol, bearerIDToken: String, limit: Int? = 6, tokenProvider: (() async throws -> String)? = nil) {
+    func fetchNewTemplatesFromAPI(bearerIDToken: String, limit: Int? = 6, tokenProvider: (() async throws -> String)? = nil) {
         isLoading = true
         errorMessage = nil
         Task {
             do {
-                let resp = try await repo.listTemplates(limit: limit, offset: 0, query: nil, sort: "newest", bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
+                let resp = try await repository.listTemplates(limit: limit, offset: 0, query: nil, sort: "newest", bearerIDToken: bearerIDToken, tokenProvider: tokenProvider)
                 let items: [TemplateItem] = resp.templates.map { dto in
-                    #if DEBUG
-                    print("📦 New Template DTO: \(dto.name)")
-                    print("   - thumbnailURL: \(dto.thumbnailURL?.absoluteString ?? "nil")")
-                    print("   - isNew: \(dto.isNew), isTrending: \(dto.isTrending)")
-                    #endif
-                    
                     // Map DTO to TemplateItem with real data
                     return TemplateItem(
                         slug: dto.id,
@@ -308,25 +229,4 @@ final class HomeViewModel {
     func isFavorite(_ item: TemplateItem) -> Bool {
         favorites.contains(item.id)
     }
-    
-    // MARK: - Mock Data (for testing)
-    
-    #if DEBUG
-    func mockProjects() -> [Project] {
-        [
-            Project(
-                templateId: "anime-style",
-                templateName: "Anime Style",
-                createdAt: Date().addingTimeInterval(-86400 * 2), // 2 days ago
-                status: .completed
-            ),
-            Project(
-                templateId: "cyberpunk",
-                templateName: "Cyberpunk",
-                createdAt: Date().addingTimeInterval(-3600 * 5), // 5 hours ago
-                status: .processing
-            )
-        ]
-    }
-    #endif
 }

@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct SearchView: View {
-    let model: AuthViewModel
+    @Environment(AuthViewModel.self) private var model
     @State private var home = HomeViewModel()
     
     @State private var searchText: String = ""
@@ -75,7 +75,7 @@ struct SearchView: View {
             }
         }
         .sheet(item: $selectedTemplate) { template in
-            TemplateSelectionView(template: template, authViewModel: model)
+            TemplateSelectionView(template: template)
         }
     }
     
@@ -237,14 +237,14 @@ struct SearchView: View {
     
     private func loadTemplates(query: String?) {
         guard let token = model.loadToken() else {
-            // Fallback to mock data if not logged in
-            home.fetchInitial()
+            // User not logged in - clear templates and show empty state
+            home.allTemplates = []
+            home.isLoading = false
+            home.errorMessage = nil
             return
         }
         
-        let repo = TemplatesRepository()
         home.fetchAllTemplatesFromAPI(
-            repo: repo,
             bearerIDToken: token,
             limit: nil, // Load all for search
             offset: nil,
@@ -334,11 +334,8 @@ private struct CategoryChipButton: View {
 // MARK: - Preview
 
 #Preview {
-    SearchView(
-        model: AuthViewModel(
-            authService: AuthService(),
-            userRepository: UserRepository()
-        )
-    )
+    let authViewModel = AuthViewModel(authService: AuthService(), userRepository: UserRepository())
+    return SearchView()
+        .environment(authViewModel)
 }
 

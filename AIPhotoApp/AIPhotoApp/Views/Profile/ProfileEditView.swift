@@ -9,19 +9,18 @@
 import SwiftUI
 
 struct ProfileEditView: View {
-    let model: AuthViewModel
+    @Environment(AuthViewModel.self) private var model
     
     @Environment(\.dismiss) private var dismiss
     @FocusState private var focusedField: Field?
     
     // Local state for editing
     @State private var editName: String = ""
-    @State private var editEmail: String = ""
     @State private var isSaving: Bool = false
     @State private var errorMessage: String?
     
     enum Field {
-        case name, email
+        case name
     }
     
     var body: some View {
@@ -31,10 +30,10 @@ struct ProfileEditView: View {
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
-                        // Avatar Section
+                        // Avatar Section (read-only display)
                         avatarSection
                         
-                        // Edit Form
+                        // Edit Form (name only)
                         formSection
                         
                         // Error Message
@@ -74,9 +73,8 @@ struct ProfileEditView: View {
                 }
             }
             .onAppear {
-                // Initialize with current values
+                // Initialize with current name value
                 editName = model.name
-                editEmail = model.email
             }
         }
     }
@@ -85,7 +83,7 @@ struct ProfileEditView: View {
     
     private var avatarSection: some View {
         VStack(spacing: 12) {
-            // Avatar Display
+            // Avatar Display (read-only)
             ZStack {
                 Circle()
                     .fill(
@@ -104,53 +102,45 @@ struct ProfileEditView: View {
                     .fill(GlassTokens.primary1)
                     .frame(width: 100, height: 100)
                 
-                if let avatarURL = model.avatarURL?.absoluteString, !avatarURL.isEmpty {
-                    // TODO: AsyncImage when backend provides URLs
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 42))
-                        .foregroundStyle(GlassTokens.textPrimary)
+                if let avatarURL = model.avatarURL {
+                    AsyncImage(url: avatarURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 100, height: 100)
+                                .clipShape(Circle())
+                        case .failure, .empty:
+                            // Fallback to initial letter
+                            Text(model.name.isEmpty ? "?" : model.name.prefix(1).uppercased())
+                                .font(.system(size: 42, weight: .bold))
+                                .foregroundStyle(GlassTokens.textPrimary)
+                        @unknown default:
+                            Text(model.name.isEmpty ? "?" : model.name.prefix(1).uppercased())
+                                .font(.system(size: 42, weight: .bold))
+                                .foregroundStyle(GlassTokens.textPrimary)
+                        }
+                    }
                 } else {
-                    Text(editName.isEmpty ? "?" : editName.prefix(1).uppercased())
+                    Text(model.name.isEmpty ? "?" : model.name.prefix(1).uppercased())
                         .font(.system(size: 42, weight: .bold))
                         .foregroundStyle(GlassTokens.textPrimary)
                 }
-                
-                // Edit badge
-                Circle()
-                    .fill(.ultraThinMaterial.opacity(0.9))
-                    .frame(width: 32, height: 32)
-                    .overlay(
-                        Image(systemName: "camera.fill")
-                            .font(.caption)
-                            .foregroundStyle(GlassTokens.textPrimary)
-                    )
-                    .overlay(
-                        Circle()
-                            .stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8)
-                    )
-                    .offset(x: 35, y: 35)
             }
             .shadow(color: GlassTokens.shadowColor, radius: 12, x: 0, y: 6)
             
-            Button {
-                // TODO: Photo picker
-                print("Change photo tapped")
-            } label: {
-                Text("Change Photo")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(GlassTokens.textPrimary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial.opacity(0.8), in: Capsule())
-                    .overlay(Capsule().stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8))
-            }
+            // Avatar cannot be changed - informational text
+            Text("Avatar cannot be changed")
+                .font(.caption)
+                .foregroundStyle(GlassTokens.textSecondary)
         }
         .frame(maxWidth: .infinity)
     }
     
     private var formSection: some View {
         VStack(spacing: 0) {
-            // Name Field
+            // Name Field (editable)
             FormFieldRow(
                 icon: "person",
                 title: "Full Name",
@@ -167,20 +157,27 @@ struct ProfileEditView: View {
             Divider()
                 .padding(.leading, 56)
             
-            // Email Field
-            FormFieldRow(
-                icon: "envelope",
-                title: "Email",
-                placeholder: "Enter your email"
-            ) {
-                TextField("", text: $editEmail)
-                    .textContentType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-                    .autocorrectionDisabled()
-                    .focused($focusedField, equals: .email)
-                    .foregroundStyle(GlassTokens.textPrimary)
+            // Email Field (read-only)
+            HStack(spacing: 12) {
+                // Icon
+                Image(systemName: "envelope")
+                    .font(.title3)
+                    .foregroundStyle(GlassTokens.textSecondary)
+                    .frame(width: 28, height: 28)
+                
+                // Field
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Email")
+                        .font(.caption)
+                        .foregroundStyle(GlassTokens.textSecondary)
+                    
+                    Text(model.email.isEmpty ? "No email" : model.email)
+                        .font(.body)
+                        .foregroundStyle(GlassTokens.textSecondary)
+                }
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
         }
         .glassCard()
     }
@@ -207,14 +204,7 @@ struct ProfileEditView: View {
     // MARK: - Validation
     
     private var isFormValid: Bool {
-        let nameOK = !editName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let emailOK = isValidEmail(editEmail)
-        return nameOK && emailOK
-    }
-    
-    private func isValidEmail(_ email: String) -> Bool {
-        let pattern = #"^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"#
-        return email.range(of: pattern, options: .regularExpression) != nil
+        !editName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     
     // MARK: - Actions
@@ -224,15 +214,16 @@ struct ProfileEditView: View {
         errorMessage = nil
         isSaving = true
         
-        // Update model
-        model.name = editName.trimmingCharacters(in: .whitespacesAndNewlines)
-        model.email = editEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedName = editName.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // TODO: Call backend API to update profile
         Task { @MainActor in
             do {
-                // Simulate API call
-                try await Task.sleep(for: .seconds(1))
+                // Update profile via ViewModel (only name, keep email and avatarURL from current model)
+                try await model.updateProfile(
+                    name: trimmedName,
+                    email: model.email, // Keep current email (not editable)
+                    avatarURL: model.avatarURL // Keep current avatar (not editable)
+                )
                 
                 // Success - dismiss
                 isSaving = false
@@ -240,6 +231,7 @@ struct ProfileEditView: View {
             } catch {
                 isSaving = false
                 errorMessage = "Failed to save profile. Please try again."
+                print("❌ [ProfileEditView] Save error: \(error)")
             }
         }
     }
@@ -291,11 +283,11 @@ struct FormFieldRow<Content: View>: View {
 // MARK: - Preview
 
 #Preview("Profile Edit") {
-    ProfileEditView(
-        model: AuthViewModel(
-            authService: AuthService(),
-            userRepository: UserRepository()
-        )
+    let authViewModel = AuthViewModel(
+        authService: AuthService(),
+        userRepository: UserRepository()
     )
+    return ProfileEditView()
+        .environment(authViewModel)
 }
 

@@ -40,6 +40,7 @@ enum AppConfig {
     // API Paths
     enum APIPath {
         static let registerUser = "/v1/users/register"
+        static let getUserProfile = "/v1/users/me"
         static let templates = "/v1/templates"
         static let trendingTemplates = "/v1/templates/trending"
         static let processImage = "/v1/images/process"

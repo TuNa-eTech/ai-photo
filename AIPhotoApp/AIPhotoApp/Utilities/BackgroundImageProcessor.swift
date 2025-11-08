@@ -16,17 +16,32 @@ fileprivate func stripDataURLPrefix(_ s: String) -> String {
     return s
 }
 
+// MARK: - Protocol
+
+protocol BackgroundImageProcessorProtocol {
+    func processImage(
+        templateId: String,
+        templateName: String,
+        originalImage: UIImage,
+        imageBase64: String,
+        token: String
+    ) async throws -> String
+}
+
+// MARK: - Implementation
+
 /// Processes images in the background using URLSession configuration
 /// Allows processing to continue even when app is killed or backgrounded
-final class BackgroundImageProcessor: NSObject {
+final class BackgroundImageProcessor: NSObject, BackgroundImageProcessorProtocol {
     static let shared = BackgroundImageProcessor()
     
     var session: URLSession!
     private let sessionIdentifier = "com.aiimagestylist.processing"
     
-    // Store pending tasks info
+    // Store pending tasks info (in-memory cache)
     private var pendingTasks: [String: PendingTaskInfo] = [:]
     private let tasksQueue = DispatchQueue(label: "com.aiimagestylist.tasks")
+    private let pendingTasksKey = "pendingImageProcessingTasks"
     
     struct PendingTaskInfo {
         let requestId: String
@@ -53,6 +68,12 @@ final class BackgroundImageProcessor: NSObject {
             delegate: self,
             delegateQueue: nil
         )
+        
+        // Restore pending tasks from UserDefaults (persist across app restarts)
+        restorePendingTasks()
+        
+        // Clean up old pending tasks (older than 24 hours)
+        cleanupOldPendingTasks()
     }
     
     // MARK: - Public Interface
@@ -124,18 +145,29 @@ final class BackgroundImageProcessor: NSObject {
         originalImagePath: URL
     ) {
         tasksQueue.sync {
-            pendingTasks[requestId] = PendingTaskInfo(
+            let taskInfo = PendingTaskInfo(
                 requestId: requestId,
                 templateId: templateId,
                 originalImagePath: originalImagePath,
                 templateName: templateName,
                 createdAt: Date()
             )
+            pendingTasks[requestId] = taskInfo
+            
+            // Persist to UserDefaults for app restart recovery
+            persistPendingTasks()
         }
     }
     
     private func getPendingTask(requestId: String) -> PendingTaskInfo? {
         return tasksQueue.sync {
+            // First check in-memory cache
+            if let task = pendingTasks[requestId] {
+                return task
+            }
+            
+            // If not in cache, try to restore from UserDefaults
+            restorePendingTasks()
             return pendingTasks[requestId]
         }
     }
@@ -143,6 +175,87 @@ final class BackgroundImageProcessor: NSObject {
     private func clearPendingTask(requestId: String) {
         tasksQueue.sync {
             pendingTasks.removeValue(forKey: requestId)
+            // Update UserDefaults after clearing
+            persistPendingTasks()
+        }
+    }
+    
+    /// Persist pending tasks to UserDefaults
+    private func persistPendingTasks() {
+        var tasksDict: [String: [String: Any]] = [:]
+        
+        for (requestId, taskInfo) in pendingTasks {
+            tasksDict[requestId] = [
+                "requestId": taskInfo.requestId,
+                "templateId": taskInfo.templateId,
+                "templateName": taskInfo.templateName,
+                "originalImagePath": taskInfo.originalImagePath.path,
+                "createdAt": taskInfo.createdAt.timeIntervalSince1970
+            ]
+        }
+        
+        UserDefaults.standard.set(tasksDict, forKey: pendingTasksKey)
+    }
+    
+    /// Restore pending tasks from UserDefaults
+    private func restorePendingTasks() {
+        guard let tasksDict = UserDefaults.standard.dictionary(forKey: pendingTasksKey) as? [String: [String: Any]] else {
+            return
+        }
+        
+        for (requestId, taskData) in tasksDict {
+            guard let templateId = taskData["templateId"] as? String,
+                  let templateName = taskData["templateName"] as? String,
+                  let imagePathString = taskData["originalImagePath"] as? String,
+                  let createdAtTimestamp = taskData["createdAt"] as? TimeInterval else {
+                continue
+            }
+            
+            let imagePath = URL(fileURLWithPath: imagePathString)
+            let createdAt = Date(timeIntervalSince1970: createdAtTimestamp)
+            
+            // Only restore if file still exists and task is not too old (24 hours)
+            let maxAge: TimeInterval = 24 * 60 * 60
+            if FileManager.default.fileExists(atPath: imagePath.path) &&
+               Date().timeIntervalSince(createdAt) < maxAge {
+                pendingTasks[requestId] = PendingTaskInfo(
+                    requestId: requestId,
+                    templateId: templateId,
+                    originalImagePath: imagePath,
+                    templateName: templateName,
+                    createdAt: createdAt
+                )
+            } else {
+                // Remove invalid/old task
+                var updatedDict = tasksDict
+                updatedDict.removeValue(forKey: requestId)
+                UserDefaults.standard.set(updatedDict, forKey: pendingTasksKey)
+            }
+        }
+    }
+    
+    /// Clean up old pending tasks (older than 24 hours)
+    private func cleanupOldPendingTasks() {
+        let maxAge: TimeInterval = 24 * 60 * 60
+        let now = Date()
+        
+        tasksQueue.sync {
+            var hasChanges = false
+            
+            for (requestId, taskInfo) in pendingTasks {
+                if now.timeIntervalSince(taskInfo.createdAt) > maxAge {
+                    // Remove old task
+                    pendingTasks.removeValue(forKey: requestId)
+                    hasChanges = true
+                    
+                    // Clean up temp file
+                    try? FileManager.default.removeItem(at: taskInfo.originalImagePath)
+                }
+            }
+            
+            if hasChanges {
+                persistPendingTasks()
+            }
         }
     }
     
@@ -267,9 +380,11 @@ extension BackgroundImageProcessor: URLSessionDelegate, URLSessionDownloadDelega
                 status: .completed
             )
             
-            // Persist processed image and project
+            // Persist processed image and project (with requestId to prevent duplicates)
+            // saveProject will automatically skip if duplicate (by requestId or templateId+createdAt)
             do {
-                try ProjectsStorageManager.shared.saveProject(project, with: processedImage)
+                try ProjectsStorageManager.shared.saveProject(project, with: processedImage, requestId: requestId)
+                print("✅ ProjectsStorageManager: Saved project with requestId \(requestId)")
             } catch {
                 print("❌ Failed to save project: \(error)")
                 clearPendingTask(requestId: requestId)
@@ -277,11 +392,23 @@ extension BackgroundImageProcessor: URLSessionDelegate, URLSessionDownloadDelega
                 return
             }
             
-            // Clean up pending task
+            // Clean up pending task (project is saved or was duplicate - both are OK)
             clearPendingTask(requestId: requestId)
             
+            // Reload projects to get the actual saved project
+            // If it was duplicate, find the existing project; otherwise use the one we just saved
+            ProjectsStorageManager.shared.reloadProjectsFromDisk()
+            let allProjects = ProjectsStorageManager.shared.getAllProjects()
+            
+            // Find the project: look for most recent project with same templateId
+            // This handles both cases: newly saved project or existing duplicate
+            let savedProject = allProjects
+                .filter { $0.templateId == project.templateId }
+                .sorted { $0.createdAt > $1.createdAt }
+                .first ?? project // Fallback to the project we created if not found
+            
             // Notify app (on main thread inside method)
-            notifyCompletion(requestId: requestId, project: project)
+            notifyCompletion(requestId: requestId, project: savedProject)
             
             // Show notification if app in background (must check on main thread)
             DispatchQueue.main.async { [weak self] in

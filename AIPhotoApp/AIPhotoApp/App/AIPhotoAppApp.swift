@@ -24,7 +24,8 @@ struct AIPhotoAppApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootRouterView(model: authModel)
+            RootRouterView()
+                .environment(authModel)  // Provide AuthViewModel globally via @Environment
                 .onOpenURL { url in
                     GIDSignIn.sharedInstance.handle(url)
                 }

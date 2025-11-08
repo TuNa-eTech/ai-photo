@@ -22,12 +22,24 @@ let UsersController = class UsersController {
     constructor(usersService) {
         this.usersService = usersService;
     }
+    async getProfile(req) {
+        const firebaseUid = req.firebaseUid;
+        return this.usersService.getUserProfile(firebaseUid);
+    }
     async register(req, dto) {
         const firebaseUid = req.firebaseUid;
         return this.usersService.registerUser(firebaseUid, dto);
     }
 };
 exports.UsersController = UsersController;
+__decorate([
+    (0, common_1.Get)('me'),
+    (0, common_1.UseGuards)(bearer_auth_guard_1.BearerAuthGuard),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "getProfile", null);
 __decorate([
     (0, common_1.Post)('register'),
     (0, common_1.UseGuards)(bearer_auth_guard_1.BearerAuthGuard),

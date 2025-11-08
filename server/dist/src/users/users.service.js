@@ -17,6 +17,25 @@ let UsersService = class UsersService {
     constructor(prisma) {
         this.prisma = prisma;
     }
+    async getUserProfile(firebaseUid) {
+        const user = await this.prisma.user.findUnique({
+            where: { firebaseUid },
+        });
+        if (!user) {
+            throw new common_1.NotFoundException({
+                code: 'user_not_found',
+                message: 'User not found',
+            });
+        }
+        return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            avatar_url: user.avatarUrl ?? undefined,
+            created_at: user.createdAt,
+            updated_at: user.updatedAt,
+        };
+    }
     async registerUser(firebaseUid, dto) {
         const user = await this.prisma.user.upsert({
             where: { firebaseUid },

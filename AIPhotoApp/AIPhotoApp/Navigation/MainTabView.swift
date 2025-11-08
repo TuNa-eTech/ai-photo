@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct MainTabView: View {
-    let authViewModel: AuthViewModel
+    @Environment(AuthViewModel.self) private var authViewModel
     
     @State private var selectedTab: TabItem = .home
     
@@ -36,7 +36,7 @@ struct MainTabView: View {
             TabView(selection: $selectedTab) {
                 // Home Tab
                 Tab(value: TabItem.home) {
-                    HomeView(model: self.authViewModel)
+                    HomeView()
                 } label: {
                     Label(TabItem.home.rawValue, systemImage: TabItem.home.icon)
                 }
@@ -50,14 +50,14 @@ struct MainTabView: View {
                 
                 // Profile Tab
                 Tab(value: TabItem.profile) {
-                    ProfileView(model: self.authViewModel)
+                    ProfileView()
                 } label: {
                     Label(TabItem.profile.rawValue, systemImage: TabItem.profile.icon)
                 }
                 
                 // Search Tab (trailing end)
                 Tab(value: TabItem.search, role: .search) {
-                    SearchView(model: self.authViewModel)
+                    SearchView()
                 } label: {
                     Label(TabItem.search.rawValue, systemImage: TabItem.search.icon)
                 }
@@ -103,11 +103,8 @@ struct MainTabView: View {
 // MARK: - Preview
 
 #Preview {
-    MainTabView(
-        authViewModel: AuthViewModel(
-            authService: AuthService(),
-            userRepository: UserRepository()
-        )
-    )
+    let authViewModel = AuthViewModel(authService: AuthService(), userRepository: UserRepository())
+    return MainTabView()
+        .environment(authViewModel)
 }
 

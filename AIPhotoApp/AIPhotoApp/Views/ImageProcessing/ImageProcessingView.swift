@@ -13,53 +13,64 @@ struct ImageProcessingView: View {
     let template: TemplateDTO
     let image: UIImage
     
-    @State private var viewModel: ImageProcessingViewModel
+    @Environment(AuthViewModel.self) private var authViewModel
+    @State private var viewModel: ImageProcessingViewModel?
     @Environment(\.dismiss) private var dismiss
     
-    init(template: TemplateDTO, image: UIImage, authViewModel: AuthViewModel) {
-        self.template = template
-        self.image = image
-        self._viewModel = State(initialValue: ImageProcessingViewModel(authViewModel: authViewModel))
-    }
-    
     var body: some View {
-        ZStack {
-            GlassBackgroundView()
-            
-            VStack(spacing: 24) {
-                // Processing animation
-                processingAnimation
-                
-                // Status text
-                statusText
-                
-                // Progress bar
-                progressBar
-                
-                // Action buttons
-                actionButtons
-            }
-            .padding(24)
-            .glassCard()
-        }
-        .task {
-            await viewModel.processImage(template: template, image: image)
-        }
-        .onChange(of: viewModel.processingState) { oldValue, newValue in
-            if case .completed = newValue {
-                Task { @MainActor in
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    // Present on next runloop tick to avoid race with current layout transaction
-                    try? await Task.sleep(for: .milliseconds(50))
-                    dismiss()
+        Group {
+            if let viewModel = viewModel {
+                ZStack {
+                    GlassBackgroundView()
+                    
+                    VStack(spacing: 24) {
+                        // Processing animation
+                        processingAnimation(viewModel: viewModel)
+                        
+                        // Status text
+                        statusText(viewModel: viewModel)
+                        
+                        // Progress bar
+                        progressBar(viewModel: viewModel)
+                        
+                        // Action buttons
+                        actionButtons(viewModel: viewModel)
+                    }
+                    .padding(24)
+                    .glassCard()
                 }
+                .task {
+                    await viewModel.processImage(template: template, image: image)
+                }
+                .onChange(of: viewModel.processingState) { oldValue, newValue in
+                    if case .completed = newValue {
+                        Task { @MainActor in
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            // Present on next runloop tick to avoid race with current layout transaction
+                            try? await Task.sleep(for: .milliseconds(50))
+                            dismiss()
+                        }
+                    }
+                }
+            } else {
+                // Loading state while initializing ViewModel
+                ZStack {
+                    GlassBackgroundView()
+                    ProgressView()
+                }
+            }
+        }
+        .onAppear {
+            // Initialize ViewModel with @Environment authViewModel
+            if viewModel == nil {
+                viewModel = ImageProcessingViewModel(authViewModel: authViewModel)
             }
         }
     }
     
     // MARK: - Views
     
-    private var processingAnimation: some View {
+    private func processingAnimation(viewModel: ImageProcessingViewModel) -> some View {
         ZStack {
             // Background circle with better contrast
             Circle()
@@ -84,7 +95,7 @@ struct ImageProcessingView: View {
                 )
             
             // Processing icon with better contrast
-            Image(systemName: imageProcessingIcon)
+            Image(systemName: imageProcessingIcon(viewModel: viewModel))
                 .font(.system(size: 80, weight: .medium))
                 .foregroundStyle(
                     LinearGradient(
@@ -100,7 +111,7 @@ struct ImageProcessingView: View {
         }
     }
     
-    private var imageProcessingIcon: String {
+    private func imageProcessingIcon(viewModel: ImageProcessingViewModel) -> String {
         switch viewModel.processingState {
         case .preparing:
             return "photo.stack"
@@ -117,13 +128,13 @@ struct ImageProcessingView: View {
         }
     }
     
-    private var statusText: some View {
+    private func statusText(viewModel: ImageProcessingViewModel) -> some View {
         VStack(spacing: 12) {
-            Text(processingTitle)
+            Text(processingTitle(viewModel: viewModel))
                 .font(.title2.bold())
                 .foregroundStyle(GlassTokens.textPrimary)
             
-            Text(processingMessage)
+            Text(processingMessage(viewModel: viewModel))
                 .font(.subheadline)
                 .foregroundStyle(GlassTokens.textSecondary)
                 .multilineTextAlignment(.center)
@@ -133,7 +144,7 @@ struct ImageProcessingView: View {
         .padding(.horizontal, 8)
     }
     
-    private var processingTitle: String {
+    private func processingTitle(viewModel: ImageProcessingViewModel) -> String {
         switch viewModel.processingState {
         case .idle:
             return "Ready to Process"
@@ -152,7 +163,7 @@ struct ImageProcessingView: View {
         }
     }
     
-    private var processingMessage: String {
+    private func processingMessage(viewModel: ImageProcessingViewModel) -> String {
         switch viewModel.processingState {
         case .idle:
             return "Starting image processing"
@@ -171,7 +182,7 @@ struct ImageProcessingView: View {
         }
     }
     
-    private var progressBar: some View {
+    private func progressBar(viewModel: ImageProcessingViewModel) -> some View {
         VStack(spacing: 12) {
             // Indeterminate spinner while uploading/processing
             ProgressView()
@@ -184,7 +195,7 @@ struct ImageProcessingView: View {
         .animation(.easeInOut(duration: 0.3), value: viewModel.processingState.canShowProgress)
     }
     
-    private var actionButtons: some View {
+    private func actionButtons(viewModel: ImageProcessingViewModel) -> some View {
         VStack(spacing: 12) {
             if case .failed = viewModel.processingState {
                 Button("Retry") {

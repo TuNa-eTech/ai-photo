@@ -33,6 +33,7 @@ final class AuthViewModel {
     var name: String = ""
     var email: String = ""
     var avatarURL: URL?
+    var createdAt: Date?
 
     // Internal
     private var session: AuthSession?
@@ -169,6 +170,7 @@ final class AuthViewModel {
         self.name = ""
         self.email = ""
         self.avatarURL = nil
+        self.createdAt = nil
         self.isAuthenticated = false
         self.isLoading = false
         self.errorMessage = nil
@@ -203,9 +205,24 @@ final class AuthViewModel {
                 do {
                     let token = try await authService.fetchFirebaseIDToken(forceRefresh: false)
                     persistToken(token)
+                    
+                    // Load profile from backend to get latest data including created_at
+                    try await fetchUserProfile()
+                    
                     setAuthenticated()
                 } catch {
-                    self.isAuthenticated = false
+                    // If profile fetch fails, still set authenticated but without backend profile data
+                    // Fallback to Firebase session data if available
+                    #if canImport(FirebaseAuth)
+                    if let user = Auth.auth().currentUser {
+                        self.name = user.displayName ?? ""
+                        self.email = user.email ?? ""
+                        if let photoURL = user.photoURL {
+                            self.avatarURL = photoURL
+                        }
+                    }
+                    #endif
+                    self.isAuthenticated = true
                 }
             } else {
                 self.isAuthenticated = false
@@ -221,6 +238,55 @@ final class AuthViewModel {
     // MARK: - Token refresh (public)
     func fetchFreshIDToken() async throws -> String {
         try await authService.fetchFirebaseIDToken(forceRefresh: true)
+    }
+
+    // MARK: - Profile Fetch
+
+    @MainActor
+    func fetchUserProfile() async throws {
+        do {
+            let token = try await authService.fetchFirebaseIDToken(forceRefresh: false)
+            let response = try await userRepository.getUserProfile(
+                bearerIDToken: token,
+                tokenProvider: { try await self.authService.fetchFirebaseIDToken(forceRefresh: true) }
+            )
+            
+            // Update profile data from backend (backend is source of truth)
+            self.name = response.name
+            self.email = response.email
+            if let avatarUrlString = response.avatarUrl, !avatarUrlString.isEmpty {
+                self.avatarURL = URL(string: avatarUrlString)
+            } else {
+                self.avatarURL = nil
+            }
+            self.createdAt = response.createdAt
+            
+            print("✅ [AuthViewModel] Profile loaded from backend:")
+            print("   • Name: \(self.name)")
+            print("   • Email: \(self.email)")
+            if let createdAt = self.createdAt {
+                print("   • Created At: \(createdAt)")
+            }
+        } catch {
+            print("⚠️ [AuthViewModel] Failed to fetch profile from backend: \(error.localizedDescription)")
+            // Don't throw - fallback to Firebase session data
+            // This allows app to continue working even if backend is unavailable
+        }
+    }
+
+    @MainActor
+    func updateProfile(name: String, email: String, avatarURL: URL?) async throws {
+        let token = try await authService.fetchFirebaseIDToken(forceRefresh: false)
+        _ = try await userRepository.registerUser(
+            name: name,
+            email: email,
+            avatarURL: avatarURL,
+            bearerIDToken: token,
+            tokenProvider: { try await self.authService.fetchFirebaseIDToken(forceRefresh: true) }
+        )
+        
+        // Refresh profile from backend to get latest data including created_at
+        try await fetchUserProfile()
     }
 
     // MARK: - Helpers
@@ -263,6 +329,10 @@ final class AuthViewModel {
                     tokenProvider: { try await self.authService.fetchFirebaseIDToken(forceRefresh: true) }
                 )
                 print("✅ [AuthViewModel] Registration successful")
+                
+                // After successful registration, fetch full profile from backend to get created_at
+                try await fetchUserProfile()
+                
                 setAuthenticated()
             } catch {
                 print("❌ [AuthViewModel] Registration failed: \(error.localizedDescription)")
@@ -285,6 +355,7 @@ final class AuthViewModel {
             self?.persistToken(newToken)
         }
 
+        // createdAt is preserved from fetchUserProfile if available
         self.isLoading = false
         self.requiresProfileCompletion = false
         self.errorMessage = nil

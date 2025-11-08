@@ -14,7 +14,7 @@ import UIKit
 
 struct TemplateSelectionView: View {
     let template: TemplateDTO
-    let authViewModel: AuthViewModel
+    @Environment(AuthViewModel.self) private var authViewModel
     
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var selectedImage: UIImage?
@@ -90,7 +90,7 @@ struct TemplateSelectionView: View {
             }
             .sheet(isPresented: $showImageProcessing) {
                 if let image = selectedImage {
-                    ImageProcessingView(template: template, image: image, authViewModel: authViewModel)
+                    ImageProcessingView(template: template, image: image)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .imageProcessingCompleted)) { notif in
@@ -328,28 +328,7 @@ private struct PickedPhoto: Transferable {
     }
 }
 
-#Preview {
-    // Create mock template JSON
-    let jsonData = """
-    {
-        "id": "test",
-        "name": "Anime Style",
-        "thumbnail_url": null,
-        "published_at": "\(ISO8601DateFormatter().string(from: Date()))",
-        "usage_count": 150
-    }
-    """.data(using: .utf8)!
-    
-    let decoder = JSONDecoder()
-    decoder.dateDecodingStrategy = .iso8601
-    
-    let mockTemplate = try! decoder.decode(TemplateDTO.self, from: jsonData)
-    
-    return TemplateSelectionView(
-        template: mockTemplate,
-        authViewModel: AuthViewModel(
-            authService: AuthService(),
-            userRepository: UserRepository()
-        )
-    )
-}
+// MARK: - Preview
+// Note: Preview requires a real TemplateDTO instance
+// To preview this view, use Xcode Previews with a real template from API
+// or create a TemplateDTO instance with actual data

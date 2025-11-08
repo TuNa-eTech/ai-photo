@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { BearerAuthGuard } from '../auth/bearer-auth.guard';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
@@ -11,6 +11,21 @@ import { UsersService } from './users.service';
 @Controller('v1/users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  /**
+   * GET /v1/users/me
+   * Get current user profile
+   * Requires Firebase authentication via Bearer token
+   */
+  @Get('me')
+  @UseGuards(BearerAuthGuard)
+  async getProfile(
+    @Req() req: Request & { firebaseUid?: string },
+  ): Promise<UserResponseDto> {
+    // firebaseUid is attached by BearerAuthGuard after verifying the token
+    const firebaseUid = req.firebaseUid!;
+    return this.usersService.getUserProfile(firebaseUid);
+  }
 
   /**
    * POST /v1/users/register

@@ -36,11 +36,26 @@ struct ProfileHeroCard: View {
                     .fill(GlassTokens.primary1)
                     .frame(width: 84, height: 84)
                 
-                if let avatarURL = avatarURL, !avatarURL.isEmpty {
-                    // TODO: AsyncImage when backend provides URLs
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 36))
-                        .foregroundStyle(GlassTokens.textPrimary)
+                if let avatarURLString = avatarURL, !avatarURLString.isEmpty, let avatarURL = URL(string: avatarURLString) {
+                    AsyncImage(url: avatarURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 84, height: 84)
+                                .clipShape(Circle())
+                        case .failure, .empty:
+                            // Fallback to initial letter
+                            Text(name.prefix(1).uppercased())
+                                .font(.system(size: 36, weight: .bold))
+                                .foregroundStyle(GlassTokens.textPrimary)
+                        @unknown default:
+                            Text(name.prefix(1).uppercased())
+                                .font(.system(size: 36, weight: .bold))
+                                .foregroundStyle(GlassTokens.textPrimary)
+                        }
+                    }
                 } else {
                     Text(name.prefix(1).uppercased())
                         .font(.system(size: 36, weight: .bold))

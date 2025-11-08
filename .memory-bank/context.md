@@ -3,6 +3,32 @@
 Last updated: 2025-11-07
 
 Current work focus
+- **✅ iOS Architecture Improvements:** ✅ COMPLETED
+  - Implemented MVVM + Repository + Service Layer architecture
+  - Refactored dependency injection patterns
+  - **Dependency Injection Improvements:**
+  - ViewModels now inject dependencies via constructor (e.g., `HomeViewModel(repository: TemplatesRepositoryProtocol)`)
+  - Removed hard-coded `TemplatesRepository` instantiation from Views
+  - Repositories injected into ViewModels, not passed as method parameters
+- **@Environment for Shared State:**
+  - `AuthViewModel` now provided globally via `@Environment` at app root
+  - Removed prop drilling - all views access `AuthViewModel` via `@Environment(AuthViewModel.self)`
+  - Updated: `HomeView`, `ProfileView`, `SearchView`, `MainTabView`, `RootRouterView`, `SplashView`, `AuthLandingViewV2`, `TemplateSelectionView`, `ImageProcessingView`
+- **Protocol-Based Services:**
+  - Created `BackgroundImageProcessorProtocol` for `BackgroundImageProcessor`
+  - `ImageProcessingViewModel` now injects processor via protocol instead of direct singleton access
+  - Enables easy mocking in tests
+- **Files Modified:**
+  - `AIPhotoAppApp.swift` - Added `.environment(authModel)` at app root
+  - `HomeViewModel.swift` - Added repository dependency injection
+  - `ImageProcessingViewModel.swift` - Added processor dependency injection
+  - `BackgroundImageProcessor.swift` - Added protocol definition
+  - All Views - Updated to use `@Environment` for `AuthViewModel`
+- **Architecture Rule Created:**
+  - Created `.cursor/rules/swiftui-architecture.mdc` with comprehensive architecture guidelines
+  - Documents MVVM + Repository + Service Layer pattern
+  - Includes quick reference, core rules, anti-patterns, and checklist
+- **Status:** All architectural improvements completed, build successful, ready for testing
 - **✅ iOS Tab Bar Navigation & Search Implementation:** ✅ COMPLETED
   - Implemented MainTabView with TabView containing 4 tabs: Home, Projects, Profile, Search
   - Used `Tab(value:role:)` wrapper for all tabs with `role: .search` for Search tab
@@ -60,6 +86,38 @@ Current work focus
 - **File Upload System:** ✅ COMPLETED - Working with thumbnail management and automatic cleanup.
 
 Recent changes (latest first)
+- ✅ **iOS Architecture Improvements (2025-11-07):**
+  - **MVVM + Repository + Service Layer Architecture:**
+    - Refactored to follow strict MVVM + Repository + Service Layer pattern
+    - ViewModels inject dependencies via constructor with default parameters
+    - Repositories are protocol-based for testability
+    - Services are protocol-based when needed for testing
+  - **Dependency Injection Refactoring:**
+    - `HomeViewModel` now injects `TemplatesRepositoryProtocol` via constructor
+    - Removed hard-coded `TemplatesRepository` instantiation from `HomeView` and `SearchView`
+    - ViewModels use injected repository instead of receiving it as method parameter
+  - **@Environment for Shared State:**
+    - `AuthViewModel` provided globally via `.environment(authModel)` at app root (`AIPhotoAppApp.swift`)
+    - All views access `AuthViewModel` via `@Environment(AuthViewModel.self)` instead of prop drilling
+    - Updated views: `HomeView`, `ProfileView`, `ProfileEditView`, `SearchView`, `MainTabView`, `RootRouterView`, `SplashView`, `AuthLandingViewV2`, `TemplateSelectionView`, `ImageProcessingView`
+    - Removed `model:` parameter from all view initializers
+  - **Protocol-Based Services:**
+    - Created `BackgroundImageProcessorProtocol` for `BackgroundImageProcessor`
+    - `ImageProcessingViewModel` now injects processor via protocol instead of `BackgroundImageProcessor.shared`
+    - Enables easy mocking in tests
+  - **Architecture Rule:**
+    - Created `.cursor/rules/swiftui-architecture.mdc` with comprehensive architecture guidelines
+    - Documents architecture pattern, dependency injection, state management, anti-patterns
+    - Includes quick reference code examples and checklist
+  - **Files Modified:**
+    - `AIPhotoAppApp.swift` - Added `.environment(authModel)`
+    - `HomeViewModel.swift` - Added repository dependency injection
+    - `ImageProcessingViewModel.swift` - Added processor dependency injection
+    - `BackgroundImageProcessor.swift` - Added protocol definition
+    - All Views - Updated to use `@Environment` for `AuthViewModel`
+    - All Previews - Updated to use `.environment()` instead of passing parameters
+  - **Build Status:** All changes build successfully, no breaking changes
+  - **Status:** Architectural improvements completed, ready for testing
 - ✅ **iOS Tab Bar Navigation & Search Implementation (2025-11-07):**
   - **MainTabView Implementation:**
     - Created MainTabView with TabView containing 4 tabs: Home, Projects, Profile, Search

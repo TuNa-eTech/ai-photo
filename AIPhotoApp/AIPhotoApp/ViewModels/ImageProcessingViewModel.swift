@@ -49,11 +49,15 @@ final class ImageProcessingViewModel {
         }
     }
     
-    private let processor = BackgroundImageProcessor.shared
+    private let processor: BackgroundImageProcessorProtocol
     private let authViewModel: AuthViewModel
     
-    init(authViewModel: AuthViewModel) {
+    init(
+        authViewModel: AuthViewModel,
+        processor: BackgroundImageProcessorProtocol = BackgroundImageProcessor.shared
+    ) {
         self.authViewModel = authViewModel
+        self.processor = processor
         
         // Listen for background completion
         NotificationCenter.default.addObserver(

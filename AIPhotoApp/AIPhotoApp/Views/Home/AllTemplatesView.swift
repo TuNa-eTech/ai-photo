@@ -244,8 +244,7 @@ private struct CategoryChipButton: View {
 // MARK: - Preview
 
 #Preview {
-    let home = HomeViewModel()
-    AllTemplatesView(home: home)
+    AllTemplatesView(home: HomeViewModel())
 }
 
 

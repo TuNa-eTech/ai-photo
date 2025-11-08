@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct ProfileView: View {
-    let model: AuthViewModel
+    @Environment(AuthViewModel.self) private var model
     
     @Environment(\.dismiss) private var dismiss
     @State private var showEditProfile = false
@@ -67,7 +67,7 @@ struct ProfileView: View {
                 }
             }
             .sheet(isPresented: $showEditProfile) {
-                ProfileEditView(model: model)
+                ProfileEditView()
             }
             .alert("Logout", isPresented: $showLogoutConfirm) {
                 Button("Cancel", role: .cancel) {}
@@ -273,11 +273,13 @@ struct ProfileView: View {
     
     // MARK: - Helpers
     
-    private func memberSinceText() -> String {
-        // TODO: Get real join date from backend
+    private func memberSinceText() -> String? {
+        guard let createdAt = model.createdAt else {
+            return nil
+        }
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM yyyy"
-        return formatter.string(from: Date())
+        return formatter.string(from: createdAt)
     }
     
     private func appVersion() -> String {
@@ -306,11 +308,11 @@ struct ProfileView: View {
 // MARK: - Preview
 
 #Preview("Profile") {
-    ProfileView(
-        model: AuthViewModel(
-            authService: AuthService(),
-            userRepository: UserRepository()
-        )
+    let authViewModel = AuthViewModel(
+        authService: AuthService(),
+        userRepository: UserRepository()
     )
+    return ProfileView()
+        .environment(authViewModel)
 }
 

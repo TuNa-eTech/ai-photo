@@ -8,7 +8,7 @@ import SwiftUI
 import AuthenticationServices
 
 struct AuthLandingViewV2: View {
-    let model: AuthViewModel
+    @Environment(AuthViewModel.self) private var model
     
     @State private var showCard = false
     @State private var logoScale: CGFloat = 0.8
@@ -399,10 +399,12 @@ struct ErrorGlassBanner: View {
 // MARK: - Preview
 
 #Preview("Auth Landing V2") {
-    AuthLandingViewV2(model: AuthViewModel(
+    let model = AuthViewModel(
         authService: AuthService(),
         userRepository: UserRepository()
-    ))
+    )
+    return AuthLandingViewV2()
+        .environment(model)
 }
 
 #Preview("Auth Landing V2 - Loading") {
@@ -411,7 +413,8 @@ struct ErrorGlassBanner: View {
         userRepository: UserRepository()
     )
     model.isLoading = true
-    return AuthLandingViewV2(model: model)
+    return AuthLandingViewV2()
+        .environment(model)
 }
 
 #Preview("Auth Landing V2 - Error") {
@@ -420,7 +423,8 @@ struct ErrorGlassBanner: View {
         userRepository: UserRepository()
     )
     model.errorMessage = "Đăng nhập thất bại. Vui lòng thử lại."
-    return AuthLandingViewV2(model: model)
+    return AuthLandingViewV2()
+        .environment(model)
 }
 
 

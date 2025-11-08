@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
@@ -9,6 +9,35 @@ import { UserResponseDto } from './dto/user-response.dto';
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
+
+  /**
+   * Get user profile by Firebase UID
+   * 
+   * @param firebaseUid - Firebase UID from verified token
+   * @returns User data (snake_case)
+   * @throws NotFoundException if user doesn't exist
+   */
+  async getUserProfile(firebaseUid: string): Promise<UserResponseDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { firebaseUid },
+    });
+
+    if (!user) {
+      throw new NotFoundException({
+        code: 'user_not_found',
+        message: 'User not found',
+      });
+    }
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      avatar_url: user.avatarUrl ?? undefined,
+      created_at: user.createdAt,
+      updated_at: user.updatedAt,
+    };
+  }
 
   /**
    * Register or update user based on Firebase UID

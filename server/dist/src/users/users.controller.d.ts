@@ -4,6 +4,9 @@ import { UsersService } from './users.service';
 export declare class UsersController {
     private readonly usersService;
     constructor(usersService: UsersService);
+    getProfile(req: Request & {
+        firebaseUid?: string;
+    }): Promise<UserResponseDto>;
     register(req: Request & {
         firebaseUid?: string;
     }, dto: RegisterUserDto): Promise<UserResponseDto>;

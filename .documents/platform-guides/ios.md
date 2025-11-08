@@ -1,6 +1,6 @@
 # iOS App - AI Image Stylist
 
-_Last updated: 2025-10-26_
+_Last updated: 2025-11-07_
 
 ## Overview
 
@@ -10,12 +10,32 @@ SwiftUI iOS app for browsing AI templates and generating stylized photos. Featur
 
 ## Architecture
 
+### Architecture Pattern: MVVM + Repository + Service Layer
+
+```
+View → ViewModel → Repository → Service → Network
+```
+
+**Layers:**
+- **View**: Pure UI, no business logic
+- **ViewModel**: Business logic, state management (`@Observable`)
+- **Repository**: Data access (protocol-based)
+- **Service**: Business services (Auth, Image Processing)
+- **Network**: HTTP client (APIClient)
+
 ### Technology Stack
 - **UI Framework**: SwiftUI (iOS 26+)
 - **Authentication**: Firebase SDK
 - **Networking**: URLSession with custom APIClient
 - **State Management**: @Observable (Observation framework)
+- **Dependency Injection**: Constructor injection with protocol-based dependencies
 - **Testing**: Swift Testing framework (@Test, @Suite)
+
+### Key Architectural Principles
+- **Dependency Injection**: ViewModels inject dependencies via constructor with default parameters
+- **Protocol-Based Design**: Repositories and services use protocols for testability
+- **@Environment for Shared State**: App-wide state (AuthViewModel) provided via `@Environment`, no prop drilling
+- **Separation of Concerns**: Views contain only UI, ViewModels contain business logic, Repositories handle data access
 
 ### Project Structure
 
@@ -49,15 +69,23 @@ AIPhotoApp/
 ├── Utilities/
 │   ├── Networking/
 │   │   └── APIClient.swift              # Envelope handling, 401 retry
+│   ├── ProjectsStorageManager.swift     # Local project storage & management
+│   ├── BackgroundImageProcessor.swift   # Background image processing
 │   └── Constants/
 │       ├── GlassTokens.swift            # Design tokens (beige palette)
 │       └── AppConfig.swift              # Backend URL configuration
-└── Services/
-    └── AuthService.swift
+├── Services/
+│   └── AuthService.swift
+└── Views/
+    └── Projects/
+        └── MyProjectsView.swift         # Project grid & detail view
 
 AIPhotoAppTests/
 ├── TemplateDTOsTests.swift              # 20 tests: DTO decoding, computed properties
 └── HomeViewModelTests.swift             # 27 tests: ViewModel logic, API integration
+
+ViewModels/
+└── ProjectsViewModel.swift              # Project management logic (MVVM)
 ```
 
 ## ⚠️ Critical Patterns & Gotchas
@@ -706,6 +734,115 @@ static let backendBaseURL = URL(string: "http://192.168.1.123:8080")!
 - Use gradient overlay for text readability instead
 - Apply shadow to text: `.shadow(color: .black.opacity(0.5), radius: 2)`
 
+## Project Storage & Management
+
+### ProjectsStorageManager
+
+Manages local storage for user-generated projects and their processed images.
+
+**Storage Location**: `Application Support/Projects/`
+- Hidden from Files app (better for app-specific data)
+- Automatically backed up by iOS
+- File protection: `completeUntilFirstUserAuthentication`
+
+**Key Features**:
+- **Duplicate Prevention**: Tracks `requestId` in UserDefaults to prevent duplicate saves
+- **Disk Persistence**: Always reloads from disk to ensure data consistency
+- **Migration**: Automatically migrates data from Documents directory
+- **File Protection**: Encrypted at rest until first user authentication
+
+**API**:
+```swift
+// Save project with duplicate prevention
+func saveProject(_ project: Project, with processedImage: UIImage, requestId: String?) throws
+
+// Get all projects (reloads from disk)
+func getAllProjects() -> [Project]
+
+// Get project image
+func getProjectImage(projectId: String) -> UIImage?
+
+// Delete project (removes project and image files)
+func deleteProject(_ project: Project) throws
+
+// Force reload from disk
+func reloadProjectsFromDisk()
+```
+
+**Duplicate Detection**:
+1. Check `requestId` in saved set (UserDefaults)
+2. Fallback: Check `templateId + createdAt` (within 5 seconds)
+3. Reload from disk before checking to ensure latest data
+
+### ProjectsViewModel
+
+MVVM ViewModel for project management UI.
+
+**Features**:
+- Image caching for performance
+- Preload images on project load
+- Delete project with error handling
+- Auto-refresh after operations
+
+**API**:
+```swift
+@Observable
+final class ProjectsViewModel {
+    var projects: [Project] = []
+    var isLoading: Bool = false
+    var errorMessage: String?
+    
+    func loadProjects()
+    func getProjectImage(projectId: String) -> UIImage?
+    func deleteProject(_ project: Project) throws
+    func refreshProjects()
+}
+```
+
+### Delete Functionality
+
+**UI Options**:
+1. **Grid View**: Delete button (X icon) on top-right corner of each card
+2. **Context Menu**: Long press card → Delete option
+3. **Detail View**: Delete button in toolbar
+
+**Flow**:
+1. User taps delete button
+2. Confirmation dialog appears
+3. User confirms deletion
+4. Project and image files deleted from storage
+5. Cache cleaned up
+6. Project list auto-refreshed
+7. Haptic feedback provided
+
+**Error Handling**:
+- Shows alert if deletion fails
+- Logs errors for debugging
+- Preserves project if deletion fails
+
+### Background Image Processing
+
+**Features**:
+- Background URLSession for long-running tasks
+- Pending task persistence (UserDefaults)
+- Task restoration on app restart
+- Automatic cleanup of old tasks (>24 hours)
+
+**Flow**:
+1. User initiates image processing
+2. Request sent to backend API
+3. Task saved to pending tasks (UserDefaults)
+4. Background URLSession handles response
+5. On completion: Save project with `requestId`
+6. Clear pending task
+7. Notify UI via NotificationCenter
+
+**Pending Task Storage**:
+- Stored in UserDefaults: `pendingImageProcessingTasks`
+- Restored on app launch
+- Validated: Only restore if temp file exists
+- Cleanup: Remove tasks older than 24 hours
+
 ## Next Steps
 
 - [ ] Implement end-to-end UI tests for template browsing
@@ -713,6 +850,8 @@ static let backendBaseURL = URL(string: "http://192.168.1.123:8080")!
 - [ ] Add image processing flow (select photo → apply template)
 - [ ] Implement offline caching with Core Data
 - [ ] Add Analytics (Firebase Analytics)
+- [ ] Add project search and filter functionality
+- [ ] Add project sharing functionality
 
 ## References
 

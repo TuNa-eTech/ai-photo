@@ -1,6 +1,6 @@
 # Tech
 
-Last updated: 2025-10-26
+Last updated: 2025-11-07
 
 Technologies
 - Backend: NestJS (Node.js), Prisma ORM (@prisma/client), PostgreSQL driver.
@@ -249,10 +249,24 @@ iOS-Specific Best Practices
   - Use `@State` for parent ViewModels to ensure persistence across view updates
   - Avoid applying blur effects to actual images - use gradient overlays for text readability instead
   - Add debug logging in DEBUG builds to track loading failures
+- **Architecture Pattern: MVVM + Repository + Service Layer**
+  - View → ViewModel → Repository → Service → Network
+  - ViewModels use `@Observable` macro (Swift Observation framework)
+  - Repositories are protocol-based for testability
+  - Services are protocol-based when needed for testing
+  - Dependency injection via constructor with default parameters
+  - See `.cursor/rules/swiftui-architecture.mdc` for detailed guidelines
+- **Dependency Injection:**
+  - ViewModels inject dependencies via constructor: `init(repository: TemplatesRepositoryProtocol = TemplatesRepository())`
+  - No hard-coded dependencies in Views or ViewModels
+  - Protocol-based dependencies for easy mocking in tests
+  - Default parameters provide convenience while allowing test injection
 - **State Management:**
+  - `@Environment` for app-wide shared state (AuthViewModel provided at app root)
+  - `@State` for local ViewModels and UI state
+  - No prop drilling - use `@Environment` instead of passing through many layers
   - Use `@State private var` for ViewModels in views to prevent re-initialization
-  - Pass ViewModels explicitly to child views (dependency injection)
-  - Use `@Observable` macro for ViewModels (not `@StateObject`)
+  - Use `@Observable` macro for ViewModels (not `@StateObject`/@Published)
 - **API Integration:**
   - Always use Repository Protocol pattern for testability
   - Mock repositories in tests, never make real network calls

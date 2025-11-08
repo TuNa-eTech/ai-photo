@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2025-10-27
+Last updated: 2025-11-07
 
 System overview
 - iOS app (SwiftUI) consumes public APIs for browsing templates and processing images.
@@ -138,6 +138,13 @@ Web CMS architecture (web-cms/)
   - Loading states, error handling, user feedback (snackbars)
 
 iOS app architecture (AIPhotoApp/)
+- **Architecture Pattern: MVVM + Repository + Service Layer**
+  - View → ViewModel → Repository → Service → Network
+  - ViewModels use `@Observable` macro (Swift Observation framework)
+  - Repositories are protocol-based for testability
+  - Services are protocol-based when needed for testing
+  - Dependency injection via constructor with default parameters
+  - Shared state via `@Environment` (no prop drilling)
 - Built with SwiftUI + Firebase SDK
 - Project structure:
   - Models/DTOs/ → Data transfer objects matching backend API schema
@@ -151,10 +158,13 @@ iOS app architecture (AIPhotoApp/)
     - UserRepository.swift → User registration API with envelope handling
     - ImageProcessingAPIClient.swift → (NEW) Image processing API client with 60s timeout
     - ProjectsStorageManager.swift → (NEW) Local project storage (save/load/delete projects)
+  - Services/ → Business services (protocol-based for testability)
+    - AuthService.swift → Firebase authentication service
+    - BackgroundImageProcessor.swift → (NEW) Background URLSession processor with BackgroundImageProcessorProtocol
   - ViewModels/ → Observable view models for business logic
-    - HomeViewModel.swift → Manages template state, fetching, filtering, favorites, supports query parameter for search
-    - AuthViewModel.swift → Firebase authentication and user registration
-    - ImageProcessingViewModel.swift → (NEW) Handles image processing flow with background support
+    - HomeViewModel.swift → Manages template state, fetching, filtering, favorites, supports query parameter for search. Injects TemplatesRepositoryProtocol via constructor.
+    - AuthViewModel.swift → Firebase authentication and user registration. Provided globally via @Environment.
+    - ImageProcessingViewModel.swift → (NEW) Handles image processing flow with background support. Injects BackgroundImageProcessorProtocol via constructor.
   - Views/ → SwiftUI views with liquid glass design
     - Common/ → Reusable components and navigation
       - MainTabView.swift → (NEW) Tab-based navigation with 4 tabs (Home, Projects, Profile, Search), uses Tab(value:role:) wrapper
@@ -190,8 +200,21 @@ iOS app architecture (AIPhotoApp/)
   - AIPhotoAppTests/ProjectsStorageManagerTests.swift → (NEW) Storage manager tests
   - Uses MockTemplatesRepository conforming to TemplatesRepositoryProtocol for isolated testing
 - Key patterns:
-  - Repository Protocol pattern for dependency injection and testability
-  - @Observable for reactive ViewModels (no @Published needed)
+  - **MVVM + Repository + Service Layer Architecture:**
+    - ViewModels inject dependencies via constructor (e.g., `init(repository: TemplatesRepositoryProtocol = TemplatesRepository())`)
+    - Repositories are protocol-based for easy mocking in tests
+    - Services are protocol-based when needed (e.g., `BackgroundImageProcessorProtocol`)
+    - No hard-coded dependencies in Views or ViewModels
+  - **State Management:**
+    - `@Environment` for app-wide shared state (AuthViewModel provided at app root)
+    - `@State` for local ViewModels and UI state
+    - No prop drilling - use `@Environment` instead of passing through many layers
+  - **Dependency Injection:**
+    - Constructor injection with default parameters for convenience
+    - Protocol-based dependencies for testability
+    - No direct singleton access - inject via protocol
+  - **Repository Protocol pattern for dependency injection and testability**
+  - @Observable for reactive ViewModels (no @Published/@StateObject needed)
   - APIClient with envelope unwrapping and standardized error handling
   - Custom JSONDecoder without `.convertFromSnakeCase` to respect explicit CodingKeys
   - AsyncImage for loading thumbnails from URLs with fallback SF Symbols

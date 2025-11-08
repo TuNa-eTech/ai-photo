@@ -272,5 +272,87 @@ describe('Users (e2e) with DevAuth', () => {
       expect(prismaMock.user!.upsert).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe('GET /v1/users/me', () => {
+    it('should return 401 when Authorization header is missing', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/v1/users/me')
+        .expect(401);
+
+      expect(res.body).toBeDefined();
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBeDefined();
+      expect(res.body.error.code).toBe('unauthorized');
+    });
+
+    it('should return 401 when token is invalid', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/v1/users/me')
+        .set('Authorization', 'Bearer wrong-token')
+        .expect(401);
+
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('unauthorized');
+    });
+
+    it('should return user profile with valid token', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/v1/users/me')
+        .set('Authorization', `Bearer ${DEV_TOKEN}`)
+        .expect(200);
+
+      // Envelope success assertion
+      expect(res.body).toBeDefined();
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toBeDefined();
+      expect(res.body.meta).toBeDefined();
+
+      // Data assertions
+      const user = res.body.data;
+      expect(user.id).toBe(mockUser.id);
+      expect(user.name).toBe(mockUser.name);
+      expect(user.email).toBe(mockUser.email);
+      expect(user.avatar_url).toBe(mockUser.avatarUrl);
+      expect(user.created_at).toBeDefined();
+      expect(user.updated_at).toBeDefined();
+
+      // Verify Prisma was called correctly
+      expect(prismaMock.user!.findUnique).toHaveBeenCalledWith({
+        where: { firebaseUid: DEV_FIREBASE_UID },
+      });
+    });
+
+    it('should return 404 when user does not exist', async () => {
+      (prismaMock.user!.findUnique as jest.Mock).mockResolvedValueOnce(null);
+
+      const res = await request(app.getHttpServer())
+        .get('/v1/users/me')
+        .set('Authorization', `Bearer ${DEV_TOKEN}`)
+        .expect(404);
+
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBeDefined();
+      expect(res.body.error.code).toBe('user_not_found');
+    });
+
+    it('should return user profile without avatar URL', async () => {
+      const userWithoutAvatar = {
+        ...mockUser,
+        avatarUrl: null,
+      };
+
+      (prismaMock.user!.findUnique as jest.Mock).mockResolvedValueOnce(userWithoutAvatar);
+
+      const res = await request(app.getHttpServer())
+        .get('/v1/users/me')
+        .set('Authorization', `Bearer ${DEV_TOKEN}`)
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.name).toBe(userWithoutAvatar.name);
+      expect(res.body.data.email).toBe(userWithoutAvatar.email);
+      expect(res.body.data.avatar_url).toBeUndefined();
+    });
+  });
 });
 
