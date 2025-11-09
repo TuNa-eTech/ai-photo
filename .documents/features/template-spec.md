@@ -40,6 +40,7 @@ Tài liệu hợp nhất mọi thông tin liên quan đến “Template” để
   - `offset` (int, default 0, min 0)
   - `q` (string): tìm theo name/slug
   - `tags` (CSV string): ví dụ `anime,portrait`
+  - `category` (string): lọc theo category (portrait, landscape, artistic, vintage, abstract). Category được map sang tags để filter.
   - `sort` (newest|popular|name, default newest)
 - Envelope Response: `EnvelopeTemplatesList { success, data{ templates: Template[] }, error?, meta{ requestId, timestamp } }`
 - Trường trong `Template`:
@@ -55,7 +56,23 @@ Tài liệu hợp nhất mọi thông tin liên quan đến “Template” để
 - Filter:
   - `q`: match tên/slug (ILIKE)
   - `tags`: join theo bảng tags (nếu có), lọc các template có chứa tất cả tag đã gửi (hoặc OR — tùy yêu cầu, đề xuất rõ ràng trong implementation)
+  - `category`: map category sang tags array (ví dụ: `portrait` → `["portrait", "chân dung", "person", "people"]`), sau đó filter bằng `tags.hasSome`. Category và tags parameter có thể kết hợp (union).
 - Backend: join `template_assets(kind='thumbnail')` để lấy `thumbnail_url` và trả về full absolute URL (ví dụ `http://localhost:8080/assets/...` hoặc `https://cdn.example.com/assets/...`), không dùng đường dẫn tương đối.
+
+### GET /v1/templates/categories
+- Mục đích: lấy danh sách categories có sẵn cho filtering.
+- Auth: Bearer (Firebase ID token).
+- Response: `EnvelopeCategoriesList { success, data{ categories: Category[] }, error?, meta{ requestId, timestamp } }`
+- Trường trong `Category`:
+  - `id` (string): category identifier (portrait, landscape, artistic, vintage, abstract)
+  - `name` (string): category display name (Vietnamese)
+- Categories được định nghĩa trong `TemplatesService.CATEGORIES`:
+  - portrait → "Chân dung"
+  - landscape → "Phong cảnh"
+  - artistic → "Nghệ thuật"
+  - vintage → "Cổ điển"
+  - abstract → "Trừu tượng"
+- Category-to-tags mapping: Mỗi category map sang một array tags để filter templates (ví dụ: `portrait` → `["portrait", "chân dung", "person", "people"]`)
 
 Ví dụ Response:
 ```json
@@ -339,4 +356,11 @@ Authorization: Bearer <ID_TOKEN>
 
 ## 15) Changelog
 
+- 1.1 (2025-01-27): Added category management:
+  - Added `GET /v1/templates/categories` endpoint for fetching predefined categories
+  - Added `category` query parameter to `GET /v1/templates` for server-side filtering
+  - Category-to-tags mapping for filtering templates by category
+  - iOS app loads categories from API via CategoryManager (no more hardcoded categories)
+  - Web CMS includes category dropdown in template form with auto tag population
+  - Updated UI to use iOS design standards (removed gradients, system colors, horizontal scrolling)
 - 1.0 (2025-10-23): Tạo tài liệu spec hợp nhất (API công khai + Admin, Assets, Data Model, Rules, Code Mapping). Chuẩn hóa tên thư mục `web-cms` và làm rõ publish guard, envelope, sorting/filtering.

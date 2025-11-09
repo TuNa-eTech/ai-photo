@@ -1,6 +1,6 @@
 # Tech
 
-Last updated: 2025-11-07
+Last updated: 2025-01-27
 
 Technologies
 - Backend: NestJS (Node.js), Prisma ORM (@prisma/client), PostgreSQL driver.

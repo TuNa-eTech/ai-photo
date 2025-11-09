@@ -1,8 +1,41 @@
 # Context
 
-Last updated: 2025-11-07
+Last updated: 2025-01-27
 
 Current work focus
+- **✅ Category Management & Search Screen Enhancement:** ✅ COMPLETED
+  - **Server-side:**
+    - Added `/v1/templates/categories` endpoint that returns predefined categories
+    - Categories defined in `TemplatesService.CATEGORIES` (portrait, landscape, artistic, vintage, abstract)
+    - Category-to-tags mapping (`CATEGORY_TO_TAGS`) for server-side filtering
+    - Added `category` query parameter to `QueryTemplatesDto` for template filtering
+    - `listTemplates` now filters templates by category using tag mapping
+  - **iOS App:**
+    - Created `CategoryManager` to load categories from API (no more hardcoded categories)
+    - Removed hardcoded predefined categories from `Category.swift`
+    - `CategoryManager` fetches categories from `/v1/templates/categories` endpoint
+    - Fallback to local categories if API fails
+    - UI metadata (icons) managed locally for design flexibility
+    - Updated `SearchView` and `AllTemplatesView` to use `CategoryManager.allCategories`
+    - Updated `HomeViewModel` to accept `category` parameter for API filtering
+    - Updated `TemplatesRepository` to support `category` query parameter
+    - Updated `AppConfig` to include `/v1/templates/categories` endpoint
+  - **UI Improvements:**
+    - Removed gradients from category buttons (applied iOS design standards)
+    - Category buttons use system colors (accent, primary, secondary)
+    - Capsule shape with proper stroke and fill
+    - Horizontal scrolling for categories in SearchView and AllTemplatesView
+    - Inline navigation title with custom font size (20pt, semibold) to reduce top spacing
+    - Improved visual hierarchy and spacing
+  - **Web CMS:**
+    - Added category dropdown in `TemplateFormDialog`
+    - Auto-populates tags based on category selection using `CATEGORY_TO_TAGS` mapping
+    - Helps admins standardize tags when creating templates
+  - **Files Modified:**
+    - Server: `templates.controller.ts`, `templates.service.ts`, `query-templates.dto.ts`, `category.dto.ts`
+    - iOS: `CategoryManager.swift` (new), `Category.swift`, `SearchView.swift`, `AllTemplatesView.swift`, `HomeViewModel.swift`, `TemplatesRepository.swift`, `AppConfig.swift`, `TemplatesDTOs.swift`
+    - Web CMS: `TemplateFormDialog.tsx`
+  - **Status:** Fully implemented, categories loaded from API, UI improvements applied, ready for testing
 - **✅ iOS Architecture Improvements:** ✅ COMPLETED
   - Implemented MVVM + Repository + Service Layer architecture
   - Refactored dependency injection patterns
@@ -86,6 +119,51 @@ Current work focus
 - **File Upload System:** ✅ COMPLETED - Working with thumbnail management and automatic cleanup.
 
 Recent changes (latest first)
+- ✅ **Category Management & Search Screen Enhancement (2025-01-27):**
+  - **Server-side Category API:**
+    - Added `GET /v1/templates/categories` endpoint returning predefined categories
+    - Categories: portrait, landscape, artistic, vintage, abstract (Vietnamese names)
+    - Category-to-tags mapping for server-side filtering (category → tags array)
+    - Added `category` query parameter to `QueryTemplatesDto` for template filtering
+    - `listTemplates` filters by category using `CATEGORY_TO_TAGS` mapping to tags
+  - **iOS Category Management:**
+    - Created `CategoryManager` (@Observable) to manage categories from API
+    - Removed hardcoded categories from `Category.swift` (only `all` category remains)
+    - `CategoryManager.loadCategories()` fetches from `/v1/templates/categories`
+    - Fallback to local categories if API fails
+    - UI metadata (icons) managed locally in `CategoryManager.uiMetadata`
+    - `allCategories` computed property combines `allCategory` + fetched categories
+  - **iOS Search & Filter Integration:**
+    - Updated `SearchView` to use `CategoryManager.allCategories` for category filters
+    - Updated `AllTemplatesView` to use `CategoryManager.allCategories`
+    - Category selection triggers API call with `category` parameter
+    - Filter segments (Trending/New) use API `sort` parameter
+    - Removed client-side filtering logic, all filtering done server-side
+  - **iOS UI Improvements:**
+    - Removed gradients from category buttons (applied iOS design standards)
+    - Category buttons: system colors (accent, primary, secondary), capsule shape
+    - Horizontal scrolling for categories with proper spacing
+    - Inline navigation title with custom font size (20pt, semibold)
+    - Reduced top spacing by using inline title instead of large title
+  - **Web CMS Category Integration:**
+    - Added category dropdown in `TemplateFormDialog` (Basic Info tab)
+    - Auto-populates tags based on category selection
+    - Uses same `CATEGORY_TO_TAGS` mapping as server for consistency
+  - **Files Created/Modified:**
+    - New: `AIPhotoApp/AIPhotoApp/Utilities/Helpers/CategoryManager.swift`
+    - Server: `server/src/templates/templates.controller.ts` (added categories endpoint)
+    - Server: `server/src/templates/templates.service.ts` (added CATEGORIES, CATEGORY_TO_TAGS, listCategories)
+    - Server: `server/src/templates/dto/category.dto.ts` (new)
+    - Server: `server/src/templates/dto/query-templates.dto.ts` (added category parameter)
+    - iOS: `AIPhotoApp/AIPhotoApp/Models/Category.swift` (removed hardcoded categories)
+    - iOS: `AIPhotoApp/AIPhotoApp/Views/Search/SearchView.swift` (CategoryManager, API integration, UI improvements)
+    - iOS: `AIPhotoApp/AIPhotoApp/Views/Home/AllTemplatesView.swift` (CategoryManager, UI improvements)
+    - iOS: `AIPhotoApp/AIPhotoApp/ViewModels/HomeViewModel.swift` (added category parameter)
+    - iOS: `AIPhotoApp/AIPhotoApp/Repositories/TemplatesRepository.swift` (added listCategories, category parameter)
+    - iOS: `AIPhotoApp/AIPhotoApp/Utilities/Constants/AppConfig.swift` (added categories endpoint)
+    - iOS: `AIPhotoApp/AIPhotoApp/Models/DTOs/TemplatesDTOs.swift` (added CategoryDTO, CategoriesListResponse)
+    - Web CMS: `web-cms/src/components/templates/TemplateFormDialog.tsx` (added category dropdown)
+  - **Status:** Fully implemented, categories loaded from API, UI improvements applied, ready for testing
 - ✅ **iOS Architecture Improvements (2025-11-07):**
   - **MVVM + Repository + Service Layer Architecture:**
     - Refactored to follow strict MVVM + Repository + Service Layer pattern

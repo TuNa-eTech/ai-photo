@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2025-11-07
+Last updated: 2025-01-27
 
 System overview
 - iOS app (SwiftUI) consumes public APIs for browsing templates and processing images.
@@ -23,10 +23,10 @@ Key code paths (backend)
   - server/src/main.ts (NestJS bootstrap with global interceptors, filters, CORS).
 - HTTP layer:
   - server/src/app.module.ts (root module configuration).
-  - server/src/templates/templates.controller.ts (Public templates listing).
+  - server/src/templates/templates.controller.ts (Public templates listing, trending, categories).
   - server/src/templates/templates-admin.controller.ts (Admin templates CRUD).
-  - server/src/templates/templates.service.ts (business logic with security filters).
-  - server/src/templates/dto/ (request/response DTOs with validation).
+  - server/src/templates/templates.service.ts (business logic with security filters, category management, category-to-tags mapping).
+  - server/src/templates/dto/ (request/response DTOs with validation, category DTOs).
 - **Image Processing:**
   - server/src/gemini/gemini.module.ts (Gemini API integration module).
   - server/src/gemini/gemini.service.ts (Call Gemini API, parse responses, handle timeouts).
@@ -73,8 +73,9 @@ Local development patterns
 
 Admin Templates flow (implemented)
 - Public endpoints:
-  - GET /v1/templates → TemplatesService.listTemplates (minimal fields for end users, all templates with filters)
+  - GET /v1/templates → TemplatesService.listTemplates (minimal fields for end users, all templates with filters: q, tags, category, sort)
   - GET /v1/templates/trending → TemplatesService.listTrendingTemplates (high usage templates with usage_count >= 500, sorted DESC)
+  - GET /v1/templates/categories → TemplatesService.listCategories (returns predefined categories: portrait, landscape, artistic, vintage, abstract)
 - Admin endpoints (templates-admin.controller.ts):
   - GET /v1/admin/templates → listAdminTemplates (full fields including slug, status, visibility, tags)
   - POST /v1/admin/templates → createTemplate (with validation: slug format, unique check)
@@ -154,7 +155,7 @@ iOS app architecture (AIPhotoApp/)
     - ProcessImageResponse.swift → (NEW) Image processing response DTO
     - Project.swift → (NEW) Local project model for "My Projects"
   - Repositories/ → API client layer with protocol-based architecture
-    - TemplatesRepository.swift → Implements TemplatesRepositoryProtocol for testability, supports query parameter for search
+    - TemplatesRepository.swift → Implements TemplatesRepositoryProtocol for testability, supports query parameter for search, category parameter for filtering, listCategories for fetching categories
     - UserRepository.swift → User registration API with envelope handling
     - ImageProcessingAPIClient.swift → (NEW) Image processing API client with 60s timeout
     - ProjectsStorageManager.swift → (NEW) Local project storage (save/load/delete projects)
@@ -162,7 +163,7 @@ iOS app architecture (AIPhotoApp/)
     - AuthService.swift → Firebase authentication service
     - BackgroundImageProcessor.swift → (NEW) Background URLSession processor with BackgroundImageProcessorProtocol
   - ViewModels/ → Observable view models for business logic
-    - HomeViewModel.swift → Manages template state, fetching, filtering, favorites, supports query parameter for search. Injects TemplatesRepositoryProtocol via constructor.
+    - HomeViewModel.swift → Manages template state, fetching, filtering, favorites, supports query parameter for search, category parameter for filtering. Injects TemplatesRepositoryProtocol via constructor.
     - AuthViewModel.swift → Firebase authentication and user registration. Provided globally via @Environment.
     - ImageProcessingViewModel.swift → (NEW) Handles image processing flow with background support. Injects BackgroundImageProcessorProtocol via constructor.
   - Views/ → SwiftUI views with liquid glass design
@@ -174,9 +175,9 @@ iOS app architecture (AIPhotoApp/)
     - Home/ → Template browsing
       - HomeView.swift → (Renamed from TemplatesHomeView) Simplified MVP home with trending templates
       - SimpleHeader.swift → Minimal header (avatar + greeting + settings)
-      - AllTemplatesView.swift → Full templates list with `.searchable()` modifier, category filters, and filter segments
+      - AllTemplatesView.swift → Full templates list with `.searchable()` modifier, category filters (from CategoryManager), and filter segments (API sort)
     - Search/ → (NEW) Search functionality
-      - SearchView.swift → Dedicated search view with `.searchable(placement: .navigationBarDrawer)`, debouncing, API integration
+      - SearchView.swift → Dedicated search view with `.searchable(placement: .navigationBarDrawer)`, debouncing, API integration, category filters (from CategoryManager), inline navigation title, horizontal scrolling categories
     - ImageProcessing/ → (NEW) Image processing UI
       - ImageProcessingView.swift → Processing screen with progress and states
       - ResultView.swift → (Renamed from ProcessingResultView) Before/after comparison view
@@ -190,7 +191,8 @@ iOS app architecture (AIPhotoApp/)
     - Home/ProfileView.swift → User profile and settings (part of tab navigation)
   - Utilities/ → Shared utilities
     - Networking/ → APIClient with envelope handling and 401 retry
-    - Constants/ → Design tokens (GlassTokens with beige color palette)
+    - Constants/ → Design tokens (GlassTokens with beige color palette), API paths (AppConfig)
+    - Helpers/ → CategoryManager.swift → Manages categories loaded from API with UI metadata mapping (icons), fallback categories
     - BackgroundImageProcessor.swift → (NEW) Background URLSession processor for long-running requests
     - Extensions/UIImage+Compression.swift → (NEW) Image compression utilities
 - Testing:
@@ -248,10 +250,14 @@ iOS app architecture (AIPhotoApp/)
   - SearchView: Dedicated search tab with full functionality
     - `.searchable(placement: .navigationBarDrawer(displayMode: .always))` for native search
     - Debouncing (0.5s delay) to reduce API calls
-    - Category filters and filter segments
+    - Category filters loaded from API via CategoryManager (horizontal scrolling)
+    - Filter segments (Trending/New) use API `sort` parameter
+    - Inline navigation title with custom font size (20pt, semibold)
     - Empty state and loading state
-  - AllTemplatesView: Also uses `.searchable()` for consistent experience
-  - API Integration: TemplatesRepository supports `query` parameter for server-side search
+    - All filtering done server-side (no client-side filtering)
+  - AllTemplatesView: Also uses `.searchable()` for consistent experience, category filters from CategoryManager
+  - API Integration: TemplatesRepository supports `query` parameter for server-side search, `category` parameter for filtering
+  - Category Management: CategoryManager loads categories from `/v1/templates/categories`, maps to UI with icons, fallback to local categories if API fails
 - Authentication UI (AuthLandingView.v2):
   - Animated beige gradient background with 2 organic blobs (13s & 15s motion cycles)
   - BrandLogoView: Glass circle (100x100) with gradient sparkles icon and scale animation

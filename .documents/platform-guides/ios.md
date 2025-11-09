@@ -1,6 +1,6 @@
 # iOS App - AI Image Stylist
 
-_Last updated: 2025-11-07_
+_Last updated: 2025-01-27_
 
 ## Overview
 
@@ -47,7 +47,7 @@ AIPhotoApp/
 │   │   └── UserDTOs.swift
 │   └── Project.swift                    # User project model (future)
 ├── Repositories/
-│   ├── TemplatesRepository.swift        # API client with protocol + custom decoder
+│   ├── TemplatesRepository.swift        # API client with protocol + custom decoder (supports category parameter, listCategories)
 │   └── UserRepository.swift
 ├── ViewModels/
 │   ├── HomeViewModel.swift              # Template browsing logic
@@ -56,8 +56,10 @@ AIPhotoApp/
 │   ├── Home/                            # Template browsing UI (MVP simplified)
 │   │   ├── TemplatesHomeView.swift      # Main home: Trending templates
 │   │   ├── SimpleHeader.swift           # Minimal header (avatar + settings)
-│   │   ├── AllTemplatesView.swift       # Full list with search/filters
+│   │   ├── AllTemplatesView.swift       # Full list with search/filters (category filters from CategoryManager)
 │   │   └── Components/
+│   ├── Search/                          # Search functionality
+│   │   └── SearchView.swift             # Search with category filters, inline title, horizontal scrolling
 │   ├── Common/
 │   │   ├── GlassComponents.swift        # Reusable liquid glass UI
 │   │   └── GlassBackgroundView.swift
@@ -69,11 +71,13 @@ AIPhotoApp/
 ├── Utilities/
 │   ├── Networking/
 │   │   └── APIClient.swift              # Envelope handling, 401 retry
+│   ├── Helpers/
+│   │   └── CategoryManager.swift        # Category management (loads from API)
 │   ├── ProjectsStorageManager.swift     # Local project storage & management
 │   ├── BackgroundImageProcessor.swift   # Background image processing
 │   └── Constants/
 │       ├── GlassTokens.swift            # Design tokens (beige palette)
-│       └── AppConfig.swift              # Backend URL configuration
+│       └── AppConfig.swift              # Backend URL configuration (includes /v1/templates/categories)
 ├── Services/
 │   └── AuthService.swift
 └── Views/
@@ -593,9 +597,10 @@ func testDecodingAllFields() throws {
 
 **GET /v1/templates** (Public)
 - Returns only `published` + `public` templates
-- Query params: `limit`, `offset`, `q` (search), `tags`, `sort` (newest|popular|name)
+- Query params: `limit`, `offset`, `q` (search), `tags`, `category` (string), `sort` (newest|popular|name)
 - Response: Envelope with `{ success, data: { templates: [] }, error, meta }`
-- Usage: "See All" templates view with full search/filters
+- Usage: "See All" templates view with full search/filters, SearchView with category filtering
+- Category filtering: Server maps category to tags (e.g., `portrait` → `["portrait", "chân dung", "person", "people"]`)
 
 **GET /v1/templates/trending** (Public) ⭐ Optimized for Home Screen
 - Returns high-usage templates (`usage_count >= 500`) sorted by usage DESC
@@ -603,6 +608,12 @@ func testDecodingAllFields() throws {
 - Response: Same envelope structure
 - Usage: Home screen "Trending Templates" section
 - Performance: Faster than client-side filtering, scales better
+
+**GET /v1/templates/categories** (Public)
+- Returns predefined categories: portrait, landscape, artistic, vintage, abstract
+- Response: Envelope with `{ success, data: { categories: [{ id, name }] }, error, meta }`
+- Usage: CategoryManager loads categories dynamically for filtering UI
+- Categories are Vietnamese: "Chân dung", "Phong cảnh", "Nghệ thuật", "Cổ điển", "Trừu tượng"
 
 ### Authentication Flow
 
