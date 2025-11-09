@@ -278,11 +278,54 @@ final class APIClient: APIClientProtocol {
             }()
 
             if (200..<300).contains(http.statusCode) {
-                let env = try dec.decode(Envelope<T>.self, from: data)
-                if env.success, let payload = env.data {
-                    return payload
+                do {
+                    let env = try dec.decode(Envelope<T>.self, from: data)
+                    if env.success {
+                        if let payload = env.data {
+                            return payload
+                        } else {
+                            // Success but no data - log for debugging
+                            #if DEBUG
+                            if let jsonString = String(data: data, encoding: .utf8) {
+                                print("⚠️ Envelope decode: success=true but data is nil. Response: \(jsonString.prefix(500))")
+                            }
+                            #endif
+                            throw APIClientError.decodingFailed(APIClientError.invalidResponse)
+                        }
+                    } else if let error = env.error {
+                        // Envelope has error field
+                        throw APIClientError.httpStatus(http.statusCode, body: "\(error.code): \(error.message)")
+                    } else {
+                        // Success is false but no error field - invalid envelope
+                        #if DEBUG
+                        if let jsonString = String(data: data, encoding: .utf8) {
+                            print("⚠️ Envelope decode: success=false but no error. Response: \(jsonString.prefix(500))")
+                        }
+                        #endif
+                        throw APIClientError.decodingFailed(APIClientError.invalidResponse)
+                    }
+                } catch let decodeError as DecodingError {
+                    // Detailed decoding error logging
+                    #if DEBUG
+                    if let jsonString = String(data: data, encoding: .utf8) {
+                        print("❌ Failed to decode Envelope<\(T.self)>:")
+                        print("   Response JSON: \(jsonString.prefix(1000))")
+                        switch decodeError {
+                        case .keyNotFound(let key, let context):
+                            print("   Missing key: \(key.stringValue) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                        case .typeMismatch(let type, let context):
+                            print("   Type mismatch: expected \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                        case .valueNotFound(let type, let context):
+                            print("   Value not found: expected \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                        case .dataCorrupted(let context):
+                            print("   Data corrupted: \(context.debugDescription)")
+                        @unknown default:
+                            print("   Unknown error: \(decodeError)")
+                        }
+                    }
+                    #endif
+                    throw APIClientError.decodingFailed(decodeError)
                 }
-                throw APIClientError.decodingFailed(APIClientError.invalidResponse)
             } else {
                 if let envErr = try? dec.decode(Envelope<[String: String]>.self, from: data),
                    let e = envErr.error {

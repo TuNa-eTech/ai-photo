@@ -31,7 +31,7 @@ struct AIPhotoAppApp: App {
                 }
                 .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { userActivity in
                     // Handle background URLSession
-                    if let url = userActivity.webpageURL {
+                    if userActivity.webpageURL != nil {
                         // Background download completion handled by BackgroundImageProcessor
                         print("Background session completed")
                     }

@@ -23,17 +23,22 @@ final class CreditsViewModel {
     var errorMessage: String?
     var successMessage: String?
     
-    // Server products (for credits mapping)
-    private var serverProducts: [IAPProduct] = []
+    // Hard-coded credits mapping (matches server seed data)
+    // This mapping is synchronized with server/scripts/seed-iap-products.ts
+    private let creditsMapping: [String: Int] = [
+        "com.aiimagestylist.credits.starter": 10,
+        "com.aiimagestylist.credits.popular": 50,
+        "com.aiimagestylist.credits.bestvalue": 100
+    ]
     
     // StoreKit products (from InAppPurchaseService)
     var products: [Product] {
         iapService.products
     }
     
-    /// Get credits count for a product ID from server metadata
+    /// Get credits count for a product ID from hard-coded mapping
     func getCreditsForProduct(_ productId: String) -> Int? {
-        return serverProducts.first { $0.product_id == productId }?.credits
+        return creditsMapping[productId]
     }
     
     init(
@@ -59,24 +64,61 @@ final class CreditsViewModel {
                 tokenProvider: { try await self.authService.fetchFirebaseIDToken(forceRefresh: true) }
             )
             
+            // Check if task was cancelled before updating UI
+            try Task.checkCancellation()
+            
             creditsBalance = balance
             isLoading = false
-        } catch {
+        } catch is CancellationError {
+            // Task was cancelled - log for debugging
+            isLoading = false
+            errorMessage = "Request was cancelled: CancellationError"
+            print("⚠️ Credits balance request was cancelled: CancellationError")
+            return
+        } catch let error as CreditsRepository.NetworkError {
+            // Handle cancelled requests - show error for debugging
+            if case .cancelled = error {
+                isLoading = false
+                errorMessage = "Request was cancelled: NetworkError.cancelled"
+                print("⚠️ Credits balance request was cancelled: NetworkError.cancelled")
+                return
+            }
+            
+            // Other network errors should be shown to user
             errorMessage = "Failed to load credits: \(error.localizedDescription)"
             isLoading = false
-            print("❌ Failed to refresh credits balance: \(error)")
+            print("❌ Failed to refresh credits balance: \(error.localizedDescription)")
+        } catch {
+            // Check if it's a cancellation error
+            if error is CancellationError {
+                isLoading = false
+                errorMessage = "Request was cancelled: \(type(of: error))"
+                print("⚠️ Credits balance request was cancelled: \(error)")
+                return
+            }
+            
+            errorMessage = "Failed to load credits: \(error.localizedDescription)"
+            isLoading = false
+            print("❌ Failed to refresh credits balance: \(error.localizedDescription)")
         }
     }
     
-    /// Load IAP products from StoreKit and server
+    /// Load IAP products from StoreKit only (no server call needed)
     @MainActor
     func loadProducts() async {
-        // Load from both sources in parallel
-        async let storeKitProducts = iapService.loadProducts()
-        async let serverProductsTask = loadIAPProductsFromServer()
-        
-        await storeKitProducts
-        await serverProductsTask
+        // Check for cancellation before and after loading
+        do {
+            try Task.checkCancellation()
+            await iapService.loadProducts()
+            try Task.checkCancellation()
+        } catch is CancellationError {
+            // Task was cancelled - log for debugging
+            print("⚠️ Load products request was cancelled: CancellationError")
+            return
+        } catch {
+            // Other errors are logged but don't block the UI
+            print("⚠️ Failed to load IAP products: \(error.localizedDescription)")
+        }
     }
     
     /// Purchase a product
@@ -85,6 +127,13 @@ final class CreditsViewModel {
         isPurchasing = true
         errorMessage = nil
         successMessage = nil
+        
+        // Verify product is available
+        guard iapService.products.contains(where: { $0.id == product.id }) else {
+            errorMessage = "Product not available. Please try again."
+            isPurchasing = false
+            return
+        }
         
         do {
             // 1. Purchase product using StoreKit
@@ -115,26 +164,34 @@ final class CreditsViewModel {
                 userInfo: ["newBalance": response.new_balance]
             )
         } catch let error as InAppPurchaseError {
-            errorMessage = error.errorDescription
             isPurchasing = false
-            print("❌ Purchase failed: \(error)")
+            
+            // Don't show error alert for user cancellation (expected behavior)
+            switch error {
+            case .userCancelled:
+                // User intentionally cancelled - don't show error
+                break
+                
+            case .pending:
+                // Purchase is pending approval
+                errorMessage = "Your purchase is pending approval. Credits will be added once approved."
+                
+            case .verificationFailed(let underlyingError):
+                errorMessage = "Transaction verification failed. Please contact support if this persists."
+                print("❌ Verification failed: \(underlyingError.localizedDescription)")
+                
+            case .purchaseFailed(let underlyingError):
+                errorMessage = "Purchase failed: \(underlyingError.localizedDescription)"
+                print("❌ Purchase failed: \(underlyingError.localizedDescription)")
+                
+            case .unknown:
+                errorMessage = "An unexpected error occurred. Please try again."
+                print("❌ Unknown purchase error")
+            }
         } catch {
             errorMessage = "Purchase failed: \(error.localizedDescription)"
             isPurchasing = false
-            print("❌ Purchase failed: \(error)")
-        }
-    }
-    
-    /// Get IAP products from server (for credits mapping)
-    @MainActor
-    func loadIAPProductsFromServer() async {
-        do {
-            serverProducts = try await creditsRepository.getIAPProducts()
-            print("📦 Loaded \(serverProducts.count) IAP products from server")
-        } catch {
-            print("⚠️ Failed to load IAP products from server: \(error)")
-            // Non-fatal error, StoreKit products are primary
-            serverProducts = []
+            print("❌ Purchase failed: \(error.localizedDescription)")
         }
     }
 }

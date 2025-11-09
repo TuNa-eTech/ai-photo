@@ -37,20 +37,30 @@ final class InAppPurchaseService {
             let storeProducts = try await Product.products(for: productIds)
             
             // Filter only consumable products and sort by display order
-            products = storeProducts
-                .filter { $0.type == .consumable }
-                .sorted { product1, product2 in
-                    // Sort by product ID order (starter, popular, bestvalue)
-                    let order1 = productIds.firstIndex(of: product1.id) ?? Int.max
-                    let order2 = productIds.firstIndex(of: product2.id) ?? Int.max
-                    return order1 < order2
-                }
+            let consumableProducts = storeProducts.filter { $0.type == .consumable }
+            
+            products = consumableProducts.sorted { product1, product2 in
+                // Sort by product ID order (starter, popular, bestvalue)
+                let order1 = productIds.firstIndex(of: product1.id) ?? Int.max
+                let order2 = productIds.firstIndex(of: product2.id) ?? Int.max
+                return order1 < order2
+            }
             
             isLoading = false
         } catch {
+            // Handle "No active account" error gracefully (expected in simulator/testing)
+            let nsError = error as NSError
+            if nsError.domain == "ASDErrorDomain" && nsError.code == 509 {
+                // "No active account" error - expected in simulator/testing
+                // This is not a fatal error - products will load when account is available
+                errorMessage = nil // Don't show error to user
+                isLoading = false
+                return
+            }
+            
             errorMessage = "Failed to load products: \(error.localizedDescription)"
             isLoading = false
-            print("❌ Failed to load products: \(error)")
+            print("❌ Failed to load products: \(error.localizedDescription)")
         }
     }
     
@@ -58,6 +68,12 @@ final class InAppPurchaseService {
     /// For iOS 26+, we serialize transaction info to JSON since jwsRepresentation is not available
     @MainActor
     func purchase(_ product: Product) async throws -> String {
+        // Verify product is available
+        guard products.contains(where: { $0.id == product.id }) else {
+            let error = NSError(domain: "InAppPurchase", code: -2, userInfo: [NSLocalizedDescriptionKey: "Product not found in loaded products"])
+            throw InAppPurchaseError.purchaseFailed(error)
+        }
+        
         do {
             // Initiate purchase
             let result = try await product.purchase()

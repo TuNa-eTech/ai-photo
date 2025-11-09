@@ -44,28 +44,12 @@ struct TransactionMeta: Codable {
     let offset: Int
 }
 
-struct IAPProduct: Codable {
-    let id: String
-    let product_id: String
-    let name: String
-    let description: String?
-    let credits: Int
-    let price: Double?
-    let currency: String?
-    let display_order: Int
-}
-
-struct IAPProductsResponse: Codable {
-    let products: [IAPProduct]
-}
-
 // MARK: - Protocol
 
 protocol CreditsRepositoryProtocol {
     func getCreditsBalance(bearerIDToken: String, tokenProvider: (() async throws -> String)?) async throws -> Int
     func getTransactionHistory(limit: Int, offset: Int, bearerIDToken: String, tokenProvider: (() async throws -> String)?) async throws -> TransactionHistoryResponse
     func purchaseCredits(transactionData: String, productId: String, bearerIDToken: String, tokenProvider: (() async throws -> String)?) async throws -> PurchaseResponse
-    func getIAPProducts() async throws -> [IAPProduct]
 }
 
 // MARK: - Implementation
@@ -79,6 +63,7 @@ final class CreditsRepository: CreditsRepositoryProtocol {
         case serverError(String)
         case unauthorized
         case decodingFailed
+        case cancelled // Request was cancelled (e.g., view dismissed)
         
         var errorDescription: String? {
             switch self {
@@ -87,6 +72,7 @@ final class CreditsRepository: CreditsRepositoryProtocol {
             case .serverError(let msg): return msg
             case .unauthorized: return "Unauthorized"
             case .decodingFailed: return "Failed to decode server response"
+            case .cancelled: return "Request was cancelled"
             }
         }
     }
@@ -126,12 +112,62 @@ final class CreditsRepository: CreditsRepositoryProtocol {
                     throw NetworkError.serverError(body)
                 }
                 throw NetworkError.invalidResponse
-            case .decodingFailed:
+            case .decodingFailed(let underlyingError):
+                // Log the underlying decoding error for debugging
+                if let decodingError = underlyingError as? DecodingError {
+                    print("❌ Decoding failed for credits balance:")
+                    switch decodingError {
+                    case .dataCorrupted(let context):
+                        print("   Data corrupted: \(context.debugDescription)")
+                    case .keyNotFound(let key, let context):
+                        print("   Key not found: \(key.stringValue) in \(context.debugDescription)")
+                    case .typeMismatch(let type, let context):
+                        print("   Type mismatch: expected \(type) in \(context.debugDescription)")
+                    case .valueNotFound(let type, let context):
+                        print("   Value not found: expected \(type) in \(context.debugDescription)")
+                    @unknown default:
+                        print("   Unknown decoding error: \(decodingError)")
+                    }
+                } else {
+                    print("❌ Decoding failed for credits balance: \(underlyingError)")
+                }
                 throw NetworkError.decodingFailed
+            case .transport(let error):
+                // Check if error is a cancelled request (URLError.cancelled)
+                if let urlError = error as? URLError, urlError.code == .cancelled {
+                    // Request was cancelled (e.g., view dismissed) - this is expected behavior
+                    // Don't log as error, just throw cancelled error
+                    throw NetworkError.cancelled
+                }
+                // Other transport errors are unexpected
+                print("❌ Transport error getting credits balance: \(error)")
+                throw NetworkError.invalidResponse
             default:
+                print("❌ Unknown API error: \(apiErr)")
                 throw NetworkError.invalidResponse
             }
         } catch {
+            // Check if error is a cancelled request
+            if let urlError = error as? URLError, urlError.code == .cancelled {
+                throw NetworkError.cancelled
+            }
+            
+            // Check if it's already a NetworkError (e.g., cancelled from transport error)
+            if let networkError = error as? NetworkError {
+                throw networkError
+            }
+            
+            print("❌ Unexpected error getting credits balance: \(error)")
+            if let decodingError = error as? DecodingError {
+                switch decodingError {
+                case .keyNotFound(let key, let context):
+                    print("   Missing key: \(key.stringValue) at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                case .typeMismatch(let type, let context):
+                    print("   Type mismatch: expected \(type) at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                default:
+                    print("   \(decodingError)")
+                }
+            }
             throw NetworkError.invalidResponse
         }
     }
@@ -143,6 +179,14 @@ final class CreditsRepository: CreditsRepositoryProtocol {
             URLQueryItem(name: "offset", value: "\(offset)")
         ]
         
+        // Custom decoder for snake_case properties (no auto conversion)
+        let customDecoder: JSONDecoder = {
+            let decoder = JSONDecoder()
+            // Don't set keyDecodingStrategy - defaults to exact key matching (no conversion)
+            decoder.dateDecodingStrategy = .iso8601
+            return decoder
+        }()
+        
         do {
             let response: TransactionHistoryResponse
             if let tokenProvider = tokenProvider {
@@ -150,7 +194,7 @@ final class CreditsRepository: CreditsRepositoryProtocol {
                     req,
                     as: TransactionHistoryResponse.self,
                     authToken: bearerIDToken,
-                    decoder: nil,
+                    decoder: customDecoder,
                     tokenProvider: tokenProvider
                 )
             } else {
@@ -158,7 +202,7 @@ final class CreditsRepository: CreditsRepositoryProtocol {
                     req,
                     as: TransactionHistoryResponse.self,
                     authToken: bearerIDToken,
-                    decoder: nil
+                    decoder: customDecoder
                 )
             }
             
@@ -173,10 +217,23 @@ final class CreditsRepository: CreditsRepositoryProtocol {
                 throw NetworkError.invalidResponse
             case .decodingFailed:
                 throw NetworkError.decodingFailed
+            case .transport(let error):
+                // Check if error is a cancelled request
+                if let urlError = error as? URLError, urlError.code == .cancelled {
+                    throw NetworkError.cancelled
+                }
+                throw NetworkError.invalidResponse
             default:
                 throw NetworkError.invalidResponse
             }
         } catch {
+            // Check if error is a cancelled request
+            if let urlError = error as? URLError, urlError.code == .cancelled {
+                throw NetworkError.cancelled
+            }
+            if let networkError = error as? NetworkError {
+                throw networkError
+            }
             throw NetworkError.invalidResponse
         }
     }
@@ -189,6 +246,14 @@ final class CreditsRepository: CreditsRepositoryProtocol {
         
         let req = try APIRequest.json(method: "POST", path: AppConfig.APIPath.creditsPurchase, body: payload)
         
+        // Custom decoder that respects snake_case properties (no auto conversion)
+        let customDecoder: JSONDecoder = {
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .useDefaultKeys // Don't convert snake_case to camelCase
+            decoder.dateDecodingStrategy = .iso8601
+            return decoder
+        }()
+        
         do {
             let response: PurchaseResponse
             if let tokenProvider = tokenProvider {
@@ -196,7 +261,7 @@ final class CreditsRepository: CreditsRepositoryProtocol {
                     req,
                     as: PurchaseResponse.self,
                     authToken: bearerIDToken,
-                    decoder: nil,
+                    decoder: customDecoder,
                     tokenProvider: tokenProvider
                 )
             } else {
@@ -204,7 +269,7 @@ final class CreditsRepository: CreditsRepositoryProtocol {
                     req,
                     as: PurchaseResponse.self,
                     authToken: bearerIDToken,
-                    decoder: nil
+                    decoder: customDecoder
                 )
             }
             
@@ -219,40 +284,23 @@ final class CreditsRepository: CreditsRepositoryProtocol {
                 throw NetworkError.invalidResponse
             case .decodingFailed:
                 throw NetworkError.decodingFailed
-            default:
-                throw NetworkError.invalidResponse
-            }
-        } catch {
-            throw NetworkError.invalidResponse
-        }
-    }
-    
-    func getIAPProducts() async throws -> [IAPProduct] {
-        var req = APIRequest(method: "GET", path: AppConfig.APIPath.iapProducts)
-        
-        do {
-            // IAP products endpoint is public (no auth required)
-            let response: IAPProductsResponse = try await client.sendEnvelope(
-                req,
-                as: IAPProductsResponse.self,
-                authToken: nil,
-                decoder: nil
-            )
-            
-            return response.products
-        } catch let apiErr as APIClientError {
-            switch apiErr {
-            case .httpStatus(let code, let body):
-                if let body = body, !body.isEmpty {
-                    throw NetworkError.serverError(body)
+            case .transport(let error):
+                // Check if error is a cancelled request
+                if let urlError = error as? URLError, urlError.code == .cancelled {
+                    throw NetworkError.cancelled
                 }
                 throw NetworkError.invalidResponse
-            case .decodingFailed:
-                throw NetworkError.decodingFailed
             default:
                 throw NetworkError.invalidResponse
             }
         } catch {
+            // Check if error is a cancelled request
+            if let urlError = error as? URLError, urlError.code == .cancelled {
+                throw NetworkError.cancelled
+            }
+            if let networkError = error as? NetworkError {
+                throw networkError
+            }
             throw NetworkError.invalidResponse
         }
     }
