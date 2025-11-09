@@ -29,6 +29,19 @@ enum TemplateVisibility {
   private
 }
 
+enum TransactionType {
+  purchase
+  usage
+  bonus
+}
+
+enum TransactionStatus {
+  pending
+  completed
+  failed
+  refunded
+}
+
 model Template {
   id             String             @id @default(uuid())
   slug           String             @unique
@@ -54,15 +67,58 @@ model Template {
 }
 
 model User {
-  id          String   @id @default(uuid())
-  firebaseUid String   @unique @map("firebase_uid")
+  id          String        @id @default(uuid())
+  firebaseUid String        @unique @map("firebase_uid")
   name        String
-  email       String   @unique
-  avatarUrl   String?  @map("avatar_url")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  email       String        @unique
+  avatarUrl   String?       @map("avatar_url")
+  credits     Int           @default(2)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  transactions Transaction[]
 
   @@index([firebaseUid])
   @@index([email])
   @@map("users")
+}
+
+model Transaction {
+  id                          String          @id @default(uuid())
+  userId                      String          @map("user_id")
+  type                        TransactionType
+  amount                      Int // positive for purchase/bonus, negative for usage
+  productId                   String?         @map("product_id")
+  appleTransactionId          String?         @map("apple_transaction_id")
+  appleOriginalTransactionId  String?         @map("apple_original_transaction_id")
+  transactionData             String?         @map("transaction_data") // JWT transaction data from StoreKit 2
+  status                      TransactionStatus @default(completed)
+  createdAt                   DateTime        @default(now()) @map("created_at")
+  updatedAt                   DateTime        @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([appleTransactionId])
+  @@index([appleOriginalTransactionId])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+model IAPProduct {
+  id           String   @id @default(uuid())
+  productId    String   @unique @map("product_id")
+  name         String
+  description  String?
+  credits      Int
+  price        Decimal? @db.Decimal(10, 2)
+  currency     String?
+  isActive     Boolean  @default(true) @map("is_active")
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([productId])
+  @@index([isActive])
+  @@map("iap_products")
 }

@@ -32,6 +32,7 @@ let UsersService = class UsersService {
             name: user.name,
             email: user.email,
             avatar_url: user.avatarUrl ?? undefined,
+            credits: user.credits,
             created_at: user.createdAt,
             updated_at: user.updatedAt,
         };
@@ -50,6 +51,7 @@ let UsersService = class UsersService {
                 name: dto.name,
                 email: dto.email,
                 avatarUrl: dto.avatar_url,
+                credits: 2,
             },
         });
         return {
@@ -57,6 +59,7 @@ let UsersService = class UsersService {
             name: user.name,
             email: user.email,
             avatar_url: user.avatarUrl ?? undefined,
+            credits: user.credits,
             created_at: user.createdAt,
             updated_at: user.updatedAt,
         };

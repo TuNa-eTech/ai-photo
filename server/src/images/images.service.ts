@@ -1,10 +1,11 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { GeminiService } from '../gemini/gemini.service';
 import { TemplatesService } from '../templates/templates.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreditsService } from '../credits/credits.service';
 import { ProcessImageDto, ProcessImageResponse } from './dto';
 
 @Injectable()
@@ -16,6 +17,8 @@ export class ImagesService {
     private readonly templatesService: TemplatesService,
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    @Inject(forwardRef(() => CreditsService))
+    private readonly creditsService: CreditsService,
   ) {}
 
   /**
@@ -38,10 +41,19 @@ export class ImagesService {
     }
   }
 
-  async processImage(dto: ProcessImageDto): Promise<ProcessImageResponse> {
+  async processImage(dto: ProcessImageDto, firebaseUid: string): Promise<ProcessImageResponse> {
     const startTime = Date.now();
     
     try {
+      // Check credits before processing
+      const hasEnoughCredits = await this.creditsService.checkCreditsAvailability(firebaseUid, 1);
+      if (!hasEnoughCredits) {
+        throw new ForbiddenException({
+          code: 'insufficient_credits',
+          message: 'Insufficient credits. Please purchase more credits to continue.',
+        });
+      }
+
       // Check if mock mode is enabled
       const useMockImage = this.configService.get<boolean>('gemini.useMockImage', false);
       
@@ -73,7 +85,10 @@ export class ImagesService {
         const processingTime = Date.now() - startTime;
         this.logger.log(`Mock image processing completed in ${processingTime}ms`);
 
-        // 4. Return mock result
+        // 4. Deduct 1 credit after successful processing
+        await this.creditsService.deductCredits(firebaseUid, 1, dto.template_id);
+
+        // 5. Return mock result
         return {
           processed_image_base64: `data:image/jpeg;base64,${mockImageBase64}`,
           metadata: {
@@ -125,7 +140,10 @@ export class ImagesService {
       const processingTime = Date.now() - startTime;
       this.logger.log(`Image processing completed in ${processingTime}ms`);
 
-      // 4. Return result
+      // 4. Deduct 1 credit after successful processing
+      await this.creditsService.deductCredits(firebaseUid, 1, dto.template_id);
+
+      // 5. Return result
       return {
         processed_image_base64: `data:image/jpeg;base64,${result.processedImageBase64}`,
         metadata: {

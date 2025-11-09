@@ -34,6 +34,7 @@ export class UsersService {
       name: user.name,
       email: user.email,
       avatar_url: user.avatarUrl ?? undefined,
+      credits: user.credits,
       created_at: user.createdAt,
       updated_at: user.updatedAt,
     };
@@ -42,7 +43,7 @@ export class UsersService {
   /**
    * Register or update user based on Firebase UID
    * - If user with firebaseUid exists: update name, email, avatarUrl
-   * - If user doesn't exist: create new user
+   * - If user doesn't exist: create new user with credits = 2 (default from schema)
    * 
    * @param firebaseUid - Firebase UID from verified token
    * @param dto - User registration data (snake_case from client)
@@ -62,6 +63,7 @@ export class UsersService {
         name: dto.name,
         email: dto.email,
         avatarUrl: dto.avatar_url,
+        credits: 2, // Explicitly set credits = 2 for new users (default from schema)
       },
     });
 
@@ -70,6 +72,7 @@ export class UsersService {
       name: user.name,
       email: user.email,
       avatar_url: user.avatarUrl ?? undefined,
+      credits: user.credits,
       created_at: user.createdAt,
       updated_at: user.updatedAt,
     };

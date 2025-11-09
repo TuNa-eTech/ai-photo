@@ -302,7 +302,21 @@ extension BackgroundImageProcessor: URLSessionDelegate, URLSessionDownloadDelega
             if !(200...299).contains(code) {
                 let data = try? Data(contentsOf: location)
                 let snippet = data.flatMap { String(data: $0, encoding: .utf8) } ?? "<binary>"
-                print("❌ HTTP \\(code) from process endpoint: \\(snippet)")
+                print("❌ HTTP \(code) from process endpoint: \(snippet)")
+                
+                // Check for insufficient credits error (403 with specific error code)
+                if code == 403 {
+                    // Try to parse error response
+                    if let data = data,
+                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let error = json["error"] as? [String: Any],
+                       let errorCode = error["code"] as? String,
+                       errorCode == "insufficient_credits" {
+                        notifyError(requestId: requestId, error: ProcessingError.insufficientCredits)
+                        return
+                    }
+                }
+                
                 notifyError(requestId: requestId, error: ProcessingError.invalidResponse)
                 return
             }
@@ -356,9 +370,9 @@ extension BackgroundImageProcessor: URLSessionDelegate, URLSessionDownloadDelega
                 throw ProcessingError.invalidResponse
             }
             
-            // Get original image
+            // Get original image (verify it exists, but we don't need to use it here)
             guard let taskInfo = getPendingTask(requestId: requestId),
-                  let originalImage = loadOriginalImage(from: taskInfo.originalImagePath) else {
+                  loadOriginalImage(from: taskInfo.originalImagePath) != nil else {
                 print("❌ Failed to load original image")
                 return
             }
@@ -442,6 +456,7 @@ extension BackgroundImageProcessor: URLSessionDelegate, URLSessionDownloadDelega
 // MARK: - Error Types
 
 enum ProcessingError: LocalizedError {
+    case insufficientCredits
     case imageSaveFailed
     case invalidResponse
     case networkError
@@ -449,6 +464,8 @@ enum ProcessingError: LocalizedError {
     
     var errorDescription: String? {
         switch self {
+        case .insufficientCredits:
+            return "Insufficient credits. Please purchase more credits to continue."
         case .imageSaveFailed:
             return "Failed to save image"
         case .invalidResponse:

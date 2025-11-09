@@ -25,6 +25,8 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import LogoutIcon from '@mui/icons-material/Logout'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import StyleIcon from '@mui/icons-material/Style'
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart'
+import HistoryIcon from '@mui/icons-material/History'
 import { useAuth } from '../../auth'
 
 export function AppLayout(): React.ReactElement {
@@ -116,6 +118,34 @@ export function AppLayout(): React.ReactElement {
               }}
             >
               Templates
+            </Button>
+            <Button
+              startIcon={<ShoppingCartIcon />}
+              onClick={() => navigate('/iap-products')}
+              sx={{
+                color: isActive('/iap-products') ? 'primary.main' : 'text.secondary',
+                fontWeight: isActive('/iap-products') ? 600 : 400,
+                bgcolor: isActive('/iap-products') ? alpha('#3f51b5', 0.08) : 'transparent',
+                '&:hover': {
+                  bgcolor: alpha('#3f51b5', 0.12),
+                },
+              }}
+            >
+              IAP Products
+            </Button>
+            <Button
+              startIcon={<HistoryIcon />}
+              onClick={() => navigate('/transactions')}
+              sx={{
+                color: isActive('/transactions') ? 'primary.main' : 'text.secondary',
+                fontWeight: isActive('/transactions') ? 600 : 400,
+                bgcolor: isActive('/transactions') ? alpha('#3f51b5', 0.08) : 'transparent',
+                '&:hover': {
+                  bgcolor: alpha('#3f51b5', 0.12),
+                },
+              }}
+            >
+              Transactions
             </Button>
           </Stack>
 

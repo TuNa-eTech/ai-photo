@@ -121,6 +121,7 @@ struct ProfileStatCard: View {
             Text(value)
                 .font(.title2.weight(.bold))
                 .foregroundStyle(GlassTokens.textPrimary)
+                .contentTransition(.numericText())
             
             Text(label)
                 .font(.caption)

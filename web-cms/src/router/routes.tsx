@@ -11,6 +11,8 @@ import { LoginPage } from '../pages/Login/LoginPage'
 import { DashboardPage } from '../pages/Dashboard/DashboardPage'
 import { TemplatesListPage } from '../pages/Templates/TemplatesListPage'
 import { TemplateDetailPage } from '../pages/Templates/TemplateDetailPage'
+import { IAPProductsPage } from '../pages/IAP/IAPProductsPage'
+import { TransactionsPage } from '../pages/Transactions/TransactionsPage'
 
 export const router = createBrowserRouter([
   {
@@ -36,6 +38,14 @@ export const router = createBrowserRouter([
       {
         path: 'templates/:slug',
         element: <TemplateDetailPage />,
+      },
+      {
+        path: 'iap-products',
+        element: <IAPProductsPage />,
+      },
+      {
+        path: 'transactions',
+        element: <TransactionsPage />,
       },
     ],
   },

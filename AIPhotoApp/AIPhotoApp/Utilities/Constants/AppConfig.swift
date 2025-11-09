@@ -45,7 +45,17 @@ enum AppConfig {
         static let trendingTemplates = "/v1/templates/trending"
         static let categories = "/v1/templates/categories"
         static let processImage = "/v1/images/process"
+        static let creditsBalance = "/v1/credits/balance"
+        static let creditsPurchase = "/v1/credits/purchase"
+        static let creditsTransactions = "/v1/credits/transactions"
+        static let iapProducts = "/v1/iap/products"
     }
     
     static let baseURL: String = selectedBaseURLString
+}
+
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let creditsBalanceUpdated = Notification.Name("creditsBalanceUpdated")
 }

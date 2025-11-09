@@ -22,16 +22,18 @@ let ImagesController = class ImagesController {
     constructor(imagesService) {
         this.imagesService = imagesService;
     }
-    async processImage(dto) {
-        return await this.imagesService.processImage(dto);
+    async processImage(req, dto) {
+        const firebaseUid = req.firebaseUid;
+        return await this.imagesService.processImage(dto, firebaseUid);
     }
 };
 exports.ImagesController = ImagesController;
 __decorate([
     (0, common_1.Post)('process'),
-    __param(0, (0, common_1.Body)()),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [process_image_dto_1.ProcessImageDto]),
+    __metadata("design:paramtypes", [Object, process_image_dto_1.ProcessImageDto]),
     __metadata("design:returntype", Promise)
 ], ImagesController.prototype, "processImage", null);
 exports.ImagesController = ImagesController = __decorate([

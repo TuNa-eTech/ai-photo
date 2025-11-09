@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2025-01-27
+Last updated: 2025-11-09
 
 System overview
 - iOS app (SwiftUI) consumes public APIs for browsing templates and processing images.
@@ -33,9 +33,18 @@ Key code paths (backend)
   - server/src/gemini/exceptions/ (GeminiAPIException, ContentPolicyException).
   - server/src/images/images.module.ts (Image processing module).
   - server/src/images/images.controller.ts (POST /v1/images/process with 60s timeout).
-  - server/src/images/images.service.ts (Business logic with mock mode support via USE_MOCK_IMAGE env flag).
+  - server/src/images/images.service.ts (Business logic with mock mode support via USE_MOCK_IMAGE env flag, enforces credit deduction).
   - server/src/images/dto/ (ProcessImageDto, ProcessImageResponse).
   - Mock mode: When `USE_MOCK_IMAGE=true`, returns `mock_dev/test_img.png` instead of calling GeminiService (cost-saving for development).
+- **Credits & IAP:**
+  - server/src/credits/credits.module.ts (Credits management module).
+  - server/src/credits/credits.service.ts (Balance, deduct, add, history operations).
+  - server/src/credits/credits.controller.ts (GET /v1/credits/balance, GET /v1/credits/transactions, POST /v1/credits/purchase).
+  - server/src/iap/iap.module.ts (IAP processing module).
+  - server/src/iap/iap.service.ts (StoreKit 2 JWT/JSON verification, purchase processing with idempotency).
+  - server/src/iap/iap.controller.ts (GET /v1/iap/products - public endpoint).
+  - Transaction verification: Supports JWT (iOS 15-17) and JSON (iOS 26+) formats from StoreKit 2.
+  - Idempotency: Uses `original_transaction_id` to prevent duplicate credit awards.
 - Auth:
   - server/src/auth/bearer-auth.guard.ts (Firebase token verification + DevAuth).
   - server/src/auth/firebase-admin.ts (Firebase Admin SDK initialization).
@@ -57,11 +66,15 @@ Key code paths (backend)
 Database schema (PostgreSQL)
 - Tables (see server/prisma/schema.prisma):
   - templates (id UUID, slug String unique, name String, description String, prompt String, negativePrompt String, modelProvider String, modelName String, status enum, visibility enum, thumbnailUrl String, publishedAt DateTime, usageCount Int, tags String[], createdAt DateTime, updatedAt DateTime).
-  - Enums: TemplateStatus (draft, published, archived), TemplateVisibility (public, private).
+  - users (id UUID, firebaseUid String unique, name String, email String, avatarUrl String, credits Int default 2, createdAt DateTime, updatedAt DateTime).
+  - transactions (id UUID, userId UUID FK, type enum, amount Int, productId String, appleTransactionId String, appleOriginalTransactionId String, transactionData String, status enum, createdAt DateTime, updatedAt DateTime).
+  - iap_products (id UUID, productId String unique, name String, description String, credits Int, price Decimal, currency String, isActive Boolean, displayOrder Int, createdAt DateTime, updatedAt DateTime).
+  - Enums: TemplateStatus (draft, published, archived), TemplateVisibility (public, private), TransactionType (purchase, usage, bonus), TransactionStatus (pending, completed, failed, refunded).
   - Future: template_versions, template_assets (to be added for prompt management and multiple assets).
 - Migrations:
   - Prisma migrations in server/prisma/migrations/
-  - Latest: 20251026115941_add_prompt_fields (added prompt, negativePrompt, modelProvider, modelName)
+  - Latest: 20251109190005_add_credits_and_iap_system (added credits, transactions, iap_products)
+  - Previous: 20251026115941_add_prompt_fields (added prompt, negativePrompt, modelProvider, modelName)
   - Previous: 20251026105027_add_admin_fields_to_templates (added admin fields)
   - Schema defined in Prisma format with @map directives for PostgreSQL compatibility.
 
@@ -113,6 +126,7 @@ Web CMS architecture (web-cms/)
     - client.ts → Base API client with auth interceptor
     - templates.ts → Templates API functions
     - images.ts → Image processing API functions
+    - credits.ts → (NEW) Credits and IAP API functions (balance, transactions, purchase, IAP products)
   - src/components/ → Reusable UI components
     - common/ → LoadingState, EmptyState
     - dashboard/ → StatsCard
@@ -122,6 +136,8 @@ Web CMS architecture (web-cms/)
     - Dashboard/DashboardPage.tsx → Stats and recent templates
     - Templates/TemplatesListPage.tsx → Templates list with CRUD
     - Templates/TemplateDetailPage.tsx → Template detail with image generator
+    - IAP/IAPProductsPage.tsx → (NEW) IAP products list view
+    - Transactions/TransactionsPage.tsx → (NEW) Transaction history with filters and search
     - Login/LoginPage.tsx → Firebase auth login
   - src/theme/theme.ts → Custom Material-UI theme (Indigo + Teal, Inter font)
   - src/types/ → TypeScript type definitions (TemplateAdmin, CreateTemplateRequest, etc.)
@@ -159,13 +175,16 @@ iOS app architecture (AIPhotoApp/)
     - UserRepository.swift → User registration API with envelope handling
     - ImageProcessingAPIClient.swift → (NEW) Image processing API client with 60s timeout
     - ProjectsStorageManager.swift → (NEW) Local project storage (save/load/delete projects)
+    - CreditsRepository.swift → (NEW) Credits and IAP API client (balance, transactions, purchase, IAP products)
   - Services/ → Business services (protocol-based for testability)
     - AuthService.swift → Firebase authentication service
     - BackgroundImageProcessor.swift → (NEW) Background URLSession processor with BackgroundImageProcessorProtocol
+    - InAppPurchaseService.swift → (NEW) StoreKit 2 integration for consumable IAP products, returns JSON transaction data (iOS 26+)
   - ViewModels/ → Observable view models for business logic
     - HomeViewModel.swift → Manages template state, fetching, filtering, favorites, supports query parameter for search, category parameter for filtering. Injects TemplatesRepositoryProtocol via constructor.
     - AuthViewModel.swift → Firebase authentication and user registration. Provided globally via @Environment.
     - ImageProcessingViewModel.swift → (NEW) Handles image processing flow with background support. Injects BackgroundImageProcessorProtocol via constructor.
+    - CreditsViewModel.swift → (NEW) Manages credits balance, IAP products, purchase flow. Loads products from StoreKit + server for credits mapping. Posts .creditsBalanceUpdated notification.
   - Views/ → SwiftUI views with liquid glass design
     - Common/ → Reusable components and navigation
       - MainTabView.swift → (NEW) Tab-based navigation with 4 tabs (Home, Projects, Profile, Search), uses Tab(value:role:) wrapper

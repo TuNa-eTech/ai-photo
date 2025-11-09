@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7536132B2EC0B5100009F4F2 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7536132A2EC0B5100009F4F2 /* StoreKit.framework */; };
 		759475722EA34DB1008B88D1 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 759475712EA34DB1008B88D1 /* GoogleSignIn */; };
 		759475742EA34DB1008B88D1 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 759475732EA34DB1008B88D1 /* GoogleSignInSwift */; };
 		759475772EA34E2A008B88D1 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 759475762EA34E2A008B88D1 /* FirebaseAnalytics */; };
@@ -42,6 +43,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		7536132A2EC0B5100009F4F2 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		759475442EA34D83008B88D1 /* AIPhotoApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AIPhotoApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		759475532EA34D85008B88D1 /* AIPhotoAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIPhotoAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7594755D2EA34D85008B88D1 /* AIPhotoAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIPhotoAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -93,6 +95,7 @@
 				759475832EA34E2A008B88D1 /* FirebaseCrashlytics in Frameworks */,
 				759475812EA34E2A008B88D1 /* FirebaseCore in Frameworks */,
 				759475792EA34E2A008B88D1 /* FirebaseAnalyticsCore in Frameworks */,
+				7536132B2EC0B5100009F4F2 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -118,12 +121,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		753613292EC0B5100009F4F2 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				7536132A2EC0B5100009F4F2 /* StoreKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		7594753B2EA34D83008B88D1 = {
 			isa = PBXGroup;
 			children = (
 				759475462EA34D83008B88D1 /* AIPhotoApp */,
 				759475562EA34D85008B88D1 /* AIPhotoAppTests */,
 				759475602EA34D85008B88D1 /* AIPhotoAppUITests */,
+				753613292EC0B5100009F4F2 /* Frameworks */,
 				759475452EA34D83008B88D1 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -467,6 +479,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AIPhotoApp/Info.plist;
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "We need access to save your processed images to your photo library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -501,6 +515,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AIPhotoApp/Info.plist;
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "We need access to save your processed images to your photo library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

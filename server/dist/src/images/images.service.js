@@ -8,6 +8,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var ImagesService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ImagesService = void 0;
@@ -18,17 +21,20 @@ const path_1 = require("path");
 const gemini_service_1 = require("../gemini/gemini.service");
 const templates_service_1 = require("../templates/templates.service");
 const prisma_service_1 = require("../prisma/prisma.service");
+const credits_service_1 = require("../credits/credits.service");
 let ImagesService = ImagesService_1 = class ImagesService {
     geminiService;
     templatesService;
     prisma;
     configService;
+    creditsService;
     logger = new common_1.Logger(ImagesService_1.name);
-    constructor(geminiService, templatesService, prisma, configService) {
+    constructor(geminiService, templatesService, prisma, configService, creditsService) {
         this.geminiService = geminiService;
         this.templatesService = templatesService;
         this.prisma = prisma;
         this.configService = configService;
+        this.creditsService = creditsService;
     }
     getMockImageBase64() {
         const mockImagePath = (0, path_1.join)(process.cwd(), 'mock_dev', 'test_img.png');
@@ -44,9 +50,16 @@ let ImagesService = ImagesService_1 = class ImagesService {
             throw new Error('Failed to read mock image file');
         }
     }
-    async processImage(dto) {
+    async processImage(dto, firebaseUid) {
         const startTime = Date.now();
         try {
+            const hasEnoughCredits = await this.creditsService.checkCreditsAvailability(firebaseUid, 1);
+            if (!hasEnoughCredits) {
+                throw new common_1.ForbiddenException({
+                    code: 'insufficient_credits',
+                    message: 'Insufficient credits. Please purchase more credits to continue.',
+                });
+            }
             const useMockImage = this.configService.get('gemini.useMockImage', false);
             if (useMockImage) {
                 this.logger.log('🔄 Mock image mode enabled - using mock_dev/test_img.png');
@@ -65,6 +78,7 @@ let ImagesService = ImagesService_1 = class ImagesService {
                 await new Promise(resolve => setTimeout(resolve, simulatedProcessingTime));
                 const processingTime = Date.now() - startTime;
                 this.logger.log(`Mock image processing completed in ${processingTime}ms`);
+                await this.creditsService.deductCredits(firebaseUid, 1, dto.template_id);
                 return {
                     processed_image_base64: `data:image/jpeg;base64,${mockImageBase64}`,
                     metadata: {
@@ -103,6 +117,7 @@ let ImagesService = ImagesService_1 = class ImagesService {
             });
             const processingTime = Date.now() - startTime;
             this.logger.log(`Image processing completed in ${processingTime}ms`);
+            await this.creditsService.deductCredits(firebaseUid, 1, dto.template_id);
             return {
                 processed_image_base64: `data:image/jpeg;base64,${result.processedImageBase64}`,
                 metadata: {
@@ -124,9 +139,11 @@ let ImagesService = ImagesService_1 = class ImagesService {
 exports.ImagesService = ImagesService;
 exports.ImagesService = ImagesService = ImagesService_1 = __decorate([
     (0, common_1.Injectable)(),
+    __param(4, (0, common_1.Inject)((0, common_1.forwardRef)(() => credits_service_1.CreditsService))),
     __metadata("design:paramtypes", [gemini_service_1.GeminiService,
         templates_service_1.TemplatesService,
         prisma_service_1.PrismaService,
-        config_1.ConfigService])
+        config_1.ConfigService,
+        credits_service_1.CreditsService])
 ], ImagesService);
 //# sourceMappingURL=images.service.js.map

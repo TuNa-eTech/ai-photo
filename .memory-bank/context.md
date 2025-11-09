@@ -1,8 +1,51 @@
 # Context
 
-Last updated: 2025-01-27
+Last updated: 2025-11-09
 
 Current work focus
+- **✅ In-App Purchase Credits System Integration:** ✅ COMPLETED
+  - **Database & Backend:**
+    - Added `credits` field to User model (default: 2)
+    - Created Transaction model (purchase, usage, bonus types)
+    - Created IAPProduct model for product metadata
+    - Migration applied: `20251109190005_add_credits_and_iap_system`
+    - All existing users updated to have 2 credits
+    - IAP products seeded: starter (10 credits), popular (50 credits), bestvalue (100 credits)
+  - **Backend API:**
+    - `GET /v1/credits/balance` - Get user credits balance
+    - `GET /v1/credits/transactions` - Get transaction history with pagination
+    - `POST /v1/credits/purchase` - Process purchase with StoreKit 2 JWT/JSON verification
+    - `GET /v1/iap/products` - Get IAP products list (public endpoint)
+    - ImagesService enforces credit deduction (1 credit per image)
+    - Idempotency check using `original_transaction_id`
+    - Supports both JWT (iOS 15-17) and JSON (iOS 26+) transaction formats
+  - **iOS Integration:**
+    - InAppPurchaseService with StoreKit 2 (consumable products)
+    - CreditsRepository for API communication
+    - CreditsViewModel for state management
+    - CreditsPurchaseView for purchase UI
+    - Credits balance displayed in ImageProcessingView header and ProfileView
+    - Insufficient credits error handling with alert and navigation to purchase screen
+  - **Web CMS:**
+    - IAP Products management page (view products list)
+    - Transaction History page with filters (type, status) and search (transaction ID, product ID)
+    - Pull-to-refresh and refresh button support
+  - **UI/UX Improvements:**
+    - Fixed ProductCard to load credits from backend API (not regex extraction)
+    - Removed success message auto-clear (user dismisses manually)
+    - Added refresh button and pull-to-refresh to CreditsPurchaseView
+    - Enhanced credits header with glass card style in ImageProcessingView
+    - Added smooth number animations when credits balance changes
+    - Added haptic feedback on successful purchase
+    - Auto-refresh balance across screens using NotificationCenter
+  - **Files Created/Modified:**
+    - Backend: CreditsModule, IAPModule, CreditsService, IAPService, CreditsController, IAPController
+    - Backend: DTOs for credits and IAP, seed script for IAP products
+    - iOS: InAppPurchaseService, CreditsRepository, CreditsViewModel, CreditsPurchaseView
+    - iOS: Updated ImageProcessingView, ProfileView, BackgroundImageProcessor
+    - Web CMS: CreditsPurchaseView, TransactionsPage, credits API client
+    - Swagger: Updated OpenAPI spec with all new endpoints
+  - **Status:** Fully implemented, tested, and production-ready
 - **✅ Category Management & Search Screen Enhancement:** ✅ COMPLETED
   - **Server-side:**
     - Added `/v1/templates/categories` endpoint that returns predefined categories
@@ -119,6 +162,53 @@ Current work focus
 - **File Upload System:** ✅ COMPLETED - Working with thumbnail management and automatic cleanup.
 
 Recent changes (latest first)
+- ✅ **In-App Purchase Credits System Integration (2025-11-09):**
+  - **Database & Backend Core:**
+    - Added `credits` field to User model (Int, default: 2)
+    - Created Transaction model with types (purchase, usage, bonus) and status (pending, completed, failed, refunded)
+    - Created IAPProduct model for product metadata (product_id, name, description, credits, price, currency, display_order)
+    - Migration: `20251109190005_add_credits_and_iap_system` applied successfully
+    - All existing users updated to have 2 credits
+    - IAP products seeded: starter (10 credits), popular (50 credits), bestvalue (100 credits)
+  - **Backend API Implementation:**
+    - CreditsService: getCreditsBalance, deductCredits, addCredits, checkCreditsAvailability, getTransactionHistory
+    - IAPService: verifyTransaction (supports JWT and JSON), processPurchase (with idempotency), getProducts
+    - CreditsController: GET /v1/credits/balance, GET /v1/credits/transactions, POST /v1/credits/purchase
+    - IAPController: GET /v1/iap/products (public endpoint)
+    - ImagesService: Enforces credit check before processing, deducts 1 credit after success
+    - UsersService: Sets credits = 2 for new users
+    - Transaction verification: Supports StoreKit 2 JWT (iOS 15-17) and JSON (iOS 26+) formats
+    - Idempotency: Checks `original_transaction_id` to prevent duplicate credit awards
+  - **iOS Integration:**
+    - InAppPurchaseService: StoreKit 2 integration, loads products, handles purchases, returns transaction data (JSON for iOS 26+)
+    - CreditsRepository: API client for credits balance, transactions, purchase, IAP products
+    - CreditsViewModel: State management with @Observable, loads products from StoreKit + server
+    - CreditsPurchaseView: Purchase UI with product cards, current credits display, loading states
+    - ImageProcessingView: Credits header with glass card style, insufficient credits alert, navigation to purchase
+    - ProfileView: Credits balance in stats section, "Buy Credits" button in account section
+    - BackgroundImageProcessor: Parses insufficient_credits error (403) and notifies with ProcessingError.insufficientCredits
+  - **Web CMS:**
+    - IAP Products Page: Displays all active IAP products in table format
+    - Transaction History Page: Lists user transactions with filters (type, status) and search (transaction ID, product ID)
+    - Added navigation links in AppLayout for IAP Products and Transactions
+    - Pull-to-refresh and refresh button support
+  - **UI/UX Improvements:**
+    - Fixed ProductCard to load credits from backend API instead of regex extraction
+    - Removed success message auto-clear (user dismisses manually)
+    - Added refresh button and pull-to-refresh to CreditsPurchaseView
+    - Enhanced credits header with glass card style in ImageProcessingView
+    - Added smooth number animations (.contentTransition(.numericText())) when credits balance changes
+    - Added haptic feedback (UINotificationFeedbackGenerator.success) on successful purchase
+    - Auto-refresh balance across screens using NotificationCenter (.creditsBalanceUpdated)
+  - **Files Created:**
+    - Backend: CreditsModule, IAPModule, CreditsService, IAPService, CreditsController, IAPController, DTOs, seed script
+    - iOS: InAppPurchaseService, CreditsRepository, CreditsViewModel, CreditsPurchaseView
+    - Web CMS: CreditsPurchaseView, TransactionsPage, credits API client
+  - **Files Modified:**
+    - Backend: app.module.ts, images.module.ts, images.service.ts, images.controller.ts, users.service.ts, swagger/openapi.yaml
+    - iOS: ImageProcessingView, ProfileView, BackgroundImageProcessor, AppConfig (notification extension)
+    - Web CMS: routes.tsx, AppLayout.tsx
+  - **Status:** Fully implemented, tested, production-ready with all UI/UX improvements
 - ✅ **Category Management & Search Screen Enhancement (2025-01-27):**
   - **Server-side Category API:**
     - Added `GET /v1/templates/categories` endpoint returning predefined categories

@@ -275,6 +275,20 @@ paths:
                 meta:
                   requestId: "req_xyz"
                   timestamp: "2025-10-27T10:30:45Z"
+        '403':
+          description: Không đủ credits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+              example:
+                success: false
+                error:
+                  code: "insufficient_credits"
+                  message: "Insufficient credits. Please purchase more credits to continue."
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-10-27T10:30:45Z"
         '429':
           description: Vượt quá giới hạn (rate limit exceeded)
           content:
@@ -504,6 +518,234 @@ paths:
                   timestamp: "2025-10-27T10:05:00Z"
       security:
         - bearerAuth: []
+
+  /v1/credits/balance:
+    get:
+      summary: Lấy số credits hiện tại của user
+      description: |
+        Trả về số credits hiện tại của user đã đăng nhập.
+        Credits được sử dụng để process images (mỗi lần process trừ 1 credit).
+      tags:
+        - Credits
+      responses:
+        '200':
+          description: Số credits hiện tại (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeCreditsBalance'
+              example:
+                success: true
+                data:
+                  credits: 5
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-11-09T10:00:00Z"
+        '401':
+          description: Chưa xác thực
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+        '404':
+          description: User không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+      security:
+        - bearerAuth: []
+
+  /v1/credits/transactions:
+    get:
+      summary: Lấy lịch sử giao dịch credits
+      description: |
+        Trả về lịch sử các giao dịch credits của user (purchase, usage, bonus).
+        Được sắp xếp theo thời gian tạo (mới nhất trước).
+      tags:
+        - Credits
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Số lượng transactions trả về
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Vị trí bắt đầu (phân trang)
+      responses:
+        '200':
+          description: Lịch sử giao dịch (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeTransactionHistory'
+              example:
+                success: true
+                data:
+                  transactions:
+                    - id: "tx-uuid-123"
+                      type: "purchase"
+                      amount: 10
+                      product_id: "com.aiimagestylist.credits.starter"
+                      status: "completed"
+                      created_at: "2025-11-09T10:00:00Z"
+                    - id: "tx-uuid-456"
+                      type: "usage"
+                      amount: -1
+                      product_id: null
+                      status: "completed"
+                      created_at: "2025-11-09T09:30:00Z"
+                  meta:
+                    total: 15
+                    limit: 20
+                    offset: 0
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-11-09T10:00:00Z"
+        '401':
+          description: Chưa xác thực
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+      security:
+        - bearerAuth: []
+
+  /v1/credits/purchase:
+    post:
+      summary: Mua credits qua In-App Purchase
+      description: |
+        Xử lý purchase từ App Store, verify JWT transaction từ StoreKit 2,
+        và thêm credits vào tài khoản user.
+        
+        **Flow:**
+        1. User mua IAP product trên iOS app
+        2. App lấy JWT transaction data từ `Transaction.jwsRepresentation`
+        3. App gửi JWT transaction data và product_id lên server
+        4. Server verify JWT, check idempotency, và thêm credits
+        5. Server trả về số credits đã thêm và balance mới
+        
+        **Idempotency:** Nếu transaction đã được xử lý trước đó (check bằng `original_transaction_id`),
+        server sẽ trả về success nhưng không thêm credits lại.
+      tags:
+        - Credits
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseRequest'
+            example:
+              transaction_data: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+              product_id: "com.aiimagestylist.credits.starter"
+      responses:
+        '200':
+          description: Purchase thành công (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopePurchaseResponse'
+              example:
+                success: true
+                data:
+                  transaction_id: "tx-uuid-123"
+                  credits_added: 10
+                  new_balance: 12
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-11-09T10:00:00Z"
+        '400':
+          description: Request không hợp lệ (invalid JWT, product ID mismatch, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+              example:
+                success: false
+                error:
+                  code: "invalid_transaction_data"
+                  message: "Invalid transaction data: Unable to parse JWT"
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-11-09T10:00:00Z"
+        '401':
+          description: Chưa xác thực
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+        '404':
+          description: Product không tồn tại hoặc user không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+              example:
+                success: false
+                error:
+                  code: "product_not_found"
+                  message: "IAP product not found"
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-11-09T10:00:00Z"
+      security:
+        - bearerAuth: []
+
+  /v1/iap/products:
+    get:
+      summary: Lấy danh sách IAP products (Public)
+      description: |
+        Trả về danh sách các IAP products đang active.
+        Endpoint này là public (không cần authentication).
+        Phù hợp để hiển thị danh sách gói mua trong app.
+      tags:
+        - IAP
+      responses:
+        '200':
+          description: Danh sách IAP products (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeIAPProductsList'
+              example:
+                success: true
+                data:
+                  products:
+                    - id: "product-uuid-1"
+                      product_id: "com.aiimagestylist.credits.starter"
+                      name: "10 Credits"
+                      description: "Buy 10 credits"
+                      credits: 10
+                      price: 0.99
+                      currency: "USD"
+                      display_order: 1
+                    - id: "product-uuid-2"
+                      product_id: "com.aiimagestylist.credits.popular"
+                      name: "50 Credits"
+                      description: "Buy 50 credits"
+                      credits: 50
+                      price: 4.99
+                      currency: "USD"
+                      display_order: 2
+                    - id: "product-uuid-3"
+                      product_id: "com.aiimagestylist.credits.bestvalue"
+                      name: "100 Credits"
+                      description: "Buy 100 credits"
+                      credits: 100
+                      price: 8.99
+                      currency: "USD"
+                      display_order: 3
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-11-09T10:00:00Z"
 
 components:
   schemas:
@@ -868,6 +1110,236 @@ components:
         - success
         - data
         - meta
+
+    # Credits & IAP Schemas
+    CreditsBalanceResponse:
+      type: object
+      properties:
+        credits:
+          type: integer
+          minimum: 0
+          description: Số credits hiện tại
+          example: 5
+      required:
+        - credits
+
+    EnvelopeCreditsBalance:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/CreditsBalanceResponse'
+        meta:
+          $ref: '#/components/schemas/Meta'
+      required:
+        - success
+        - data
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "tx-uuid-123"
+        type:
+          type: string
+          enum:
+            - purchase
+            - usage
+            - bonus
+          description: Loại giao dịch
+          example: "purchase"
+        amount:
+          type: integer
+          description: Số credits (positive cho purchase/bonus, negative cho usage)
+          example: 10
+        product_id:
+          type: string
+          nullable: true
+          description: IAP product ID (chỉ có khi type = purchase)
+          example: "com.aiimagestylist.credits.starter"
+        status:
+          type: string
+          enum:
+            - pending
+            - completed
+            - failed
+            - refunded
+          example: "completed"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-11-09T10:00:00Z"
+      required:
+        - id
+        - type
+        - amount
+        - status
+        - created_at
+
+    TransactionHistoryResponse:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+              example: 15
+            limit:
+              type: integer
+              example: 20
+            offset:
+              type: integer
+              example: 0
+          required:
+            - total
+            - limit
+            - offset
+      required:
+        - transactions
+        - meta
+
+    EnvelopeTransactionHistory:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/TransactionHistoryResponse'
+        meta:
+          $ref: '#/components/schemas/Meta'
+      required:
+        - success
+        - data
+
+    PurchaseRequest:
+      type: object
+      required:
+        - transaction_data
+        - product_id
+      properties:
+        transaction_data:
+          type: string
+          description: JWT transaction data từ StoreKit 2 (Transaction.jwsRepresentation)
+          example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+        product_id:
+          type: string
+          description: Apple IAP product identifier
+          example: "com.aiimagestylist.credits.starter"
+
+    PurchaseResponse:
+      type: object
+      properties:
+        transaction_id:
+          type: string
+          format: uuid
+          description: ID của transaction trong database
+          example: "tx-uuid-123"
+        credits_added:
+          type: integer
+          description: Số credits đã thêm vào tài khoản
+          example: 10
+        new_balance:
+          type: integer
+          description: Số credits mới sau khi thêm
+          example: 12
+      required:
+        - transaction_id
+        - credits_added
+        - new_balance
+
+    EnvelopePurchaseResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/PurchaseResponse'
+        meta:
+          $ref: '#/components/schemas/Meta'
+      required:
+        - success
+        - data
+
+    IAPProduct:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "product-uuid-1"
+        product_id:
+          type: string
+          description: Apple IAP product identifier
+          example: "com.aiimagestylist.credits.starter"
+        name:
+          type: string
+          description: Tên hiển thị của product
+          example: "10 Credits"
+        description:
+          type: string
+          nullable: true
+          description: Mô tả product
+          example: "Buy 10 credits"
+        credits:
+          type: integer
+          description: Số credits trong gói
+          example: 10
+        price:
+          type: number
+          format: decimal
+          nullable: true
+          description: Giá tiền (optional, có thể lấy từ Apple)
+          example: 0.99
+        currency:
+          type: string
+          nullable: true
+          description: Mã tiền tệ
+          example: "USD"
+        display_order:
+          type: integer
+          description: Thứ tự hiển thị
+          example: 1
+      required:
+        - id
+        - product_id
+        - name
+        - credits
+        - display_order
+
+    IAPProductsListResponse:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/IAPProduct'
+      required:
+        - products
+
+    EnvelopeIAPProductsList:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/IAPProductsListResponse'
+        meta:
+          $ref: '#/components/schemas/Meta'
+      required:
+        - success
+        - data
 
   securitySchemes:
     bearerAuth:

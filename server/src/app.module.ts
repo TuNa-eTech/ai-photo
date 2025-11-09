@@ -5,6 +5,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { TemplatesModule } from './templates/templates.module';
 import { UsersModule } from './users/users.module';
 import { ImagesModule } from './images/images.module';
+import { CreditsModule } from './credits/credits.module';
+import { IAPModule } from './iap/iap.module';
 import { ConfigModule } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
@@ -30,6 +32,8 @@ import { join } from 'path';
     TemplatesModule,
     UsersModule,
     ImagesModule,
+    CreditsModule,
+    IAPModule,
   ],
   controllers: [AppController],
   providers: [AppService],

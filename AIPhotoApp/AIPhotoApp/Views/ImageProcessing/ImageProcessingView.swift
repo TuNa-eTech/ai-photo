@@ -15,6 +15,9 @@ struct ImageProcessingView: View {
     
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var viewModel: ImageProcessingViewModel?
+    @State private var creditsViewModel = CreditsViewModel()
+    @State private var showCreditsPurchase = false
+    @State private var showInsufficientCreditsAlert = false
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -24,6 +27,9 @@ struct ImageProcessingView: View {
                     GlassBackgroundView()
                     
                     VStack(spacing: 24) {
+                        // Credits header
+                        creditsHeader
+                        
                         // Processing animation
                         processingAnimation(viewModel: viewModel)
                         
@@ -40,17 +46,45 @@ struct ImageProcessingView: View {
                     .glassCard()
                 }
                 .task {
+                    await creditsViewModel.refreshCreditsBalance()
                     await viewModel.processImage(template: template, image: image)
                 }
                 .onChange(of: viewModel.processingState) { oldValue, newValue in
                     if case .completed = newValue {
                         Task { @MainActor in
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            // Refresh credits after completion
+                            await creditsViewModel.refreshCreditsBalance()
                             // Present on next runloop tick to avoid race with current layout transaction
                             try? await Task.sleep(for: .milliseconds(50))
                             dismiss()
                         }
                     }
+                    // Check for insufficient credits error
+                    if case .failed(let error) = newValue,
+                       case .insufficientCredits = error {
+                        showInsufficientCreditsAlert = true
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .creditsBalanceUpdated)) { _ in
+                    // Auto-refresh balance when updated from CreditsPurchaseView
+                    Task {
+                        await creditsViewModel.refreshCreditsBalance()
+                    }
+                }
+                .alert("Không đủ Credits", isPresented: $showInsufficientCreditsAlert) {
+                    Button("Hủy", role: .cancel) {
+                        dismiss()
+                    }
+                    Button("Mua Credits") {
+                        showCreditsPurchase = true
+                    }
+                } message: {
+                    Text("Bạn không đủ credits. Vui lòng mua thêm để tiếp tục.")
+                }
+                .sheet(isPresented: $showCreditsPurchase) {
+                    CreditsPurchaseView()
+                        .environment(authViewModel)
                 }
             } else {
                 // Loading state while initializing ViewModel
@@ -69,6 +103,37 @@ struct ImageProcessingView: View {
     }
     
     // MARK: - Views
+    
+    private var creditsHeader: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "star.fill")
+                .font(.subheadline)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [GlassTokens.accent1, GlassTokens.accent2],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Credits")
+                    .font(.caption)
+                    .foregroundStyle(GlassTokens.textSecondary)
+                
+                Text("\(creditsViewModel.creditsBalance)")
+                    .font(.headline.bold())
+                    .foregroundStyle(GlassTokens.textPrimary)
+                    .contentTransition(.numericText())
+                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: creditsViewModel.creditsBalance)
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .glassCard()
+    }
     
     private func processingAnimation(viewModel: ImageProcessingViewModel) -> some View {
         ZStack {
@@ -197,14 +262,24 @@ struct ImageProcessingView: View {
     
     private func actionButtons(viewModel: ImageProcessingViewModel) -> some View {
         VStack(spacing: 12) {
-            if case .failed = viewModel.processingState {
-                Button("Retry") {
-                    Task {
-                        await viewModel.processImage(template: template, image: image)
+            if case .failed(let error) = viewModel.processingState {
+                // Show "Buy Credits" button for insufficient credits error
+                if case .insufficientCredits = error {
+                    Button("Mua Credits") {
+                        showCreditsPurchase = true
                     }
+                    .buttonStyle(GlassCTAButtonStyle())
+                    .controlSize(.large)
+                } else {
+                    // Show "Retry" button for other errors
+                    Button("Retry") {
+                        Task {
+                            await viewModel.processImage(template: template, image: image)
+                        }
+                    }
+                    .buttonStyle(GlassCTAButtonStyle())
+                    .controlSize(.large)
                 }
-                .buttonStyle(GlassCTAButtonStyle())
-                .controlSize(.large)
             }
             
             Button("Cancel") {

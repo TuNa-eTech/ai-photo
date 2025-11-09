@@ -6,6 +6,7 @@ class UserResponseDto {
     name;
     email;
     avatar_url;
+    credits;
     created_at;
     updated_at;
 }

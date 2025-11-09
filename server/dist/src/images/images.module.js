@@ -13,12 +13,18 @@ const images_service_1 = require("./images.service");
 const gemini_module_1 = require("../gemini/gemini.module");
 const templates_module_1 = require("../templates/templates.module");
 const prisma_module_1 = require("../prisma/prisma.module");
+const credits_module_1 = require("../credits/credits.module");
 let ImagesModule = class ImagesModule {
 };
 exports.ImagesModule = ImagesModule;
 exports.ImagesModule = ImagesModule = __decorate([
     (0, common_1.Module)({
-        imports: [gemini_module_1.GeminiModule, templates_module_1.TemplatesModule, prisma_module_1.PrismaModule],
+        imports: [
+            gemini_module_1.GeminiModule,
+            templates_module_1.TemplatesModule,
+            prisma_module_1.PrismaModule,
+            (0, common_1.forwardRef)(() => credits_module_1.CreditsModule),
+        ],
         controllers: [images_controller_1.ImagesController],
         providers: [images_service_1.ImagesService],
     })

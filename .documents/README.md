@@ -1,7 +1,7 @@
 # Project Documentation Index (.documents)
 
 Status: Stable  
-Updated: 2025-10-23  
+Updated: 2025-11-09  
 Owner: @anhtu
 
 Purpose
@@ -32,6 +32,7 @@ Directory Structure
 - features/
   - template-spec.md — End-to-end spec for Templates (public + admin + assets)
   - image-processing.md — Spec for image processing flow
+  - iap-credits-system.md — In-App Purchase credits system (StoreKit 2, credits management, purchase flow)
 - auth/
   - login-register.md — Auth flows
   - refresh-logout.md — Refresh/logout flows

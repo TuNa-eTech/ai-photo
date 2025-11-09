@@ -1,0 +1,260 @@
+//
+//  CreditsRepository.swift
+//  AIPhotoApp
+//
+//  Repository for credits and IAP operations
+//
+
+import Foundation
+
+// MARK: - Models
+
+struct CreditsBalanceResponse: Codable {
+    let credits: Int
+}
+
+struct PurchaseRequest: Codable {
+    let transaction_data: String
+    let product_id: String
+}
+
+struct PurchaseResponse: Codable {
+    let transaction_id: String
+    let credits_added: Int
+    let new_balance: Int
+}
+
+struct Transaction: Codable {
+    let id: String
+    let type: String
+    let amount: Int
+    let product_id: String?
+    let status: String
+    let created_at: String
+}
+
+struct TransactionHistoryResponse: Codable {
+    let transactions: [Transaction]
+    let meta: TransactionMeta
+}
+
+struct TransactionMeta: Codable {
+    let total: Int
+    let limit: Int
+    let offset: Int
+}
+
+struct IAPProduct: Codable {
+    let id: String
+    let product_id: String
+    let name: String
+    let description: String?
+    let credits: Int
+    let price: Double?
+    let currency: String?
+    let display_order: Int
+}
+
+struct IAPProductsResponse: Codable {
+    let products: [IAPProduct]
+}
+
+// MARK: - Protocol
+
+protocol CreditsRepositoryProtocol {
+    func getCreditsBalance(bearerIDToken: String, tokenProvider: (() async throws -> String)?) async throws -> Int
+    func getTransactionHistory(limit: Int, offset: Int, bearerIDToken: String, tokenProvider: (() async throws -> String)?) async throws -> TransactionHistoryResponse
+    func purchaseCredits(transactionData: String, productId: String, bearerIDToken: String, tokenProvider: (() async throws -> String)?) async throws -> PurchaseResponse
+    func getIAPProducts() async throws -> [IAPProduct]
+}
+
+// MARK: - Implementation
+
+final class CreditsRepository: CreditsRepositoryProtocol {
+    private let client: APIClientProtocol
+    
+    enum NetworkError: LocalizedError {
+        case invalidURL
+        case invalidResponse
+        case serverError(String)
+        case unauthorized
+        case decodingFailed
+        
+        var errorDescription: String? {
+            switch self {
+            case .invalidURL: return "Invalid URL"
+            case .invalidResponse: return "Invalid server response"
+            case .serverError(let msg): return msg
+            case .unauthorized: return "Unauthorized"
+            case .decodingFailed: return "Failed to decode server response"
+            }
+        }
+    }
+    
+    init(client: APIClientProtocol = APIClient()) {
+        self.client = client
+    }
+    
+    func getCreditsBalance(bearerIDToken: String, tokenProvider: (() async throws -> String)? = nil) async throws -> Int {
+        var req = APIRequest(method: "GET", path: AppConfig.APIPath.creditsBalance)
+        
+        do {
+            let response: CreditsBalanceResponse
+            if let tokenProvider = tokenProvider {
+                response = try await client.sendEnvelopeRetry401(
+                    req,
+                    as: CreditsBalanceResponse.self,
+                    authToken: bearerIDToken,
+                    decoder: nil,
+                    tokenProvider: tokenProvider
+                )
+            } else {
+                response = try await client.sendEnvelope(
+                    req,
+                    as: CreditsBalanceResponse.self,
+                    authToken: bearerIDToken,
+                    decoder: nil
+                )
+            }
+            
+            return response.credits
+        } catch let apiErr as APIClientError {
+            switch apiErr {
+            case .httpStatus(let code, let body):
+                if code == 401 { throw NetworkError.unauthorized }
+                if let body = body, !body.isEmpty {
+                    throw NetworkError.serverError(body)
+                }
+                throw NetworkError.invalidResponse
+            case .decodingFailed:
+                throw NetworkError.decodingFailed
+            default:
+                throw NetworkError.invalidResponse
+            }
+        } catch {
+            throw NetworkError.invalidResponse
+        }
+    }
+    
+    func getTransactionHistory(limit: Int = 20, offset: Int = 0, bearerIDToken: String, tokenProvider: (() async throws -> String)? = nil) async throws -> TransactionHistoryResponse {
+        var req = APIRequest(method: "GET", path: AppConfig.APIPath.creditsTransactions)
+        req.queryItems = [
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ]
+        
+        do {
+            let response: TransactionHistoryResponse
+            if let tokenProvider = tokenProvider {
+                response = try await client.sendEnvelopeRetry401(
+                    req,
+                    as: TransactionHistoryResponse.self,
+                    authToken: bearerIDToken,
+                    decoder: nil,
+                    tokenProvider: tokenProvider
+                )
+            } else {
+                response = try await client.sendEnvelope(
+                    req,
+                    as: TransactionHistoryResponse.self,
+                    authToken: bearerIDToken,
+                    decoder: nil
+                )
+            }
+            
+            return response
+        } catch let apiErr as APIClientError {
+            switch apiErr {
+            case .httpStatus(let code, let body):
+                if code == 401 { throw NetworkError.unauthorized }
+                if let body = body, !body.isEmpty {
+                    throw NetworkError.serverError(body)
+                }
+                throw NetworkError.invalidResponse
+            case .decodingFailed:
+                throw NetworkError.decodingFailed
+            default:
+                throw NetworkError.invalidResponse
+            }
+        } catch {
+            throw NetworkError.invalidResponse
+        }
+    }
+    
+    func purchaseCredits(transactionData: String, productId: String, bearerIDToken: String, tokenProvider: (() async throws -> String)? = nil) async throws -> PurchaseResponse {
+        let payload = PurchaseRequest(
+            transaction_data: transactionData,
+            product_id: productId
+        )
+        
+        let req = try APIRequest.json(method: "POST", path: AppConfig.APIPath.creditsPurchase, body: payload)
+        
+        do {
+            let response: PurchaseResponse
+            if let tokenProvider = tokenProvider {
+                response = try await client.sendEnvelopeRetry401(
+                    req,
+                    as: PurchaseResponse.self,
+                    authToken: bearerIDToken,
+                    decoder: nil,
+                    tokenProvider: tokenProvider
+                )
+            } else {
+                response = try await client.sendEnvelope(
+                    req,
+                    as: PurchaseResponse.self,
+                    authToken: bearerIDToken,
+                    decoder: nil
+                )
+            }
+            
+            return response
+        } catch let apiErr as APIClientError {
+            switch apiErr {
+            case .httpStatus(let code, let body):
+                if code == 401 { throw NetworkError.unauthorized }
+                if let body = body, !body.isEmpty {
+                    throw NetworkError.serverError(body)
+                }
+                throw NetworkError.invalidResponse
+            case .decodingFailed:
+                throw NetworkError.decodingFailed
+            default:
+                throw NetworkError.invalidResponse
+            }
+        } catch {
+            throw NetworkError.invalidResponse
+        }
+    }
+    
+    func getIAPProducts() async throws -> [IAPProduct] {
+        var req = APIRequest(method: "GET", path: AppConfig.APIPath.iapProducts)
+        
+        do {
+            // IAP products endpoint is public (no auth required)
+            let response: IAPProductsResponse = try await client.sendEnvelope(
+                req,
+                as: IAPProductsResponse.self,
+                authToken: nil,
+                decoder: nil
+            )
+            
+            return response.products
+        } catch let apiErr as APIClientError {
+            switch apiErr {
+            case .httpStatus(let code, let body):
+                if let body = body, !body.isEmpty {
+                    throw NetworkError.serverError(body)
+                }
+                throw NetworkError.invalidResponse
+            case .decodingFailed:
+                throw NetworkError.decodingFailed
+            default:
+                throw NetworkError.invalidResponse
+            }
+        } catch {
+            throw NetworkError.invalidResponse
+        }
+    }
+}
+

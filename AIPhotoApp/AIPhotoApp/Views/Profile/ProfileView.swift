@@ -15,6 +15,8 @@ struct ProfileView: View {
     @State private var showEditProfile = false
     @State private var showLogoutConfirm = false
     @State private var showDeleteConfirm = false
+    @State private var showCreditsPurchase = false
+    @State private var creditsViewModel = CreditsViewModel()
     
     // Settings toggles
     @State private var notificationsEnabled = true
@@ -69,6 +71,24 @@ struct ProfileView: View {
             .sheet(isPresented: $showEditProfile) {
                 ProfileEditView()
             }
+            .sheet(isPresented: $showCreditsPurchase) {
+                CreditsPurchaseView()
+                    .environment(model)
+            }
+            .task {
+                await creditsViewModel.refreshCreditsBalance()
+            }
+            .onAppear {
+                Task {
+                    await creditsViewModel.refreshCreditsBalance()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .creditsBalanceUpdated)) { _ in
+                // Auto-refresh balance when updated from CreditsPurchaseView
+                Task {
+                    await creditsViewModel.refreshCreditsBalance()
+                }
+            }
             .alert("Logout", isPresented: $showLogoutConfirm) {
                 Button("Cancel", role: .cancel) {}
                 Button("Logout", role: .destructive) {
@@ -102,6 +122,12 @@ struct ProfileView: View {
     private var statsSection: some View {
         HStack(spacing: 12) {
             ProfileStatCard(
+                value: animatedCreditsValue,
+                label: "Credits",
+                icon: "star.fill"
+            )
+            
+            ProfileStatCard(
                 value: "24",
                 label: "Used",
                 icon: "square.grid.2x2"
@@ -112,17 +138,22 @@ struct ProfileView: View {
                 label: "Favorites",
                 icon: "heart.fill"
             )
-            
-            ProfileStatCard(
-                value: "5",
-                label: "Today",
-                icon: "sparkles"
-            )
         }
     }
     
     private var accountSection: some View {
         SettingsSection(title: "ACCOUNT") {
+            SettingsRow(
+                icon: "star.fill",
+                title: "Buy Credits",
+                subtitle: "Purchase credits to process images"
+            ) {
+                showCreditsPurchase = true
+            }
+            
+            Divider()
+                .padding(.leading, 56)
+            
             SettingsRow(
                 icon: "person.circle",
                 title: "Edit Profile",
@@ -272,6 +303,10 @@ struct ProfileView: View {
     }
     
     // MARK: - Helpers
+    
+    private var animatedCreditsValue: String {
+        "\(creditsViewModel.creditsBalance)"
+    }
     
     private func memberSinceText() -> String? {
         guard let createdAt = model.createdAt else {
