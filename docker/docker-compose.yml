@@ -4,13 +4,18 @@ services:
     container_name: imageaiwrapper-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: imageai
-      POSTGRES_PASSWORD: imageai_pass
-      POSTGRES_DB: imageai_db
+      POSTGRES_USER: ${POSTGRES_USER:-imageai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-imageai_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-imageai_db}
     ports:
       - "55432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-imageai} -d ${POSTGRES_DB:-imageai_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   server:
     build:
@@ -18,79 +23,100 @@ services:
       dockerfile: Dockerfile
     container_name: imageaiwrapper-server
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      # Server runtime
-      PORT: 8080
-      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:4173
+      # Server runtime - values from .env file or defaults
+      PORT: ${PORT:-8080}
+      NODE_ENV: ${NODE_ENV:-production}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:5174}
       # Database for Prisma inside container (host = db)
-      DATABASE_URL: postgresql://imageai:imageai_pass@db:5432/imageai_db?schema=public
+      DATABASE_URL: ${DATABASE_URL:-postgresql://imageai:imageai_pass@db:5432/imageai_db?schema=public}
       # DevAuth (local/dev) - disable in prod
-      DEV_AUTH_ENABLED: "1"
-      DEV_AUTH_TOKEN: "dev"
+      DEV_AUTH_ENABLED: ${DEV_AUTH_ENABLED:-1}
+      DEV_AUTH_TOKEN: ${DEV_AUTH_TOKEN:-dev}
       # Firebase Admin (optional; used when DEV_AUTH_ENABLED=0)
-      # FIREBASE_PROJECT_ID: ""
-      # FIREBASE_CLIENT_EMAIL: ""
-      # FIREBASE_PRIVATE_KEY: ""
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
     ports:
       - "8080:8080"
     volumes:
       # Mount public directory for static file serving (uploaded assets)
       - ../server/public:/app/public
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  # Optional: run web_cms in Docker for dev (Vite with HMR)
-  # The app will be available at http://localhost:5173
-  web_cms:
-    image: node:20-alpine
+  web-cms:
+    build:
+      context: ../web-cms
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
+        VITE_DEV_AUTH: ${VITE_DEV_AUTH:-0}
+        VITE_DEV_AUTH_TOKEN: ${VITE_DEV_AUTH_TOKEN:-dev}
+        # Firebase Configuration (Production)
+        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY:-}
+        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN:-}
+        VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID:-}
+        VITE_FIREBASE_STORAGE_BUCKET: ${VITE_FIREBASE_STORAGE_BUCKET:-}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${VITE_FIREBASE_MESSAGING_SENDER_ID:-}
+        VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID:-}
     container_name: imageaiwrapper-web-cms
-    working_dir: /app
-    environment:
-      CI: "true"
-      VITE_API_BASE_URL: http://localhost:8080
-      VITE_DEV_AUTH: "1"
-    volumes:
-      - ../web-cms:/app
-      - /app/node_modules
-    command: sh -c "corepack enable && corepack prepare pnpm@10.18.3 --activate || true; pnpm install --no-frozen-lockfile; pnpm dev --host 0.0.0.0"
+    restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "5173:3001"
     depends_on:
-      - server
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  # Production-like build & preview for web_admin (served by Vite preview)
-  # The app will be available at http://localhost:4173
-  web_cms_preview:
-    image: node:20-alpine
-    container_name: imageaiwrapper-web-cms-preview
-    working_dir: /app
-    environment:
-      CI: "true"
-    volumes:
-      - ../web-cms:/app
-      - /app/node_modules
-    command: >
-      sh -c "corepack enable &&
-             corepack prepare pnpm@10.18.3 --activate || true;
-             pnpm install --no-frozen-lockfile;
-             pnpm build;
-             pnpm preview --host 0.0.0.0"
+  landing-page:
+    build:
+      context: ../landing-page
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
+    container_name: imageaiwrapper-landing-page
+    restart: unless-stopped
     ports:
-      - "4173:4173"
+      - "5174:3002"
     depends_on:
-      - server
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   pgadmin:
     image: dpage/pgadmin4
     container_name: imageaiwrapper-pgadmin
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@gmail.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@gmail.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
     ports:
       - "5050:80"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
 volumes:
   db_data:

@@ -4,7 +4,6 @@
  * Display and manage IAP products
  */
 
-import { useState } from 'react'
 import {
   Box,
   Typography,
@@ -18,11 +17,9 @@ import {
   Chip,
   Stack,
   Alert,
-  CircularProgress,
 } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
 import { getIAPProducts } from '../../api/credits'
-import type { IAPProduct } from '../../api/credits'
 import { LoadingState } from '../../components/common/LoadingState'
 import { EmptyState } from '../../components/common/EmptyState'
 
@@ -31,7 +28,6 @@ export function IAPProductsPage(): React.ReactElement {
     data,
     isLoading,
     error,
-    refetch,
   } = useQuery({
     queryKey: ['iap-products'],
     queryFn: getIAPProducts,
@@ -64,7 +60,7 @@ export function IAPProductsPage(): React.ReactElement {
       {products.length === 0 ? (
         <EmptyState
           title="No IAP Products"
-          message="No in-app purchase products found."
+          description="No in-app purchase products found."
         />
       ) : (
         <TableContainer component={Paper} elevation={0} sx={{ border: 1, borderColor: 'divider' }}>

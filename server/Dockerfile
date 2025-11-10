@@ -12,6 +12,8 @@ RUN corepack enable && yarn install --frozen-lockfile
 COPY prisma ./prisma
 COPY tsconfig*.json nest-cli.json ./
 COPY src ./src
+# Copy Firebase Admin SDK credentials (if exists)
+COPY firebase-adminsdk.json* ./
 
 # Generate Prisma client and build the app
 RUN yarn prisma:generate
@@ -26,6 +28,10 @@ ENV NODE_ENV=production
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY package.json ./
+# Copy prisma folder for migrations
+COPY --from=builder /app/prisma ./prisma
+# Copy Firebase Admin SDK credentials (if exists)
+COPY --from=builder /app/firebase-adminsdk.json* ./
 
 # Expose port and run the server
 EXPOSE 8080

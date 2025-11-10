@@ -22,7 +22,6 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Button,
   IconButton,
   Pagination,
   TextField,
@@ -226,7 +225,7 @@ export function TransactionsPage(): React.ReactElement {
       {filteredTransactions.length === 0 ? (
         <EmptyState
           title="No Transactions"
-          message="No transactions found matching your filters."
+          description="No transactions found matching your filters."
         />
       ) : (
         <>
