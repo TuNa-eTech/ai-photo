@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		7536132B2EC0B5100009F4F2 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7536132A2EC0B5100009F4F2 /* StoreKit.framework */; };
+		754B850F2EC1DD4D001805B7 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = 754B850E2EC1DD4D001805B7 /* GoogleMobileAds */; };
+		754B85132EC1E133001805B7 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = 754B85122EC1E133001805B7 /* GoogleMobileAds */; };
 		759475722EA34DB1008B88D1 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 759475712EA34DB1008B88D1 /* GoogleSignIn */; };
 		759475742EA34DB1008B88D1 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 759475732EA34DB1008B88D1 /* GoogleSignInSwift */; };
 		759475772EA34E2A008B88D1 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 759475762EA34E2A008B88D1 /* FirebaseAnalytics */; };
@@ -85,6 +87,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				754B850F2EC1DD4D001805B7 /* GoogleMobileAds in Frameworks */,
 				759475722EA34DB1008B88D1 /* GoogleSignIn in Frameworks */,
 				7594757D2EA34E2A008B88D1 /* FirebaseAuth in Frameworks */,
 				759475852EA34E2A008B88D1 /* FirebaseMessaging in Frameworks */,
@@ -103,6 +106,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				754B85132EC1E133001805B7 /* GoogleMobileAds in Frameworks */,
 				759475912EA34EB0008B88D1 /* GoogleSignInSwift in Frameworks */,
 				759475892EA34E9F008B88D1 /* FirebaseAuth in Frameworks */,
 				7594758F2EA34EB0008B88D1 /* GoogleSignIn in Frameworks */,
@@ -180,6 +184,7 @@
 				759475802EA34E2A008B88D1 /* FirebaseCore */,
 				759475822EA34E2A008B88D1 /* FirebaseCrashlytics */,
 				759475842EA34E2A008B88D1 /* FirebaseMessaging */,
+				754B850E2EC1DD4D001805B7 /* GoogleMobileAds */,
 			);
 			productName = AIPhotoApp;
 			productReference = 759475442EA34D83008B88D1 /* AIPhotoApp.app */;
@@ -208,6 +213,7 @@
 				7594758C2EA34E9F008B88D1 /* FirebaseCore */,
 				7594758E2EA34EB0008B88D1 /* GoogleSignIn */,
 				759475902EA34EB0008B88D1 /* GoogleSignInSwift */,
+				754B85122EC1E133001805B7 /* GoogleMobileAds */,
 			);
 			productName = AIPhotoAppTests;
 			productReference = 759475532EA34D85008B88D1 /* AIPhotoAppTests.xctest */;
@@ -271,6 +277,7 @@
 			packageReferences = (
 				759475702EA34DB1008B88D1 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				759475752EA34E2A008B88D1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				754B850D2EC1DD4D001805B7 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 759475452EA34D83008B88D1 /* Products */;
@@ -485,8 +492,8 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -522,8 +529,8 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -667,6 +674,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		754B850D2EC1DD4D001805B7 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.13.0;
+			};
+		};
 		759475702EA34DB1008B88D1 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
@@ -686,6 +701,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		754B850E2EC1DD4D001805B7 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 754B850D2EC1DD4D001805B7 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
+		};
+		754B85122EC1E133001805B7 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 754B850D2EC1DD4D001805B7 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
+		};
 		759475712EA34DB1008B88D1 /* GoogleSignIn */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 759475702EA34DB1008B88D1 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;

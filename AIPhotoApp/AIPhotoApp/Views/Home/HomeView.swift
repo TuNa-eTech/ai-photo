@@ -19,88 +19,94 @@ struct HomeView: View {
     @State private var selectedTemplate: TemplateDTO?
 
     var body: some View {
-        ZStack {
-            GlassBackgroundView()
-
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    // Hero Section: Carousel of 2 trending templates
-                    HeroSection(
-                        heroTemplates: home.heroTemplates,
-                        isLoading: home.isLoading,
-                        onTemplateTap: { template in
-                            selectedTemplate = template
-                        }
-                    )
-                    
-                    // Trending Now Section: Horizontal scroll
-                    TrendingNowSection(
-                        templates: home.trendingNowTemplates,
-                        isLoading: home.isLoading,
-                        isFavorite: { item in home.isFavorite(item) },
-                        onTemplateTap: { item in
-                            if let dto = item.dto {
-                                selectedTemplate = dto
+        NavigationStack {
+            ZStack {
+                GlassBackgroundView()
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        // Hero Section: Carousel of 2 trending templates
+                        HeroSection(
+                            heroTemplates: home.heroTemplates,
+                            isLoading: home.isLoading,
+                            onTemplateTap: { template in
+                                selectedTemplate = template
                             }
-                        },
-                        onToggleFavorite: { item in
-                            home.toggleFavorite(item)
-                        },
-                        onSeeAllTap: {
-                            showAllTemplates = true
-                        }
-                    )
-                    .padding(.top, 24)
-                    
-                    // New Section: Latest templates
-                    NewSection(
-                        templates: home.newTemplates,
-                        isLoading: home.isLoading,
-                        isFavorite: { item in home.isFavorite(item) },
-                        onTemplateTap: { item in
-                            if let dto = item.dto {
-                                selectedTemplate = dto
+                        )
+                        
+                        // Trending Now Section: Horizontal scroll
+                        TrendingNowSection(
+                            templates: home.trendingNowTemplates,
+                            isLoading: home.isLoading,
+                            isFavorite: { item in home.isFavorite(item) },
+                            onTemplateTap: { item in
+                                if let dto = item.dto {
+                                    selectedTemplate = dto
+                                }
+                            },
+                            onToggleFavorite: { item in
+                                home.toggleFavorite(item)
+                            },
+                            onSeeAllTap: {
+                                showAllTemplates = true
                             }
-                        },
-                        onToggleFavorite: { item in
-                            home.toggleFavorite(item)
-                        },
-                        onSeeAllTap: {
-                            showAllTemplates = true
+                        )
+                        .padding(.top, 24)
+                        
+                        // New Section: Latest templates
+                        NewSection(
+                            templates: home.newTemplates,
+                            isLoading: home.isLoading,
+                            isFavorite: { item in home.isFavorite(item) },
+                            onTemplateTap: { item in
+                                if let dto = item.dto {
+                                    selectedTemplate = dto
+                                }
+                            },
+                            onToggleFavorite: { item in
+                                home.toggleFavorite(item)
+                            },
+                            onSeeAllTap: {
+                                showAllTemplates = true
+                            }
+                        )
+                        .padding(.top, 24)
+                        .padding(.bottom, 24)
+                    }
+                }
+                .ignoresSafeArea(edges: .top)
+                .overlay(alignment: .top) {
+                    // Loading / Error banners
+                    if home.isLoading {
+                        HUDGlass(text: "Đang tải…")
+                            .transition(.opacity)
+                            .padding(.top, 8)
+                    } else if let err = home.errorMessage, !err.isEmpty {
+                        BannerGlass(text: err, tint: .red) {
+                            // Retry API call if user is logged in
+                            if let token = model.loadToken() {
+                                withAnimation {
+                                    home.fetchTrendingFromAPI(
+                                        bearerIDToken: token,
+                                        limit: 9,
+                                        tokenProvider: { try await model.fetchFreshIDToken() }
+                                    )
+                                    home.fetchNewTemplatesFromAPI(
+                                        bearerIDToken: token,
+                                        limit: 6,
+                                        tokenProvider: { try await model.fetchFreshIDToken() }
+                                    )
+                                }
+                            }
                         }
-                    )
-                    .padding(.top, 24)
-                    .padding(.bottom, 24)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .padding(.top, 8)
+                    }
                 }
             }
-            .ignoresSafeArea(edges: .top)
-            .overlay(alignment: .top) {
-                // Loading / Error banners
-                if home.isLoading {
-                    HUDGlass(text: "Đang tải…")
-                        .transition(.opacity)
-                        .padding(.top, 8)
-                } else if let err = home.errorMessage, !err.isEmpty {
-                    BannerGlass(text: err, tint: .red) {
-                        // Retry API call if user is logged in
-                        if let token = model.loadToken() {
-                            withAnimation {
-                                home.fetchTrendingFromAPI(
-                                    bearerIDToken: token,
-                                    limit: 9,
-                                    tokenProvider: { try await model.fetchFreshIDToken() }
-                                )
-                                home.fetchNewTemplatesFromAPI(
-                                    bearerIDToken: token,
-                                    limit: 6,
-                                    tokenProvider: { try await model.fetchFreshIDToken() }
-                                )
-                            }
-                        }
-                    }
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .padding(.top, 8)
-                }
+            .navigationDestination(item: $selectedTemplate) { template in
+                TemplateSelectionView(template: template)
+                    .toolbar(.hidden, for: .tabBar)
             }
         }
         .navigationBarHidden(true)
@@ -143,9 +149,6 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showAllTemplates) {
             AllTemplatesView(home: home)
-        }
-        .sheet(item: $selectedTemplate) { template in
-            TemplateSelectionView(template: template)
         }
     }
 }

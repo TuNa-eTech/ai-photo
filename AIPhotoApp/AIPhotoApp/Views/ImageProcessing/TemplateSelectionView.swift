@@ -27,89 +27,86 @@ struct TemplateSelectionView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                GlassBackgroundView()
+        ZStack {
+            GlassBackgroundView()
+            
+            VStack(spacing: 24) {
+                // Template info
+                templateInfo
                 
-                VStack(spacing: 24) {
-                    // Template info
-                    templateInfo
-                    
-                    // Instructions
-                    instructions
-                    
-                    // Image picker
-                    imagePickerSection
-                    
-                    
-                    Spacer()
+                // Instructions
+                instructions
+                
+                // Image picker
+                imagePickerSection
+                
+                
+                Spacer()
+            }
+            .padding(24)
+        }
+        .navigationTitle("Select Image")
+        .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: selectedPhotoItem) { oldValue, newValue in
+            Task {
+                guard let item = newValue else { return }
+                
+                // 1) Try Transferable wrapper (best for HEIC/iCloud)
+                if let picked = try? await item.loadTransferable(type: PickedPhoto.self) {
+                    selectedImage = picked.image
+                    showImageProcessing = true
+                    return
                 }
-                .padding(24)
-            }
-            .navigationTitle("Select Image")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+                
+                // 2) Try URL (iCloud download fallback)
+                if let url = try? await item.loadTransferable(type: URL.self),
+                   let data = try? Data(contentsOf: url),
+                   let image = UIImage(data: data) {
+                    selectedImage = image
+                    showImageProcessing = true
+                    return
                 }
-            }
-            .onChange(of: selectedPhotoItem) { oldValue, newValue in
-                Task {
-                    guard let item = newValue else { return }
-                    
-                    // 1) Try Transferable wrapper (best for HEIC/iCloud)
-                    if let picked = try? await item.loadTransferable(type: PickedPhoto.self) {
-                        selectedImage = picked.image
-                        showImageProcessing = true
-                        return
-                    }
-                    
-                    // 2) Try URL (iCloud download fallback)
-                    if let url = try? await item.loadTransferable(type: URL.self),
-                       let data = try? Data(contentsOf: url),
-                       let image = UIImage(data: data) {
-                        selectedImage = image
-                        showImageProcessing = true
-                        return
-                    }
-                    
-                    // 3) Try raw Data
-                    if let data = try? await item.loadTransferable(type: Data.self),
-                       let image = UIImage(data: data) {
-                        selectedImage = image
-                        showImageProcessing = true
-                        return
-                    }
-                    
-                    // If all attempts fail, show a friendly message
-                    loadErrorMessage = "Cannot load this image. If it’s stored in iCloud, please download it first and try again."
-                    showLoadErrorAlert = true
+                
+                // 3) Try raw Data
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data) {
+                    selectedImage = image
+                    showImageProcessing = true
+                    return
                 }
+                
+                // If all attempts fail, show a friendly message
+                loadErrorMessage = "Cannot load this image. If it’s stored in iCloud, please download it first and try again."
+                showLoadErrorAlert = true
             }
-            .sheet(isPresented: $showImageProcessing) {
-                if let image = selectedImage {
-                    ImageProcessingView(template: template, image: image)
-                }
+        }
+        .navigationDestination(isPresented: $showImageProcessing) {
+            if let image = selectedImage {
+                ImageProcessingView(template: template, image: image)
+                    .toolbar(.hidden, for: .tabBar)
+            } else {
+                EmptyView()
             }
-            .onReceive(NotificationCenter.default.publisher(for: .imageProcessingCompleted)) { notif in
-                if let project = notif.userInfo?["project"] as? Project {
-                    completedProject = project
-                    showImageProcessing = false
-                    showResult = true
-                }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .imageProcessingCompleted)) { notif in
+            if let project = notif.userInfo?["project"] as? Project {
+                completedProject = project
+                showImageProcessing = false
+                showResult = true
             }
-            .fullScreenCover(isPresented: $showResult) {
-                if let project = completedProject, let image = selectedImage {
-                    ResultView(project: project, originalImage: image)
-                }
+        }
+        .navigationDestination(isPresented: $showResult) {
+            if let project = completedProject, let image = selectedImage {
+                ResultView(project: project, originalImage: image)
+                    .toolbar(.hidden, for: .tabBar)
+            } else {
+                EmptyView()
             }
-            .alert("Cannot load image", isPresented: $showLoadErrorAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(loadErrorMessage ?? "Unknown error")
-            }
+        }
+        .alert("Cannot load image", isPresented: $showLoadErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(loadErrorMessage ?? "Unknown error")
         }
     }
     

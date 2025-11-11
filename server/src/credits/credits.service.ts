@@ -160,6 +160,58 @@ export class CreditsService {
   }
 
   /**
+   * Add reward credit from rewarded ads
+   * Adds 1 credit with TransactionType.bonus
+   */
+  async addRewardCredit(firebaseUid: string, source?: string): Promise<{ credits_added: number; new_balance: number }> {
+    const user = await this.prisma.user.findUnique({
+      where: { firebaseUid },
+    });
+
+    if (!user) {
+      throw new NotFoundException({
+        code: 'user_not_found',
+        message: 'User not found',
+      });
+    }
+
+    const amount = 1; // Always 1 credit for rewarded ads
+
+    // Use transaction to ensure atomicity
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Update user credits
+      const updatedUser = await tx.user.update({
+        where: { firebaseUid },
+        data: {
+          credits: {
+            increment: amount,
+          },
+        },
+      });
+
+      // Create transaction record with type bonus
+      await tx.transaction.create({
+        data: {
+          userId: user.id,
+          type: TransactionType.bonus,
+          amount: amount,
+          productId: source || 'rewarded_ad',
+          status: TransactionStatus.completed,
+        },
+      });
+
+      this.logger.log(`Added ${amount} reward credit to user ${firebaseUid}. New balance: ${updatedUser.credits}`);
+
+      return {
+        credits_added: amount,
+        new_balance: updatedUser.credits,
+      };
+    });
+
+    return result;
+  }
+
+  /**
    * Get transaction history for a user
    */
   async getTransactionHistory(

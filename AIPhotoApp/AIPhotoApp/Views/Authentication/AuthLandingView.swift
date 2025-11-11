@@ -1,155 +1,430 @@
-//  AuthLandingView.swift
+//  AuthLandingView.v2.swift
 //  AIPhotoApp
 //
-//  Landing screen for Authentication (Apple / Google), handles loading + error,
-//  presents ProfileCompletion when needed, and navigates to Home/Templates on success.
+//  Redesigned Authentication Landing with Liquid Glass Beige aesthetic
+//  Features: Animated background, glass card, smooth transitions, premium feel
 
 import SwiftUI
 import AuthenticationServices
 
 struct AuthLandingView: View {
-    let model: AuthViewModel
-
+    @Environment(AuthViewModel.self) private var model
+    
+    @State private var showCard = false
+    @State private var logoScale: CGFloat = 0.8
+    
     var body: some View {
         NavigationStack {
             ZStack {
+                // Animated beige gradient background
+                GlassBackgroundView(animated: true)
+                
+                // Main content
                 ScrollView {
-                    VStack(spacing: 24) {
-                        // Hero / Value proposition
-                        VStack(spacing: 8) {
-                            Text("Biến ảnh thành phong cách AI")
-                                .font(.largeTitle.bold())
-                                .multilineTextAlignment(.center)
-                            Text("Chỉ vài chạm để tạo ra bức ảnh độc đáo theo phong cách bạn yêu thích.")
-                                .font(.body)
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.center)
-                        }
-                        .padding(.top, 48)
-
-                        // Sign in with Apple
-                        SignInWithAppleButton(
-                            .signIn,
-                            onRequest: { request in
-                                model.configureAppleRequest(request)
-                            },
-                            onCompletion: { result in
-                                model.handleAppleCompletion(result)
-                            }
-                        )
-                        .signInWithAppleButtonStyle(.black)
-                        .frame(height: 52)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                        // Sign in with Google (brand-safe simple SwiftUI button)
-                        Button {
-                            model.signInWithGoogle()
-                        } label: {
-                            HStack(spacing: 12) {
-                                // Simple "G" placeholder; consider replacing with official logo asset if available
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.white)
-                                        .frame(width: 22, height: 22)
-                                    Text("G")
-                                        .font(.headline.bold())
-                                        .foregroundStyle(.red)
+                    VStack(spacing: 0) {
+                        Spacer()
+                            .frame(height: 60)
+                        
+                        // Brand Logo with glass effect
+                        BrandLogoView()
+                            .scaleEffect(logoScale)
+                            .opacity(showCard ? 1 : 0)
+                        
+                        Spacer()
+                            .frame(height: 32)
+                        
+                        // Main glass card
+                        AuthGlassCard {
+                            VStack(spacing: 24) {
+                                // Hero text
+                                VStack(spacing: 8) {
+                                    Text("Chào mừng đến")
+                                        .font(.title2)
+                                        .foregroundStyle(GlassTokens.textSecondary)
+                                    
+                                    Text("AIPhotoApp")
+                                        .font(.largeTitle.bold())
+                                        .foregroundStyle(GlassTokens.textPrimary)
+                                    
+                                    Text("Biến ảnh thành phong cách AI")
+                                        .font(.body)
+                                        .foregroundStyle(GlassTokens.textSecondary)
+                                        .multilineTextAlignment(.center)
+                                        .padding(.top, 4)
                                 }
-                                Text("Tiếp tục với Google")
-                                    .font(.headline)
-                            }
-                            .frame(maxWidth: .infinity, minHeight: 52)
-                        }
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.roundedRectangle(radius: 12))
-                        .tint(.gray)
-
-                        // Terms & Privacy
-                        VStack(spacing: 4) {
-                            Text("Bằng việc tiếp tục, bạn đồng ý với")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                            HStack(spacing: 16) {
-                                Link("Điều khoản", destination: URL(string: "https://example.com/terms")!)
-                                    .font(.footnote)
-                                Link("Chính sách bảo mật", destination: URL(string: "https://example.com/privacy")!)
-                                    .font(.footnote)
-                            }
-                        }
-                        .padding(.top, 8)
-
-                        // Error banner (non-blocking)
-                        if let error = model.errorMessage, !error.isEmpty {
-                            Text(error)
-                                .font(.footnote)
-                                .foregroundStyle(.white)
-                                .padding(12)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(Color.red.opacity(0.9))
-                                )
+                                .padding(.bottom, 8)
+                                
+                                // Sign in buttons
+                                VStack(spacing: 16) {
+                                    // Apple Sign In
+                                    SignInWithAppleButton(
+                                        .signIn,
+                                        onRequest: { request in
+                                            model.configureAppleRequest(request)
+                                        },
+                                        onCompletion: { result in
+                                            model.handleAppleCompletion(result)
+                                        }
+                                    )
+                                    .signInWithAppleButtonStyle(.black)
+                                    .frame(height: 56)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .stroke(Color.white.opacity(0.3), lineWidth: 1.5)
+                                    )
+                                    .shadow(
+                                        color: GlassTokens.shadowColor,
+                                        radius: 15,
+                                        y: 8
+                                    )
+                                    
+                                    // Google Sign In
+                                    GlassSignInButton(
+                                        title: "Tiếp tục với Google",
+                                        icon: "GoogleIcon",
+                                        style: .google
+                                    ) {
+                                        model.signInWithGoogle()
+                                    }
+                                }
+                                
+                                // Terms & Privacy
+                                VStack(spacing: 4) {
+                                    Text("Bằng việc tiếp tục, bạn đồng ý với")
+                                        .font(.caption)
+                                        .foregroundStyle(GlassTokens.textSecondary)
+                                    
+                                    HStack(spacing: 16) {
+                                        Link("Điều khoản", destination: URL(string: "https://example.com/terms")!)
+                                            .font(.caption.weight(.medium))
+                                            .foregroundStyle(GlassTokens.textPrimary)
+                                        
+                                        Text("•")
+                                            .foregroundStyle(GlassTokens.textSecondary)
+                                        
+                                        Link("Chính sách", destination: URL(string: "https://example.com/privacy")!)
+                                            .font(.caption.weight(.medium))
+                                            .foregroundStyle(GlassTokens.textPrimary)
+                                    }
+                                }
                                 .padding(.top, 8)
-                                .accessibilityLabel("Thông báo lỗi")
-                                .accessibilityHint(error)
+                            }
                         }
+                        .opacity(showCard ? 1 : 0)
+                        .offset(y: showCard ? 0 : 30)
+                        .padding(.horizontal, 24)
+                        
+                        Spacer()
+                            .frame(height: 40)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 40)
                 }
-
+                
                 // Loading overlay
                 if model.isLoading {
-                    Color.black.opacity(0.2)
-                        .ignoresSafeArea()
-                    ProgressView("Đang xử lý...")
-                        .padding(16)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                        .accessibilityLabel("Đang xử lý")
+                    LoadingGlassOverlay()
+                }
+                
+                // Error banner
+                if let error = model.errorMessage, !error.isEmpty {
+                    VStack {
+                        ErrorGlassBanner(message: error) {
+                            model.errorMessage = nil
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 50)
+                        
+                        Spacer()
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
             .navigationBarHidden(true)
         }
-        
-        
-    }
-}
-
- // MARK: - Placeholder home screen after authentication
-struct LegacyTemplatesHomePlaceholderView: View {
-    let model: AuthViewModel
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 16) {
-                Text("Chào mừng đến AIPhotoApp!")
-                    .font(.title2.bold())
-                Text("Bạn đã đăng nhập thành công.")
-                    .foregroundStyle(.secondary)
-
-                Button(role: .destructive) {
-                    model.logout()
-                } label: {
-                    Text("Đăng xuất")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.red)
-                .padding(.top, 24)
+        .onAppear {
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.1)) {
+                logoScale = 1.0
             }
-            .padding()
-            .navigationTitle("Templates")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Đăng xuất") {
-                        model.logout()
-                    }
-                }
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.3)) {
+                showCard = true
             }
         }
     }
 }
 
-#Preview {
-    AuthLandingView(model: AuthViewModel(authService: AuthService(), userRepository: UserRepository()))
+// MARK: - Brand Logo
+
+struct BrandLogoView: View {
+    var body: some View {
+        ZStack {
+            // Glass circle background
+            Circle()
+                .fill(.ultraThinMaterial)
+                .frame(width: 100, height: 100)
+                .overlay(
+                    Circle()
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.4),
+                                    Color.white.opacity(0.1)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 2
+                        )
+                )
+                .shadow(color: GlassTokens.shadowColor, radius: 20, y: 10)
+            
+            // Icon with gradient
+            Image(systemName: "sparkles")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 50, height: 50)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [
+                            GlassTokens.primary1,
+                            GlassTokens.accent2
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        }
+    }
 }
+
+// MARK: - Auth Glass Card
+
+struct AuthGlassCard<Content: View>: View {
+    let content: Content
+    
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+    
+    var body: some View {
+        content
+            .padding(32)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        // Subtle beige tint
+                        LinearGradient(
+                            colors: [
+                                GlassTokens.primary1.opacity(0.15),
+                                GlassTokens.accent1.opacity(0.1)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.4),
+                                Color.white.opacity(0.1)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.5
+                    )
+            )
+            .shadow(
+                color: GlassTokens.textPrimary.opacity(0.12),
+                radius: 30,
+                y: 15
+            )
+    }
+}
+
+// MARK: - Glass Sign In Button
+
+struct GlassSignInButton: View {
+    let title: String
+    let icon: String // Asset name or SF Symbol
+    let style: ButtonStyle
+    let action: () -> Void
+    
+    enum ButtonStyle {
+        case google
+        case custom
+    }
+    
+    @State private var isPressed = false
+    
+    var body: some View {
+        Button(action: {
+            isPressed = true
+            // Haptic feedback
+            #if canImport(UIKit)
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            #endif
+            action()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                isPressed = false
+            }
+        }) {
+            HStack(spacing: 12) {
+                // Google "G" icon (placeholder - replace with actual asset)
+                if style == .google {
+                    ZStack {
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 24, height: 24)
+                        
+                        Text("G")
+                            .font(.headline.bold())
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [Color.red, Color.blue, Color.green, Color.yellow],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    }
+                }
+                
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(GlassTokens.textPrimary)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.white)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(.ultraThinMaterial.opacity(0.4))
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(
+                    Color.white.opacity(isPressed ? 0.6 : 0.3),
+                    lineWidth: 1.5
+                )
+        )
+        .scaleEffect(isPressed ? 0.98 : 1.0)
+        .shadow(
+            color: GlassTokens.shadowColor,
+            radius: isPressed ? 12 : 15,
+            y: isPressed ? 6 : 8
+        )
+        .animation(.easeInOut(duration: 0.15), value: isPressed)
+    }
+}
+
+// MARK: - Loading Glass Overlay
+
+struct LoadingGlassOverlay: View {
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.15)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 16) {
+                ProgressView()
+                    .tint(GlassTokens.textPrimary)
+                
+                Text("Đang xử lý...")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(GlassTokens.textPrimary)
+            }
+            .padding(24)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(Color.white.opacity(0.3), lineWidth: 1.5)
+                    )
+            )
+            .shadow(color: .black.opacity(0.2), radius: 30, y: 15)
+        }
+        .transition(.opacity)
+    }
+}
+
+// MARK: - Error Glass Banner
+
+struct ErrorGlassBanner: View {
+    let message: String
+    let onDismiss: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.white)
+            
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption.bold())
+                    .foregroundStyle(.white.opacity(0.8))
+                    .padding(8)
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.red.opacity(0.9))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(.ultraThinMaterial.opacity(0.2))
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.3), lineWidth: 1.5)
+        )
+        .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
+    }
+}
+
+// MARK: - Preview
+
+#Preview("Auth Landing V2") {
+    let model = AuthViewModel(
+        authService: AuthService(),
+        userRepository: UserRepository()
+    )
+    return AuthLandingView()
+        .environment(model)
+}
+
+#Preview("Auth Landing V2 - Loading") {
+    let model = AuthViewModel(
+        authService: AuthService(),
+        userRepository: UserRepository()
+    )
+    model.isLoading = true
+    return AuthLandingView()
+        .environment(model)
+}
+
+#Preview("Auth Landing V2 - Error") {
+    let model = AuthViewModel(
+        authService: AuthService(),
+        userRepository: UserRepository()
+    )
+    model.errorMessage = "Đăng nhập thất bại. Vui lòng thử lại."
+    return AuthLandingView()
+        .environment(model)
+}
+
+

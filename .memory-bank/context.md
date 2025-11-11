@@ -89,7 +89,7 @@ Current work focus
 - **@Environment for Shared State:**
   - `AuthViewModel` now provided globally via `@Environment` at app root
   - Removed prop drilling - all views access `AuthViewModel` via `@Environment(AuthViewModel.self)`
-  - Updated: `HomeView`, `ProfileView`, `SearchView`, `MainTabView`, `RootRouterView`, `SplashView`, `AuthLandingViewV2`, `TemplateSelectionView`, `ImageProcessingView`
+  - Updated: `HomeView`, `ProfileView`, `SearchView`, `MainTabView`, `RootRouterView`, `SplashView`, `AuthLandingView`, `TemplateSelectionView`, `ImageProcessingView`
 - **Protocol-Based Services:**
   - Created `BackgroundImageProcessorProtocol` for `BackgroundImageProcessor`
   - `ImageProcessingViewModel` now injects processor via protocol instead of direct singleton access
@@ -267,7 +267,7 @@ Recent changes (latest first)
   - **@Environment for Shared State:**
     - `AuthViewModel` provided globally via `.environment(authModel)` at app root (`AIPhotoAppApp.swift`)
     - All views access `AuthViewModel` via `@Environment(AuthViewModel.self)` instead of prop drilling
-    - Updated views: `HomeView`, `ProfileView`, `ProfileEditView`, `SearchView`, `MainTabView`, `RootRouterView`, `SplashView`, `AuthLandingViewV2`, `TemplateSelectionView`, `ImageProcessingView`
+    - Updated views: `HomeView`, `ProfileView`, `ProfileEditView`, `SearchView`, `MainTabView`, `RootRouterView`, `SplashView`, `AuthLandingView`, `TemplateSelectionView`, `ImageProcessingView`
     - Removed `model:` parameter from all view initializers
   - **Protocol-Based Services:**
     - Created `BackgroundImageProcessorProtocol` for `BackgroundImageProcessor`
@@ -397,14 +397,14 @@ Recent changes (latest first)
     - Premium glass effects: .ultraThinMaterial, gradient overlays, white border glow, soft shadows
     - Smooth animations: Logo scale (0.8→1.0), card slide-up, button press (1.0→0.98), blob motion
   - **Components Created:**
-    - AuthLandingViewV2: Main view with animated background, logo, glass card, sign-in buttons
+    - AuthLandingView: Main view with animated background, logo, glass card, sign-in buttons
     - BrandLogoView: 100x100 glass circle with gradient sparkles icon
     - AuthGlassCard: Reusable glass container with 28pt corner radius, beige tint, white border
     - GlassSignInButton: 56pt height buttons with press animations and haptic feedback
     - LoadingGlassOverlay: Full-screen blur with glass HUD and progress indicator
     - ErrorGlassBanner: Red glass banner with slide-in/out animations
   - **Integration:**
-    - Updated BootstrapViews.swift to use AuthLandingViewV2 (line 42)
+    - Updated BootstrapViews.swift to use AuthLandingView (line 42)
     - No changes required to AuthViewModel (backward compatible)
     - Works with existing Firebase Auth flow (Google & Apple Sign In)
   - **Documentation:**

@@ -1,5 +1,5 @@
 import { CreditsService } from './credits.service';
-import { CreditsBalanceResponseDto, TransactionHistoryResponseDto, PurchaseRequestDto, PurchaseResponseDto } from './dto';
+import { CreditsBalanceResponseDto, TransactionHistoryResponseDto, PurchaseRequestDto, PurchaseResponseDto, RewardRequestDto, RewardResponseDto } from './dto';
 import { IAPService } from '../iap/iap.service';
 export declare class CreditsController {
     private readonly creditsService;
@@ -14,4 +14,7 @@ export declare class CreditsController {
     purchase(req: Request & {
         firebaseUid?: string;
     }, dto: PurchaseRequestDto): Promise<PurchaseResponseDto>;
+    reward(req: Request & {
+        firebaseUid?: string;
+    }, dto: RewardRequestDto): Promise<RewardResponseDto>;
 }

@@ -103,17 +103,12 @@ services:
       retries: 3
       start_period: 40s
 
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: imageaiwrapper-pgadmin
+  adminer:
+    image: adminer:latest
+    container_name: imageaiwrapper-adminer
     restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@gmail.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
     ports:
-      - "5050:80"
+      - "5050:8080"
     depends_on:
       db:
         condition: service_healthy

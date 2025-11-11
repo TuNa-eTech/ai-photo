@@ -19,4 +19,6 @@ __exportStar(require("./transaction.dto"), exports);
 __exportStar(require("./transaction-history-response.dto"), exports);
 __exportStar(require("./purchase-request.dto"), exports);
 __exportStar(require("./purchase-response.dto"), exports);
+__exportStar(require("./reward-request.dto"), exports);
+__exportStar(require("./reward-response.dto"), exports);
 //# sourceMappingURL=index.js.map

@@ -98,7 +98,7 @@ struct SearchView: View {
                 loadTemplates(query: searchText.isEmpty ? nil : searchText, category: categoryId, sort: sortForFilter(newValue))
             }
         }
-        .sheet(item: $selectedTemplate) { template in
+        .navigationDestination(item: $selectedTemplate) { template in
             TemplateSelectionView(template: template)
         }
     }

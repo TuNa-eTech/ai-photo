@@ -8,6 +8,9 @@
 import Foundation
 import Observation
 import StoreKit
+#if canImport(UIKit)
+import UIKit
+#endif
 
 @Observable
 final class CreditsViewModel {
@@ -15,11 +18,13 @@ final class CreditsViewModel {
     private let creditsRepository: CreditsRepositoryProtocol
     private let iapService: InAppPurchaseService
     private let authService: AuthService
+    private let rewardedAdsService: RewardedAdsServiceProtocol
     
     // UI State
     var creditsBalance: Int = 0
     var isLoading: Bool = false
     var isPurchasing: Bool = false
+    var isWatchingAd: Bool = false
     var errorMessage: String?
     var successMessage: String?
     
@@ -41,14 +46,19 @@ final class CreditsViewModel {
         return creditsMapping[productId]
     }
     
+    @MainActor
     init(
-        creditsRepository: CreditsRepositoryProtocol = CreditsRepository(),
-        iapService: InAppPurchaseService = InAppPurchaseService(),
-        authService: AuthService = AuthService()
+        creditsRepository: CreditsRepositoryProtocol? = nil,
+        iapService: InAppPurchaseService? = nil,
+        authService: AuthService? = nil,
+        rewardedAdsService: RewardedAdsServiceProtocol? = nil
     ) {
-        self.creditsRepository = creditsRepository
-        self.iapService = iapService
-        self.authService = authService
+        // Initialize dependencies in body to avoid main actor isolation issue with default parameters
+        // Default parameters are evaluated in nonisolated context, but init body runs on @MainActor
+        self.creditsRepository = creditsRepository ?? CreditsRepository()
+        self.iapService = iapService ?? InAppPurchaseService()
+        self.authService = authService ?? AuthService()
+        self.rewardedAdsService = rewardedAdsService ?? RewardedAdsService()
     }
     
     /// Load credits balance from server
@@ -192,6 +202,65 @@ final class CreditsViewModel {
             errorMessage = "Purchase failed: \(error.localizedDescription)"
             isPurchasing = false
             print("❌ Purchase failed: \(error.localizedDescription)")
+        }
+    }
+    
+    /// Watch rewarded ad and add credit if user completes
+    /// Flow: showRewardedAd will handle loading if needed
+    @MainActor
+    func watchRewardedAd(presenting viewController: UIViewController) async {
+        isWatchingAd = true
+        errorMessage = nil
+        successMessage = nil
+        
+        do {
+            // Show ad (it will load if not already loaded)
+            let didEarnReward = try await rewardedAdsService.showRewardedAd(presenting: viewController)
+            
+            // 3. If user earned reward, add credit to account
+            if didEarnReward {
+                let token = try await authService.fetchFirebaseIDToken(forceRefresh: false)
+                let response = try await creditsRepository.addRewardCredit(
+                    bearerIDToken: token,
+                    tokenProvider: { try await self.authService.fetchFirebaseIDToken(forceRefresh: true) }
+                )
+                
+                // 4. Update credits balance
+                creditsBalance = response.new_balance
+                successMessage = "Bạn đã nhận được 1 credit!"
+                isWatchingAd = false
+                
+                // Haptic feedback on success
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.success)
+                
+                // Post notification for balance update
+                NotificationCenter.default.post(
+                    name: .creditsBalanceUpdated,
+                    object: nil,
+                    userInfo: ["newBalance": response.new_balance]
+                )
+            } else {
+                // User closed ad before completing
+                isWatchingAd = false
+                errorMessage = "Bạn cần xem hết quảng cáo để nhận credit."
+            }
+        } catch let error as RewardedAdsError {
+            isWatchingAd = false
+            
+            switch error {
+            case .adNotLoaded:
+                errorMessage = "Quảng cáo chưa sẵn sàng. Vui lòng thử lại sau."
+            case .presentationFailed(let underlyingError):
+                errorMessage = "Không thể hiển thị quảng cáo: \(underlyingError.localizedDescription)"
+            case .userCancelled:
+                // User cancelled - don't show error
+                break
+            }
+        } catch {
+            isWatchingAd = false
+            errorMessage = "Lỗi khi xem quảng cáo: \(error.localizedDescription)"
+            print("❌ Failed to watch rewarded ad: \(error.localizedDescription)")
         }
     }
 }

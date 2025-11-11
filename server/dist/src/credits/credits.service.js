@@ -119,6 +119,43 @@ let CreditsService = CreditsService_1 = class CreditsService {
             this.logger.log(`Added ${amount} credits to user ${firebaseUid}. New balance: ${updatedUser.credits}`);
         });
     }
+    async addRewardCredit(firebaseUid, source) {
+        const user = await this.prisma.user.findUnique({
+            where: { firebaseUid },
+        });
+        if (!user) {
+            throw new common_1.NotFoundException({
+                code: 'user_not_found',
+                message: 'User not found',
+            });
+        }
+        const amount = 1;
+        const result = await this.prisma.$transaction(async (tx) => {
+            const updatedUser = await tx.user.update({
+                where: { firebaseUid },
+                data: {
+                    credits: {
+                        increment: amount,
+                    },
+                },
+            });
+            await tx.transaction.create({
+                data: {
+                    userId: user.id,
+                    type: client_1.TransactionType.bonus,
+                    amount: amount,
+                    productId: source || 'rewarded_ad',
+                    status: client_1.TransactionStatus.completed,
+                },
+            });
+            this.logger.log(`Added ${amount} reward credit to user ${firebaseUid}. New balance: ${updatedUser.credits}`);
+            return {
+                credits_added: amount,
+                new_balance: updatedUser.credits,
+            };
+        });
+        return result;
+    }
     async getTransactionHistory(firebaseUid, limit = 20, offset = 0) {
         const user = await this.prisma.user.findUnique({
             where: { firebaseUid },

@@ -16,8 +16,7 @@ struct ImageProcessingView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var viewModel: ImageProcessingViewModel?
     @State private var creditsViewModel = CreditsViewModel()
-    @State private var showCreditsPurchase = false
-    @State private var showInsufficientCreditsAlert = false
+    @State private var navigateToInsufficientCredits = false
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -63,27 +62,23 @@ struct ImageProcessingView: View {
                     // Check for insufficient credits error
                     if case .failed(let error) = newValue,
                        case .insufficientCredits = error {
-                        showInsufficientCreditsAlert = true
+                        navigateToInsufficientCredits = true
                     }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .creditsBalanceUpdated)) { _ in
-                    // Auto-refresh balance when updated from CreditsPurchaseView
-                    Task {
+                    // Auto-refresh balance when updated from rewarded ad or purchase,
+                    // and automatically retry if the previous failure was insufficient credits.
+                    Task { @MainActor in
                         await creditsViewModel.refreshCreditsBalance()
+                        if case .failed(let error) = viewModel.processingState,
+                           case .insufficientCredits = error,
+                           creditsViewModel.creditsBalance > 0 {
+                            await viewModel.processImage(template: template, image: image)
+                        }
                     }
                 }
-                .alert("Không đủ Credits", isPresented: $showInsufficientCreditsAlert) {
-                    Button("Hủy", role: .cancel) {
-                        dismiss()
-                    }
-                    Button("Mua Credits") {
-                        showCreditsPurchase = true
-                    }
-                } message: {
-                    Text("Bạn không đủ credits. Vui lòng mua thêm để tiếp tục.")
-                }
-                .sheet(isPresented: $showCreditsPurchase) {
-                    CreditsPurchaseView()
+                .navigationDestination(isPresented: $navigateToInsufficientCredits) {
+                    InsufficientCreditsView()
                         .environment(authViewModel)
                 }
             } else {
@@ -263,10 +258,10 @@ struct ImageProcessingView: View {
     private func actionButtons(viewModel: ImageProcessingViewModel) -> some View {
         VStack(spacing: 12) {
             if case .failed(let error) = viewModel.processingState {
-                // Show "Buy Credits" button for insufficient credits error
+                // Show "Get Credits" button for insufficient credits error
                 if case .insufficientCredits = error {
-                    Button("Mua Credits") {
-                        showCreditsPurchase = true
+                    Button("Lấy Credits") {
+                        navigateToInsufficientCredits = true
                     }
                     .buttonStyle(GlassCTAButtonStyle())
                     .controlSize(.large)

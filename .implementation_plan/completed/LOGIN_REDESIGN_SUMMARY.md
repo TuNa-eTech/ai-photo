@@ -24,7 +24,7 @@ Comprehensive plan covering:
 **File**: `AIPhotoApp/AIPhotoApp/Views/Authentication/AuthLandingView.v2.swift`
 
 New SwiftUI view with:
-- **AuthLandingViewV2**: Main view with animated background & glass card
+- **AuthLandingView**: Main view with animated background & glass card
 - **BrandLogoView**: Glass circle logo with gradient icon
 - **AuthGlassCard**: Reusable glass container component
 - **GlassSignInButton**: Premium button with press states
@@ -93,14 +93,14 @@ Text:       #4A3F35 (Dark Brown)
    AuthLandingView(model: authViewModel)
    
    // To:
-   AuthLandingViewV2(model: authViewModel)
+   AuthLandingView(model: authViewModel)
    ```
 
 ### Option 3: A/B Test
 Keep both versions and use a feature flag:
 ```swift
 if useNewLoginDesign {
-    AuthLandingViewV2(model: authViewModel)
+    AuthLandingView(model: authViewModel)
 } else {
     AuthLandingView(model: authViewModel)
 }

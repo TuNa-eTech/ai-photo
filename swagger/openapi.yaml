@@ -699,6 +699,59 @@ paths:
       security:
         - bearerAuth: []
 
+  /v1/credits/reward:
+    post:
+      summary: Thêm credit từ rewarded ads
+      description: |
+        Thêm 1 credit vào tài khoản user sau khi user xem xong rewarded ad.
+        
+        **Flow:**
+        1. User xem rewarded ad trên iOS app
+        2. App verify việc xem ads hoàn thành (qua AdMob SDK callback `rewardedAdDidEarnReward`)
+        3. App gọi API này để cộng 1 credit
+        4. Server thêm credit với `TransactionType.bonus` và trả về balance mới
+        
+        **Note:** Server không verify ads, chỉ nhận request từ app và cộng credit.
+      tags:
+        - Credits
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RewardRequest'
+            example:
+              source: "rewarded_ad"
+      responses:
+        '200':
+          description: Thêm credit thành công (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeRewardResponse'
+              example:
+                success: true
+                data:
+                  credits_added: 1
+                  new_balance: 3
+                meta:
+                  requestId: "req_xyz"
+                  timestamp: "2025-11-09T10:00:00Z"
+        '401':
+          description: Chưa xác thực
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+        '404':
+          description: User không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+      security:
+        - bearerAuth: []
+
   /v1/iap/products:
     get:
       summary: Lấy danh sách IAP products (Public)
@@ -1270,6 +1323,45 @@ components:
       required:
         - success
         - data
+
+    RewardRequest:
+      type: object
+      properties:
+        source:
+          type: string
+          description: Nguồn reward (optional, mặc định "rewarded_ad")
+          example: "rewarded_ad"
+      required: []
+
+    RewardResponse:
+      type: object
+      properties:
+        credits_added:
+          type: integer
+          description: Số credits đã thêm (luôn là 1)
+          example: 1
+        new_balance:
+          type: integer
+          description: Số credits mới sau khi thêm
+          example: 3
+      required:
+        - credits_added
+        - new_balance
+
+    EnvelopeRewardResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/RewardResponse'
+        meta:
+          $ref: '#/components/schemas/Meta'
+      required:
+        - success
+        - data
+        - meta
 
     IAPProduct:
       type: object

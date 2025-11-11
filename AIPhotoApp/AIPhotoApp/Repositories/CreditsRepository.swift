@@ -24,6 +24,19 @@ struct PurchaseResponse: Codable {
     let new_balance: Int
 }
 
+struct RewardCreditRequest: Codable {
+    let source: String?
+    
+    init(source: String? = "rewarded_ad") {
+        self.source = source
+    }
+}
+
+struct RewardCreditResponse: Codable {
+    let credits_added: Int
+    let new_balance: Int
+}
+
 struct Transaction: Codable {
     let id: String
     let type: String
@@ -50,6 +63,7 @@ protocol CreditsRepositoryProtocol {
     func getCreditsBalance(bearerIDToken: String, tokenProvider: (() async throws -> String)?) async throws -> Int
     func getTransactionHistory(limit: Int, offset: Int, bearerIDToken: String, tokenProvider: (() async throws -> String)?) async throws -> TransactionHistoryResponse
     func purchaseCredits(transactionData: String, productId: String, bearerIDToken: String, tokenProvider: (() async throws -> String)?) async throws -> PurchaseResponse
+    func addRewardCredit(bearerIDToken: String, tokenProvider: (() async throws -> String)?) async throws -> RewardCreditResponse
 }
 
 // MARK: - Implementation
@@ -268,6 +282,70 @@ final class CreditsRepository: CreditsRepositoryProtocol {
                 response = try await client.sendEnvelope(
                     req,
                     as: PurchaseResponse.self,
+                    authToken: bearerIDToken,
+                    decoder: customDecoder
+                )
+            }
+            
+            return response
+        } catch let apiErr as APIClientError {
+            switch apiErr {
+            case .httpStatus(let code, let body):
+                if code == 401 { throw NetworkError.unauthorized }
+                if let body = body, !body.isEmpty {
+                    throw NetworkError.serverError(body)
+                }
+                throw NetworkError.invalidResponse
+            case .decodingFailed:
+                throw NetworkError.decodingFailed
+            case .transport(let error):
+                // Check if error is a cancelled request
+                if let urlError = error as? URLError, urlError.code == .cancelled {
+                    throw NetworkError.cancelled
+                }
+                throw NetworkError.invalidResponse
+            default:
+                throw NetworkError.invalidResponse
+            }
+        } catch {
+            // Check if error is a cancelled request
+            if let urlError = error as? URLError, urlError.code == .cancelled {
+                throw NetworkError.cancelled
+            }
+            if let networkError = error as? NetworkError {
+                throw networkError
+            }
+            throw NetworkError.invalidResponse
+        }
+    }
+    
+    func addRewardCredit(bearerIDToken: String, tokenProvider: (() async throws -> String)? = nil) async throws -> RewardCreditResponse {
+        let payload = RewardCreditRequest(source: "rewarded_ad")
+        
+        let req = try APIRequest.json(method: "POST", path: AppConfig.APIPath.creditsReward, body: payload)
+        
+        // Custom decoder that respects snake_case properties (no auto conversion)
+        let customDecoder: JSONDecoder = {
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .useDefaultKeys // Don't convert snake_case to camelCase
+            decoder.dateDecodingStrategy = .iso8601
+            return decoder
+        }()
+        
+        do {
+            let response: RewardCreditResponse
+            if let tokenProvider = tokenProvider {
+                response = try await client.sendEnvelopeRetry401(
+                    req,
+                    as: RewardCreditResponse.self,
+                    authToken: bearerIDToken,
+                    decoder: customDecoder,
+                    tokenProvider: tokenProvider
+                )
+            } else {
+                response = try await client.sendEnvelope(
+                    req,
+                    as: RewardCreditResponse.self,
                     authToken: bearerIDToken,
                     decoder: customDecoder
                 )

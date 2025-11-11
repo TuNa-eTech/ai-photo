@@ -39,7 +39,7 @@ struct RootRouterView: View {
                 MainTabView()
             } else {
                 // Otherwise show the login landing (V2 with Liquid Glass design)
-                AuthLandingViewV2()
+                AuthLandingView()
             }
         }
     }

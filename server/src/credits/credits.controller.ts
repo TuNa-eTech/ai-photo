@@ -6,6 +6,8 @@ import {
   TransactionHistoryResponseDto,
   PurchaseRequestDto,
   PurchaseResponseDto,
+  RewardRequestDto,
+  RewardResponseDto,
 } from './dto';
 import { IAPService } from '../iap/iap.service';
 
@@ -63,6 +65,27 @@ export class CreditsController {
       transaction_id: result.transactionId,
       credits_added: result.creditsAdded,
       new_balance: result.newBalance,
+    };
+  }
+
+  /**
+   * POST /v1/credits/reward
+   * Add reward credit from rewarded ads
+   */
+  @Post('reward')
+  async reward(
+    @Req() req: Request & { firebaseUid?: string },
+    @Body() dto: RewardRequestDto,
+  ): Promise<RewardResponseDto> {
+    const firebaseUid = req.firebaseUid!;
+    const result = await this.creditsService.addRewardCredit(
+      firebaseUid,
+      dto.source || 'rewarded_ad',
+    );
+
+    return {
+      credits_added: result.credits_added,
+      new_balance: result.new_balance,
     };
   }
 }

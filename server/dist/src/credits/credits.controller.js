@@ -42,6 +42,14 @@ let CreditsController = class CreditsController {
             new_balance: result.newBalance,
         };
     }
+    async reward(req, dto) {
+        const firebaseUid = req.firebaseUid;
+        const result = await this.creditsService.addRewardCredit(firebaseUid, dto.source || 'rewarded_ad');
+        return {
+            credits_added: result.credits_added,
+            new_balance: result.new_balance,
+        };
+    }
 };
 exports.CreditsController = CreditsController;
 __decorate([
@@ -68,6 +76,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, dto_1.PurchaseRequestDto]),
     __metadata("design:returntype", Promise)
 ], CreditsController.prototype, "purchase", null);
+__decorate([
+    (0, common_1.Post)('reward'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, dto_1.RewardRequestDto]),
+    __metadata("design:returntype", Promise)
+], CreditsController.prototype, "reward", null);
 exports.CreditsController = CreditsController = __decorate([
     (0, common_1.Controller)('v1/credits'),
     (0, common_1.UseGuards)(bearer_auth_guard_1.BearerAuthGuard),
