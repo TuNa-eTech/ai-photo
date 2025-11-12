@@ -2,29 +2,14 @@
 //  AllTemplatesView.swift
 //  AIPhotoApp
 //
-//  Full templates view with search, filters, and categories
+//  Full templates view with pagination and load more
 //
 
 import SwiftUI
 
 struct AllTemplatesView: View {
-    let home: HomeViewModel
-    
-    @Environment(\.dismiss) private var dismiss
     @Environment(AuthViewModel.self) private var authModel
-    
-    @State private var categoryManager = CategoryManager()
-    @State private var searchText: String = ""
-    @State private var selectedCategory: TemplateCategory = .all
-    @State private var selectedFilter: FilterType = .all
-    
-    enum FilterType: String, CaseIterable, Identifiable {
-        case all = "All"
-        case trending = "Trending"
-        case new = "New"
-        
-        var id: String { rawValue }
-    }
+    @State private var viewModel = AllTemplatesViewModel()
     
     private let gridCols: [GridItem] = [
         GridItem(.flexible(), spacing: 12, alignment: .top),
@@ -37,193 +22,139 @@ struct AllTemplatesView: View {
                 GlassBackgroundView()
                 
                 VStack(spacing: 0) {
-                    // Category filters
-                    categorySection
-                    
-                    // Filter segment
-                    filterSection
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 12)
-                    
-                    // Templates grid
-                    ScrollView(showsIndicators: false) {
-                        LazyVGrid(columns: gridCols, spacing: 12) {
-                            ForEach(filteredTemplates) { item in
-                                CardGlassSmall(
-                                    title: item.title,
-                                    tag: item.tag,
-                                    thumbnailURL: item.thumbnailURL,
-                                    thumbnailSymbol: item.thumbnailSymbol
-                                )
-                                .overlay(alignment: .topTrailing) {
-                                    if home.isFavorite(item) {
-                                        GlassChip(text: "Fav", systemImage: "heart.fill")
-                                            .padding(8)
+                    if viewModel.isLoading && viewModel.templates.isEmpty {
+                        // Initial loading state
+                        VStack {
+                            ProgressView()
+                                .tint(GlassTokens.textPrimary)
+                            Text("Loading templates...")
+                                .font(.subheadline)
+                                .foregroundStyle(GlassTokens.textSecondary)
+                                .padding(.top, 16)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if viewModel.templates.isEmpty {
+                        // Empty state
+                        emptyStateView
+                    } else {
+                        // Templates grid with load more
+                        ScrollView(showsIndicators: false) {
+                            VStack(spacing: 12) {
+                                LazyVGrid(columns: gridCols, spacing: 12) {
+                                    ForEach(viewModel.templates) { item in
+                                        CardGlassSmall(
+                                            title: item.title,
+                                            tag: item.tag,
+                                            thumbnailURL: item.thumbnailURL,
+                                            thumbnailSymbol: item.thumbnailSymbol ?? "photo"
+                                        )
+                                        .overlay(alignment: .topTrailing) {
+                                            if viewModel.isFavorite(item) {
+                                                GlassChip(text: "Fav", systemImage: "heart.fill")
+                                                    .padding(8)
+                                            }
+                                        }
+                                        .onTapGesture {
+                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                            // Navigate to template selection if needed
+                                        }
+                                        .contextMenu {
+                                            Button("Preview", systemImage: "eye") {}
+                                            Button(viewModel.isFavorite(item) ? "Remove Favorite" : "Add Favorite",
+                                                   systemImage: viewModel.isFavorite(item) ? "heart.slash" : "heart") {
+                                                viewModel.toggleFavorite(item)
+                                            }
+                                        }
                                     }
                                 }
-                                .onTapGesture {
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    // TODO: Navigate to template detail
-                                }
-                                .contextMenu {
-                                    Button("Preview", systemImage: "eye") {}
-                                    Button(home.isFavorite(item) ? "Remove Favorite" : "Add Favorite",
-                                           systemImage: home.isFavorite(item) ? "heart.slash" : "heart") {
-                                        home.toggleFavorite(item)
+                                
+                                // Load more trigger
+                                if viewModel.hasMorePages && !viewModel.isLoadingMore {
+                                    Button(action: loadMore) {
+                                        VStack(spacing: 8) {
+                                            Image(systemName: "arrow.down.circle")
+                                                .font(.title3)
+                                                .foregroundStyle(GlassTokens.accent1)
+                                            Text("Load More")
+                                                .font(.caption)
+                                                .foregroundStyle(GlassTokens.textSecondary)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 24)
                                     }
+                                    .buttonStyle(.plain)
+                                } else if viewModel.isLoadingMore {
+                                    VStack(spacing: 8) {
+                                        ProgressView()
+                                            .tint(GlassTokens.textPrimary)
+                                        Text("Loading...")
+                                            .font(.caption)
+                                            .foregroundStyle(GlassTokens.textSecondary)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 24)
                                 }
                             }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 24)
                     }
                 }
             }
             .navigationTitle("All Templates")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(
-                text: $searchText,
-                placement: .navigationBarDrawer(displayMode: .always),
-                prompt: "Search templates…"
-            )
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .onAppear {
-                // Load categories from API
-                if let token = authModel.loadToken() {
-                    categoryManager.loadCategories(
-                        bearerIDToken: token,
-                        tokenProvider: { try await authModel.fetchFreshIDToken() }
-                    )
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .foregroundStyle(GlassTokens.textPrimary)
-                }
+            .toolbar(.hidden, for: .tabBar)
+        }
+        .onAppear {
+            if viewModel.templates.isEmpty {
+                loadInitial()
             }
         }
     }
     
-    // MARK: - Sections
-    
-    private var categorySection: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                ForEach(categoryManager.allCategories) { category in
-                    CategoryChipButton(
-                        category: category,
-                        isSelected: selectedCategory.id == category.id
-                    ) {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedCategory = category
-                        }
-                    }
-                }
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 48))
+                .foregroundStyle(GlassTokens.textSecondary.opacity(0.6))
+            
+            Text("No Templates Found")
+                .font(.headline)
+                .foregroundStyle(GlassTokens.textPrimary)
+            
+            if let error = viewModel.errorMessage {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
         }
-        .scrollClipDisabled(false)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("Category filters"))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
-    private var filterSection: some View {
-        Picker("Filter", selection: $selectedFilter) {
-            ForEach(FilterType.allCases) { filter in
-                Text(filter.rawValue).tag(filter)
-            }
-        }
-        .pickerStyle(.segmented)
-        .accessibilityLabel(Text("Template filters"))
+    private func loadInitial() {
+        guard let token = authModel.loadToken() else { return }
+        
+        viewModel.loadInitial(
+            bearerIDToken: token,
+            tokenProvider: { try await authModel.fetchFreshIDToken() }
+        )
     }
     
-    // MARK: - Computed
-    
-    private var filteredTemplates: [HomeViewModel.TemplateItem] {
-        var list = home.allTemplates
+    private func loadMore() {
+        guard let token = authModel.loadToken() else { return }
         
-        // Category filter
-        if selectedCategory != .all {
-            list = list.filter { $0.tag == selectedCategory.id }
-        }
-        
-        // Filter type
-        switch selectedFilter {
-        case .all:
-            break
-        case .trending:
-            list = list.filter { $0.isTrending }
-        case .new:
-            list = list.filter { $0.isNew }
-        }
-        
-        // Search
-        let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !q.isEmpty {
-            list = list.filter {
-                $0.title.localizedCaseInsensitiveContains(q) ||
-                ($0.tag?.localizedCaseInsensitiveContains(q) ?? false) ||
-                ($0.subtitle?.localizedCaseInsensitiveContains(q) ?? false)
-            }
-        }
-        
-        return list
-    }
-}
-
-// MARK: - Category Chip Button (iOS Design Standards)
-
-private struct CategoryChipButton: View {
-    let category: TemplateCategory
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: {
-            #if canImport(UIKit)
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.impactOccurred()
-            #endif
-            action()
-        }) {
-            HStack(spacing: 6) {
-                Image(systemName: category.icon)
-                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
-                
-                Text(category.name)
-                    .font(.system(size: 15, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background {
-                Capsule()
-                    .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
-                    .overlay {
-                        Capsule()
-                            .strokeBorder(
-                                isSelected ? Color.accentColor.opacity(0.3) : Color.secondary.opacity(0.2),
-                                lineWidth: isSelected ? 1.5 : 1
-                            )
-                    }
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(category.name))
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        viewModel.loadMore(
+            bearerIDToken: token,
+            tokenProvider: { try await authModel.fetchFreshIDToken() }
+        )
     }
 }
 
 // MARK: - Preview
 
 #Preview {
-    AllTemplatesView(home: HomeViewModel())
+    AllTemplatesView()
+        .environment(AuthViewModel(authService: AuthService(), userRepository: UserRepository()))
 }
-
-

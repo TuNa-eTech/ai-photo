@@ -12,37 +12,42 @@ import UIKit
 #endif
 
 struct InsufficientCreditsView: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(AuthViewModel.self) private var authViewModel
-    
-    @State private var creditsViewModel = CreditsViewModel()
-    @State private var showCreditsPurchase = false
-    @State private var showLoadingOverlay = false
-    
-    var body: some View {
-        ZStack {
-            GlassBackgroundView()
-            
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 24) {
-                    headerSection
-                    optionsSection
-                    infoSection
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 40)
-            }
-            
-            if showLoadingOverlay {
-                loadingOverlay
-            }
-        }
-        .navigationTitle("Không đủ Credits")
-        .navigationBarTitleDisplayMode(.inline)
-        .task {
-            await creditsViewModel.refreshCreditsBalance()
-        }
+     @Environment(\.dismiss) private var dismiss
+     @Environment(AuthViewModel.self) private var authViewModel
+     
+     @State private var creditsViewModel = CreditsViewModel()
+     @State private var showCreditsPurchase = false
+     @State private var showLoadingOverlay = false
+     @State private var hasRefreshed = false
+     
+     var body: some View {
+         ZStack {
+             GlassBackgroundView()
+             
+             ScrollView(showsIndicators: false) {
+                 VStack(spacing: 24) {
+                     headerSection
+                     optionsSection
+                     infoSection
+                 }
+                 .padding(.horizontal, 20)
+                 .padding(.top, 20)
+                 .padding(.bottom, 40)
+             }
+             
+             if showLoadingOverlay {
+                 loadingOverlay
+             }
+         }
+         .navigationTitle("Không đủ Credits")
+         .navigationBarTitleDisplayMode(.inline)
+         .task {
+             // Only refresh once when first entering the view
+             if !hasRefreshed {
+                 await creditsViewModel.refreshCreditsBalance()
+                 hasRefreshed = true
+             }
+         }
         .sheet(isPresented: $showCreditsPurchase) {
             CreditsPurchaseView()
                 .environment(authViewModel)
@@ -73,6 +78,16 @@ struct InsufficientCreditsView: View {
             if newValue != nil {
                 Task {
                     try? await Task.sleep(for: .milliseconds(500))
+                    dismiss()
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .creditsBalanceUpdated)) { _ in
+            // Auto-dismiss InsufficientCreditsView when credits are added from purchase or rewarded ad
+            Task { @MainActor in
+                await creditsViewModel.refreshCreditsBalance()
+                if creditsViewModel.creditsBalance > 0 {
+                    try? await Task.sleep(for: .milliseconds(300))
                     dismiss()
                 }
             }

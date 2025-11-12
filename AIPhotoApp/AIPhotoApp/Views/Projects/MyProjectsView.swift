@@ -49,8 +49,8 @@ struct MyProjectsView: View {
                     )
                 }
             }
-            .sheet(isPresented: $showAllTemplates) {
-                AllTemplatesView(home: HomeViewModel())
+            .navigationDestination(isPresented: $showAllTemplates) {
+                AllTemplatesView()
             }
         }
     }

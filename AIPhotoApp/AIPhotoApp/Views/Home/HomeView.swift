@@ -108,6 +108,9 @@ struct HomeView: View {
                 TemplateSelectionView(template: template)
                     .toolbar(.hidden, for: .tabBar)
             }
+            .navigationDestination(isPresented: $showAllTemplates) {
+                AllTemplatesView()
+            }
         }
         .navigationBarHidden(true)
         .onAppear {
@@ -146,9 +149,6 @@ struct HomeView: View {
         }
         .fullScreenCover(isPresented: $showSearch) {
             SearchView()
-        }
-        .sheet(isPresented: $showAllTemplates) {
-            AllTemplatesView(home: home)
         }
     }
 }

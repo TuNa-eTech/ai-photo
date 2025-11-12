@@ -10,14 +10,17 @@ import SwiftUI
 import UIKit
 
 struct ImageProcessingView: View {
-    let template: TemplateDTO
-    let image: UIImage
-    
-    @Environment(AuthViewModel.self) private var authViewModel
-    @State private var viewModel: ImageProcessingViewModel?
-    @State private var creditsViewModel = CreditsViewModel()
-    @State private var navigateToInsufficientCredits = false
-    @Environment(\.dismiss) private var dismiss
+     let template: TemplateDTO
+     let image: UIImage
+     
+     @Environment(AuthViewModel.self) private var authViewModel
+     @State private var viewModel: ImageProcessingViewModel?
+     @State private var creditsViewModel = CreditsViewModel()
+     @State private var navigateToInsufficientCredits = false
+     @State private var hasReturnedWithInsufficientCredits = false
+     @State private var shouldSkipInitialProcess = false
+     @State private var creditsBeforeInsufficientError = 0
+     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         Group {
@@ -45,9 +48,12 @@ struct ImageProcessingView: View {
                     .glassCard()
                 }
                 .task {
-                    await creditsViewModel.refreshCreditsBalance()
-                    await viewModel.processImage(template: template, image: image)
-                }
+                     await creditsViewModel.refreshCreditsBalance()
+                     // Skip initial process if returning from InsufficientCreditsView with 0 credits
+                     if !shouldSkipInitialProcess {
+                         await viewModel.processImage(template: template, image: image)
+                     }
+                 }
                 .onChange(of: viewModel.processingState) { oldValue, newValue in
                     if case .completed = newValue {
                         Task { @MainActor in
@@ -62,7 +68,22 @@ struct ImageProcessingView: View {
                     // Check for insufficient credits error
                     if case .failed(let error) = newValue,
                        case .insufficientCredits = error {
+                        creditsBeforeInsufficientError = creditsViewModel.creditsBalance
+                        hasReturnedWithInsufficientCredits = true
                         navigateToInsufficientCredits = true
+                    }
+                }
+                .onChange(of: navigateToInsufficientCredits) { oldValue, newValue in
+                    // When dismissing InsufficientCreditsView (back button)
+                    if !newValue && hasReturnedWithInsufficientCredits {
+                        // Only skip if credits are still the same (no purchase/ad)
+                        if creditsViewModel.creditsBalance == creditsBeforeInsufficientError {
+                            shouldSkipInitialProcess = true
+                        } else {
+                            // Credits increased (purchased or watched ad), will auto-retry via notification
+                            shouldSkipInitialProcess = false
+                        }
+                        hasReturnedWithInsufficientCredits = false
                     }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .creditsBalanceUpdated)) { _ in
