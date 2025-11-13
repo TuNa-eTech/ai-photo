@@ -25,7 +25,7 @@ struct TemplateSectionHeader: View {
                 onSeeAllTap()
             }) {
                 HStack(spacing: 4) {
-                    Text("See All")
+                    Text(L10n.tr("l10n.home.seeAll"))
                         .font(.subheadline.weight(.medium))
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.semibold))

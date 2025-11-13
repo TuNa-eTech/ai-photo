@@ -21,87 +21,106 @@ struct ImageProcessingView: View {
      @State private var shouldSkipInitialProcess = false
      @State private var creditsBeforeInsufficientError = 0
      @Environment(\.dismiss) private var dismiss
+     
+     // ResultView navigation
+     @State private var showResultView = false
+     @State private var resultProject: Project?
     
     var body: some View {
-        Group {
-            if let viewModel = viewModel {
-                ZStack {
-                    GlassBackgroundView()
-                    
-                    VStack(spacing: 24) {
-                        // Credits header
-                        creditsHeader
-                        
-                        // Processing animation
-                        processingAnimation(viewModel: viewModel)
-                        
-                        // Status text
-                        statusText(viewModel: viewModel)
-                        
-                        // Progress bar
-                        progressBar(viewModel: viewModel)
-                        
-                        // Action buttons
-                        actionButtons(viewModel: viewModel)
-                    }
-                    .padding(24)
-                    .glassCard()
-                }
-                .task {
-                     await creditsViewModel.refreshCreditsBalance()
-                     // Skip initial process if returning from InsufficientCreditsView with 0 credits
-                     if !shouldSkipInitialProcess {
-                         await viewModel.processImage(template: template, image: image)
+         Group {
+             if let viewModel = viewModel {
+                 NavigationStack {
+                     ZStack {
+                         GlassBackgroundView()
+                         
+                         VStack(spacing: 24) {
+                             // Credits header
+                             creditsHeader
+                             
+                             // Processing animation
+                             processingAnimation(viewModel: viewModel)
+                             
+                             // Status text
+                             statusText(viewModel: viewModel)
+                             
+                             // Progress bar
+                             progressBar(viewModel: viewModel)
+                             
+                             // Action buttons
+                             actionButtons(viewModel: viewModel)
+                         }
+                         .padding(24)
+                         .glassCard()
+                     }
+                     
+                     // Navigate to ResultView on successful completion
+                     .navigationDestination(isPresented: $showResultView) {
+                         if let project = resultProject {
+                             ResultView(project: project, originalImage: image)
+                                 .toolbar(.hidden, for: .tabBar)
+                         }
+                     }
+                     
+                     // Navigate to InsufficientCreditsView on insufficient credits error
+                     .navigationDestination(isPresented: $navigateToInsufficientCredits) {
+                         InsufficientCreditsView()
+                             .environment(authViewModel)
                      }
                  }
-                .onChange(of: viewModel.processingState) { oldValue, newValue in
-                    if case .completed = newValue {
-                        Task { @MainActor in
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            // Refresh credits after completion
-                            await creditsViewModel.refreshCreditsBalance()
-                            // Present on next runloop tick to avoid race with current layout transaction
-                            try? await Task.sleep(for: .milliseconds(50))
-                            dismiss()
-                        }
-                    }
-                    // Check for insufficient credits error
-                    if case .failed(let error) = newValue,
-                       case .insufficientCredits = error {
-                        creditsBeforeInsufficientError = creditsViewModel.creditsBalance
-                        hasReturnedWithInsufficientCredits = true
-                        navigateToInsufficientCredits = true
-                    }
-                }
-                .onChange(of: navigateToInsufficientCredits) { oldValue, newValue in
-                    // When dismissing InsufficientCreditsView (back button)
-                    if !newValue && hasReturnedWithInsufficientCredits {
-                        // Only skip if credits are still the same (no purchase/ad)
-                        if creditsViewModel.creditsBalance == creditsBeforeInsufficientError {
-                            shouldSkipInitialProcess = true
-                        } else {
-                            // Credits increased (purchased or watched ad), will auto-retry via notification
-                            shouldSkipInitialProcess = false
-                        }
-                        hasReturnedWithInsufficientCredits = false
-                    }
-                }
-                .onReceive(NotificationCenter.default.publisher(for: .creditsBalanceUpdated)) { _ in
-                    // Auto-refresh balance when updated from rewarded ad or purchase,
-                    // and automatically retry if the previous failure was insufficient credits.
-                    Task { @MainActor in
-                        await creditsViewModel.refreshCreditsBalance()
-                        if case .failed(let error) = viewModel.processingState,
-                           case .insufficientCredits = error,
-                           creditsViewModel.creditsBalance > 0 {
-                            await viewModel.processImage(template: template, image: image)
-                        }
-                    }
-                }
-                .navigationDestination(isPresented: $navigateToInsufficientCredits) {
-                    InsufficientCreditsView()
-                        .environment(authViewModel)
-                }
+                 .task {
+                      await creditsViewModel.refreshCreditsBalance()
+                      // Skip initial process if returning from InsufficientCreditsView with 0 credits
+                      if !shouldSkipInitialProcess {
+                          await viewModel.processImage(template: template, image: image)
+                      }
+                  }
+                 .onChange(of: viewModel.processingState) { oldValue, newValue in
+                      // Only navigate to ResultView on successful completion
+                      if case .completed(let project) = newValue {
+                          Task { @MainActor in
+                              UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                              // Refresh credits after completion
+                              await creditsViewModel.refreshCreditsBalance()
+                              // Prepare ResultView and navigate
+                              try? await Task.sleep(for: .milliseconds(50))
+                              resultProject = project
+                              showResultView = true
+                              // Navigation will happen automatically via NavigationLink
+                          }
+                      }
+                      // Check for insufficient credits error
+                      if case .failed(let error) = newValue,
+                         case .insufficientCredits = error {
+                          creditsBeforeInsufficientError = creditsViewModel.creditsBalance
+                          hasReturnedWithInsufficientCredits = true
+                          navigateToInsufficientCredits = true
+                      }
+                  }
+                 .onChange(of: navigateToInsufficientCredits) { oldValue, newValue in
+                     // When dismissing InsufficientCreditsView (back button)
+                     if !newValue && hasReturnedWithInsufficientCredits {
+                         // Only skip if credits are still the same (no purchase/ad)
+                         if creditsViewModel.creditsBalance == creditsBeforeInsufficientError {
+                             shouldSkipInitialProcess = true
+                         } else {
+                             // Credits increased (purchased or watched ad), will auto-retry via notification
+                             shouldSkipInitialProcess = false
+                         }
+                         hasReturnedWithInsufficientCredits = false
+                     }
+                 }
+                 .onReceive(NotificationCenter.default.publisher(for: .creditsBalanceUpdated)) { _ in
+                     // Auto-refresh balance when updated from rewarded ad or purchase,
+                     // and automatically retry if the previous failure was insufficient credits.
+                     Task { @MainActor in
+                         await creditsViewModel.refreshCreditsBalance()
+                         if case .failed(let error) = viewModel.processingState,
+                            case .insufficientCredits = error,
+                            creditsViewModel.creditsBalance > 0 {
+                             await viewModel.processImage(template: template, image: image)
+                         }
+                     }
+                 }
             } else {
                 // Loading state while initializing ViewModel
                 ZStack {
@@ -133,7 +152,7 @@ struct ImageProcessingView: View {
                 )
             
             VStack(alignment: .leading, spacing: 2) {
-                Text("Credits")
+                Text(L10n.tr("l10n.credits.title"))
                     .font(.caption)
                     .foregroundStyle(GlassTokens.textSecondary)
                 
@@ -228,36 +247,36 @@ struct ImageProcessingView: View {
     private func processingTitle(viewModel: ImageProcessingViewModel) -> String {
         switch viewModel.processingState {
         case .idle:
-            return "Ready to Process"
+            return L10n.tr("l10n.processing.title.ready")
         case .preparing:
-            return "Preparing Image..."
+            return L10n.tr("l10n.processing.title.preparing")
         case .uploading:
-            return "Uploading Image..."
+            return L10n.tr("l10n.processing.title.uploading")
         case .processing:
-            return "Processing with AI..."
+            return L10n.tr("l10n.processing.title.processing")
         case .processingInBackground:
-            return "Processing in Background"
+            return L10n.tr("l10n.processing.title.background")
         case .completed:
-            return "Complete! ✓"
+            return L10n.tr("l10n.processing.title.completed")
         case .failed:
-            return "Processing Failed"
+            return L10n.tr("l10n.processing.title.failed")
         }
     }
     
     private func processingMessage(viewModel: ImageProcessingViewModel) -> String {
         switch viewModel.processingState {
         case .idle:
-            return "Starting image processing"
+            return L10n.tr("l10n.processing.msg.idle")
         case .preparing:
-            return "Optimizing your image for AI processing"
+            return L10n.tr("l10n.processing.msg.preparing")
         case .uploading:
-            return "Sending to AI server"
+            return L10n.tr("l10n.processing.msg.uploading")
         case .processing:
-            return "Applying \(template.name) style... This may take 30-60 seconds"
+            return L10n.tr("l10n.processing.msg.processing", template.name)
         case .processingInBackground:
-            return "You can close the app - we'll notify when done"
+            return L10n.tr("l10n.processing.msg.background")
         case .completed:
-            return "Your image is ready!"
+            return L10n.tr("l10n.processing.msg.completed")
         case .failed(let error):
             return error.localizedDescription
         }
@@ -281,14 +300,14 @@ struct ImageProcessingView: View {
             if case .failed(let error) = viewModel.processingState {
                 // Show "Get Credits" button for insufficient credits error
                 if case .insufficientCredits = error {
-                    Button("Lấy Credits") {
+                    Button(L10n.tr("l10n.credits.get")) {
                         navigateToInsufficientCredits = true
                     }
                     .buttonStyle(GlassCTAButtonStyle())
                     .controlSize(.large)
                 } else {
                     // Show "Retry" button for other errors
-                    Button("Retry") {
+                    Button(L10n.tr("l10n.common.retryVerb")) {
                         Task {
                             await viewModel.processImage(template: template, image: image)
                         }
@@ -298,7 +317,7 @@ struct ImageProcessingView: View {
                 }
             }
             
-            Button("Cancel") {
+            Button(L10n.tr("l10n.common.cancel")) {
                 dismiss()
             }
             .buttonStyle(.bordered)

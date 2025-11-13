@@ -21,8 +21,11 @@ struct TemplateSelectionView: View {
     @State private var showImageProcessing: Bool = false
     @State private var loadErrorMessage: String?
     @State private var showLoadErrorAlert: Bool = false
-    @State private var completedProject: Project?
-    @State private var showResult: Bool = false
+    // Action Sheet + Picker/Camera states
+    @State private var showSourceDialog: Bool = false
+    @State private var showLibraryPicker: Bool = false
+    @State private var showCamera: Bool = false
+    @State private var showCameraUnavailableAlert: Bool = false
     
     @Environment(\.dismiss) private var dismiss
     
@@ -45,8 +48,8 @@ struct TemplateSelectionView: View {
             }
             .padding(24)
         }
-        .navigationTitle("Select Image")
-        .navigationBarTitleDisplayMode(.inline)
+         .navigationTitle(L10n.tr("l10n.image.navTitle"))
+         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: selectedPhotoItem) { oldValue, newValue in
             Task {
                 guard let item = newValue else { return }
@@ -76,8 +79,8 @@ struct TemplateSelectionView: View {
                 }
                 
                 // If all attempts fail, show a friendly message
-                loadErrorMessage = "Cannot load this image. If it’s stored in iCloud, please download it first and try again."
-                showLoadErrorAlert = true
+                 loadErrorMessage = L10n.tr("l10n.image.cannotLoadTip")
+                 showLoadErrorAlert = true
             }
         }
         .navigationDestination(isPresented: $showImageProcessing) {
@@ -88,25 +91,26 @@ struct TemplateSelectionView: View {
                 EmptyView()
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .imageProcessingCompleted)) { notif in
-            if let project = notif.userInfo?["project"] as? Project {
-                completedProject = project
-                showImageProcessing = false
-                showResult = true
-            }
-        }
-        .navigationDestination(isPresented: $showResult) {
-            if let project = completedProject, let image = selectedImage {
-                ResultView(project: project, originalImage: image)
-                    .toolbar(.hidden, for: .tabBar)
-            } else {
-                EmptyView()
-            }
-        }
-        .alert("Cannot load image", isPresented: $showLoadErrorAlert) {
-            Button("OK", role: .cancel) { }
+        .alert(L10n.tr("l10n.image.cannotLoadTitle"), isPresented: $showLoadErrorAlert) {
+            Button(L10n.tr("l10n.common.ok"), role: .cancel) { }
         } message: {
-            Text(loadErrorMessage ?? "Unknown error")
+            Text(loadErrorMessage ?? L10n.tr("l10n.image.unknownError"))
+        }
+        .photosPicker(isPresented: $showLibraryPicker, selection: $selectedPhotoItem, matching: .images)
+        #if canImport(UIKit)
+        .sheet(isPresented: $showCamera) {
+            CameraPicker(onImage: { image in
+                selectedImage = image
+                showImageProcessing = true
+            }, onCancel: {
+                // no-op
+            })
+        }
+        #endif
+        .alert(L10n.tr("l10n.camera.unavailable"), isPresented: $showCameraUnavailableAlert) {
+            Button(L10n.tr("l10n.common.ok"), role: .cancel) { }
+        } message: {
+            Text(L10n.tr("l10n.camera.unavailable.message"))
         }
     }
     
@@ -141,7 +145,7 @@ struct TemplateSelectionView: View {
                 .foregroundStyle(GlassTokens.textPrimary)
             
             if template.isNew {
-                Label("New Template", systemImage: "sparkles")
+                Label(L10n.tr("l10n.template.new"), systemImage: "sparkles")
                     .font(.subheadline)
                     .foregroundStyle(GlassTokens.accent1)
             }
@@ -164,11 +168,11 @@ struct TemplateSelectionView: View {
     
     private var instructions: some View {
         VStack(spacing: 12) {
-            Text("Select an image to process")
+            Text(L10n.tr("l10n.image.instructions.title"))
                 .font(.headline)
                 .foregroundStyle(GlassTokens.textPrimary)
             
-            Text("Choose a photo from your library to apply \(template.name) style")
+            Text(L10n.tr("l10n.image.instructions.subtitle", template.name))
                 .font(.subheadline)
                 .foregroundStyle(GlassTokens.textSecondary)
                 .multilineTextAlignment(.center)
@@ -201,11 +205,10 @@ struct TemplateSelectionView: View {
                 // Process button
                 processButton
             } else {
-                // Image picker button
-                PhotosPicker(
-                    selection: $selectedPhotoItem,
-                    matching: .images
-                ) {
+                // Image picker entry via Action Sheet
+                Button {
+                    showSourceDialog = true
+                } label: {
                     VStack(spacing: 16) {
                         // Icon with background circle for better contrast
                         ZStack {
@@ -236,13 +239,13 @@ struct TemplateSelectionView: View {
                                 )
                         }
                         
-                        Text("Pick an Image")
-                            .font(.headline)
-                            .foregroundStyle(GlassTokens.textPrimary)
-                        
-                        Text("Tap to select from your library")
-                            .font(.subheadline)
-                            .foregroundStyle(GlassTokens.textSecondary)
+                        Text(L10n.tr("l10n.image.select"))
+                             .font(.headline)
+                             .foregroundStyle(GlassTokens.textPrimary)
+                         
+                         Text(L10n.tr("l10n.image.source.hint"))
+                             .font(.subheadline)
+                             .foregroundStyle(GlassTokens.textSecondary)
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 200)
@@ -272,6 +275,19 @@ struct TemplateSelectionView: View {
                         y: GlassTokens.shadowY
                     )
                 }
+                .confirmationDialog(L10n.tr("l10n.image.source"), isPresented: $showSourceDialog, titleVisibility: .visible) {
+                     Button(L10n.tr("l10n.image.source.library")) { showLibraryPicker = true }
+                     Button(L10n.tr("l10n.image.source.camera")) {
+                         #if canImport(UIKit)
+                         if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                             showCamera = true
+                         } else {
+                             showCameraUnavailableAlert = true
+                         }
+                         #endif
+                     }
+                     Button(L10n.tr("l10n.common.cancel"), role: .cancel) { }
+                 }
             }
         }
     }
@@ -282,7 +298,7 @@ struct TemplateSelectionView: View {
             showImageProcessing = true
         }, label: {
             HStack {
-                Text("Process Image")
+                Text(L10n.tr("l10n.image.process"))
                     .font(.headline)
                 Image(systemName: "wand.and.stars")
             }

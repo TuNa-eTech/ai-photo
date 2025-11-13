@@ -1,0 +1,246 @@
+/* Vietnamese Localizable.strings */
+
+"l10n.camera.unavailable" = "Camera không khả dụng";
+"l10n.image.select" = "Chọn ảnh";
+"l10n.image.source" = "Chọn nguồn ảnh";
+"l10n.image.source.library" = "Từ thư viện";
+"l10n.image.source.camera" = "Chụp ảnh";
+"l10n.common.cancel" = "Hủy";
+"l10n.common.ok" = "OK";
+"l10n.common.success" = "Thành công";
+"l10n.ads.cannotPresent" = "Không thể hiển thị quảng cáo.";
+"l10n.credits.buyTitle" = "Mua Credits";
+"l10n.credits.buyDesc" = "Mua gói credits với giá ưu đãi";
+"l10n.credits.buyNow" = "Mua ngay";
+"l10n.ads.notReady" = "Quảng cáo chưa sẵn sàng. Vui lòng thử lại sau.";
+"l10n.ads.cannotPresentWithError" = "Không thể hiển thị quảng cáo: %@";
+"l10n.ads.watchError" = "Lỗi khi xem quảng cáo: %@";
+"l10n.auth.googleCannotPresent" = "Không thể trình bày màn hình đăng nhập Google.";
+"l10n.auth.sessionInvalid" = "Phiên đăng nhập không hợp lệ. Vui lòng thử lại.";
+"l10n.auth.invalidProfile" = "Vui lòng nhập tên và email hợp lệ.";
+"l10n.auth.signInFailed" = "Đăng nhập thất bại. Vui lòng thử lại.";
+"l10n.profile.avatar" = "Ảnh đại diện";
+/* Additional Vietnamese keys for Template Selection, Credits flows, and common */
+
+"l10n.common.notice" = "Thông báo";
+"l10n.common.info" = "Thông tin";
+
+"l10n.image.navTitle" = "Chọn ảnh";
+"l10n.image.cannotLoadTitle" = "Không thể tải ảnh";
+"l10n.image.cannotLoadTip" = "Không thể tải ảnh này. Nếu ảnh nằm trong iCloud, hãy tải xuống trước rồi thử lại.";
+"l10n.image.unknownError" = "Lỗi không xác định";
+"l10n.image.instructions.title" = "Chọn một ảnh để xử lý";
+"l10n.image.instructions.subtitle" = "Chọn ảnh từ thư viện để áp dụng phong cách %@";
+"l10n.image.source.hint" = "Chọn từ thư viện hoặc chụp ảnh";
+"l10n.image.process" = "Xử lý ảnh";
+"l10n.camera.unavailable.message" = "Thiết bị này không hỗ trợ camera hoặc đang chạy trên Simulator.";
+"l10n.template.new" = "Mẫu mới";
+
+"l10n.credits.notEnoughTitle" = "Không đủ Credits";
+"l10n.credits.header.title" = "Bạn không đủ credits";
+"l10n.credits.header.subtitle" = "Chọn một trong các cách sau để tiếp tục";
+"l10n.ads.watchTitle" = "Xem quảng cáo";
+"l10n.ads.watchDesc" = "Xem quảng cáo để nhận 1 credit miễn phí";
+"l10n.ads.watchNow" = "Xem ngay";
+"l10n.credits.info" = "Thông tin";
+"l10n.credits.info.1" = "1 credit = 1 lần xử lý ảnh";
+"l10n.credits.info.2" = "Credits không bao giờ hết hạn";
+"l10n.credits.info.3" = "Thanh toán an toàn qua App Store";
+"l10n.ads.loading" = "Đang tải quảng cáo...";
+"l10n.ads.rewardReceived" = "Bạn đã nhận được 1 credit!";
+"l10n.ads.mustComplete" = "Bạn cần xem hết quảng cáo để nhận credit.";
+"l10n.ads.userCancelled" = "Bạn đã đóng quảng cáo trước khi hoàn thành.";
+/* ProfileCompletionView */
+"l10n.profile.section.title" = "Thông tin cá nhân";
+"l10n.profile.name.placeholder" = "Họ và tên";
+"l10n.profile.email.placeholder" = "Email";
+"l10n.profile.error.label" = "Thông báo lỗi";
+"l10n.profile.action.continue" = "Tiếp tục";
+"l10n.profile.submit.accessibility" = "Gửi thông tin hồ sơ";
+"l10n.profile.footer" = "Tên và email là bắt buộc để hoàn tất hồ sơ.";
+"l10n.profile.title" = "Hoàn tất hồ sơ";
+"l10n.common.close" = "Đóng";
+
+/* AuthLandingView */
+"l10n.auth.welcome.to" = "Chào mừng đến";
+"l10n.auth.subtitle" = "Biến ảnh thành phong cách AI";
+"l10n.auth.google" = "Tiếp tục với Google";
+"l10n.auth.terms.prefix" = "Bằng việc tiếp tục, bạn đồng ý với";
+"l10n.auth.terms" = "Điều khoản";
+"l10n.auth.privacy" = "Chính sách";
+"l10n.common.processing" = "Đang xử lý...";
+
+/* AuthViewModel messages */
+"l10n.auth.appleCredentialMissing" = "Không lấy được Apple credential.";
+
+/* Tab Navigation */
+"l10n.tab.home" = "Trang chủ";
+"l10n.tab.projects" = "Dự án";
+"l10n.tab.profile" = "Hồ sơ";
+"l10n.tab.search" = "Tìm kiếm";
+
+/* Home Screen */
+"l10n.home.loading" = "Đang tải…";
+"l10n.home.seeAll" = "Xem tất cả";
+"l10n.home.trendingNow" = "Đang xu hướng";
+"l10n.home.noTrendingTemplates" = "Không có mẫu xu hướng nào";
+"l10n.home.new" = "Mới";
+"l10n.home.noNewTemplates" = "Không có mẫu mới";
+"l10n.home.loadingTemplate" = "Đang tải mẫu xu hướng...";
+
+/* Language selection in Profile */
+"l10n.settings.language" = "Ngôn ngữ";
+"l10n.language.selectTitle" = "Chọn ngôn ngữ";
+"l10n.language.changedTitle" = "Đã thay đổi ngôn ngữ";
+"l10n.language.restartMessage" = "Vui lòng khởi động lại ứng dụng để áp dụng ngôn ngữ mới.";
+"l10n.language.english" = "English";
+"l10n.language.vietnamese" = "Tiếng Việt";
+
+/* Profile screen localization (Vietnamese) */
+"l10n.profile.navTitle" = "Hồ sơ";
+"l10n.common.edit" = "Chỉnh sửa";
+"l10n.profile.stats.credits" = "Credits";
+"l10n.profile.stats.used" = "Đã dùng";
+"l10n.profile.stats.favorites" = "Yêu thích";
+"l10n.profile.section.account" = "TÀI KHOẢN";
+"l10n.profile.section.preferences" = "TÙY CHỌN";
+"l10n.profile.section.about" = "GIỚI THIỆU";
+"l10n.profile.buyCredits.title" = "Mua Credits";
+"l10n.profile.buyCredits.subtitle" = "Mua credits để xử lý ảnh";
+"l10n.profile.edit.title" = "Chỉnh sửa hồ sơ";
+"l10n.profile.edit.subtitle" = "Cập nhật thông tin của bạn";
+"l10n.profile.email.title" = "Email";
+"l10n.profile.privacy.title" = "Quyền riêng tư & Bảo mật";
+"l10n.profile.privacy.subtitle" = "Quản lý dữ liệu của bạn";
+"l10n.profile.appearance.title" = "Giao diện";
+"l10n.profile.appearance.subtitle" = "Chủ đề Beige";
+"l10n.profile.help.title" = "Trợ giúp & Hỗ trợ";
+"l10n.profile.help.subtitle" = "Câu hỏi thường gặp và liên hệ";
+"l10n.profile.terms.title" = "Điều khoản dịch vụ";
+"l10n.profile.aboutPrivacy.title" = "Chính sách quyền riêng tư";
+"l10n.profile.logout" = "Đăng xuất";
+"l10n.profile.logout.confirmTitle" = "Đăng xuất";
+"l10n.profile.logout.confirmMessage" = "Bạn có chắc muốn đăng xuất không?";
+"l10n.profile.deleteAccount" = "Xóa tài khoản";
+"l10n.profile.delete.confirmTitle" = "Xóa tài khoản";
+"l10n.profile.delete.confirmMessage" = "Hành động này không thể hoàn tác. Tất cả dữ liệu của bạn sẽ bị xóa vĩnh viễn.";
+"l10n.profile.memberSince" = "Thành viên từ %@";
+
+/* Bổ sung khóa còn thiếu cho Profile */
+"l10n.profile.notifications.title" = "Thông báo đẩy";
+"l10n.profile.notifications.subtitle" = "Nhận cập nhật về mẫu mới";
+"l10n.profile.emailUpdates.title" = "Cập nhật qua email";
+"l10n.profile.emailUpdates.subtitle" = "Nhận bản tin và mẹo hay";
+
+/* Nhãn phiên bản ứng dụng và placeholder */
+"l10n.app.versionLabel" = "%@ • Phiên bản %@";
+"l10n.app.name" = "AI Photo App";
+"l10n.profile.placeholder.user" = "Người dùng";
+"l10n.profile.placeholder.email" = "user@example.com";
+
+
+/* Accessibility - Login language switch and sign-in buttons (Vietnamese) */
+"l10n.settings.language.hint" = "Nhấn hai lần để thay đổi ngôn ngữ ứng dụng";
+"l10n.auth.signin.apple" = "Tiếp tục với Apple";
+"l10n.auth.signin.apple.hint" = "Đăng nhập an toàn bằng Apple ID";
+"l10n.auth.google.hint" = "Đăng nhập bằng tài khoản Google";
+
+/* === i18n hardening backfill (VI) === */
+"l10n.common.error" = "Lỗi";
+"l10n.common.save" = "Lưu";
+"l10n.common.share" = "Chia sẻ";
+"l10n.common.retry" = "Thử lại";
+"l10n.common.loading" = "Đang tải...";
+"l10n.common.seeAll" = "Xem tất cả";
+"l10n.common.settings" = "Cài đặt";
+"l10n.common.done" = "Xong";
+"l10n.common.fav" = "Yêu thích";
+
+/* CreditsPurchaseView */
+"l10n.credits.balance" = "Số dư Credits";
+"l10n.credits.active" = "Đang hoạt động";
+"l10n.credits.choosePackage" = "Chọn gói";
+"l10n.credits.plan.subtitle" = "Chọn gói phù hợp với bạn";
+"l10n.credits.noProducts" = "Không có sản phẩm";
+"l10n.credits.checkConnection" = "Vui lòng kiểm tra kết nối và thử lại";
+"l10n.credits.bestValue" = "GIÁ TỐT NHẤT";
+"l10n.credits.perCredit" = "%@/credit";
+"l10n.credits.xCredits" = "%d credits";
+
+/* Search / Templates */
+"l10n.search.title" = "Tìm kiếm";
+"l10n.search.searching" = "Đang tìm…";
+"l10n.search.tryDifferent" = "Hãy thử từ khóa hoặc bộ lọc khác";
+"l10n.search.hint" = "Tìm mẫu theo tên, danh mục hoặc thẻ";
+"l10n.search.categoryFilters" = "Bộ lọc danh mục";
+"l10n.search.templateFilters" = "Bộ lọc mẫu";
+"l10n.search.filter" = "Bộ lọc";
+"l10n.search.start" = "Bắt đầu tìm kiếm";
+"l10n.search.noResults" = "Không tìm thấy kết quả";
+
+"l10n.templates.loading" = "Đang tải danh sách mẫu...";
+"l10n.templates.all" = "Tất cả mẫu";
+"l10n.templates.none" = "Không tìm thấy mẫu nào";
+"l10n.templates.loadMore" = "Tải thêm";
+"l10n.templates.preview" = "Xem trước";
+"l10n.templates.addFavorite" = "Thêm yêu thích";
+"l10n.templates.removeFavorite" = "Bỏ yêu thích";
+
+/* Projects */
+"l10n.projects.title" = "Dự án của tôi";
+"l10n.projects.completed" = "Hoàn thành";
+"l10n.projects.details" = "Chi tiết dự án";
+"l10n.projects.delete" = "Xóa";
+"l10n.projects.deleteTitle" = "Xóa dự án";
+"l10n.projects.confirmDelete" = "Bạn có chắc muốn xóa \"%@\"? Hành động này không thể hoàn tác.";
+"l10n.projects.deleteFailed" = "Xóa thất bại";
+"l10n.projects.noneTitle" = "Chưa có dự án";
+"l10n.projects.noneSubtitle" = "Bắt đầu tạo ảnh tuyệt vời với các mẫu AI!";
+"l10n.projects.explore" = "Khám phá Mẫu";
+
+/* Result / Photo permissions */
+"l10n.result.title" = "Kết quả";
+"l10n.result.doubleTapZoom" = "Nhấn đúp để phóng to";
+"l10n.photo.savedTitle" = "Đã lưu";
+"l10n.photo.savedMessage" = "Ảnh đã được lưu vào Ảnh.";
+"l10n.photo.permissionTitle" = "Cần cấp quyền";
+"l10n.photo.permissionMessage" = "Vui lòng bật quyền truy cập thư viện ảnh trong Cài đặt để lưu ảnh.";
+
+/* Image Processing / Credits */
+"l10n.credits.title" = "Credits";
+"l10n.credits.get" = "Mua Credits";
+"l10n.common.retryVerb" = "Thử lại";
+
+/* Greetings / Headers */
+"l10n.greeting.user" = "Chào %@";
+
+/* Sharing */
+"l10n.share.previewTitle" = "Ảnh AI của tôi";
+
+/* Debug (DEBUG builds) */
+"l10n.debug.noUrl" = "Không có URL";
+"l10n.debug.failedWithError" = "Thất bại: %@";
+"l10n.debug.status.ok" = "AI Engine: OK • API ~%@ms";
+
+/* === i18n hardening backfill (VI addendum) === */
+"l10n.search.prompt" = "Tìm mẫu…";
+
+/* Processing statuses (VI) */
+"l10n.processing.title.ready" = "Sẵn sàng xử lý";
+"l10n.processing.title.preparing" = "Đang chuẩn bị ảnh...";
+"l10n.processing.title.uploading" = "Đang tải ảnh lên...";
+"l10n.processing.title.processing" = "Đang xử lý bằng AI...";
+"l10n.processing.title.background" = "Đang xử lý ở chế độ nền";
+"l10n.processing.title.completed" = "Hoàn thành! ✓";
+"l10n.processing.title.failed" = "Xử lý thất bại";
+
+"l10n.processing.msg.idle" = "Bắt đầu xử lý ảnh";
+"l10n.processing.msg.preparing" = "Tối ưu hóa ảnh của bạn để xử lý AI";
+"l10n.processing.msg.uploading" = "Gửi đến máy chủ AI";
+"l10n.processing.msg.processing" = "Đang áp dụng phong cách %@... Có thể mất 30-60 giây";
+"l10n.processing.msg.background" = "Bạn có thể đóng ứng dụng - chúng tôi sẽ thông báo khi hoàn thành";
+"l10n.processing.msg.completed" = "Ảnh của bạn đã sẵn sàng!";
+
+/* InsufficientCreditsView keys (VI) */
+"l10n.photo.accessibility.saveToPhotos" = "Lưu ảnh vào Ảnh";
+"l10n.projects.viewAll" = "Xem tất cả dự án";

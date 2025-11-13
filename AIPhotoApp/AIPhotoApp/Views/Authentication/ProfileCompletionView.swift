@@ -17,8 +17,8 @@ struct ProfileCompletionView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Thông tin cá nhân")) {
-                    TextField("Họ và tên", text: Binding(
+                Section(header: Text(NSLocalizedString("l10n.profile.section.title", comment: "Profile section header"))) {
+                    TextField(NSLocalizedString("l10n.profile.name.placeholder", comment: "Full name"), text: Binding(
                         get: { model.name },
                         set: { model.name = $0 }
                     ))
@@ -27,7 +27,7 @@ struct ProfileCompletionView: View {
                     .autocorrectionDisabled()
                     .focused($focusedField, equals: .name)
 
-                    TextField("Email", text: Binding(
+                    TextField(NSLocalizedString("l10n.profile.email.placeholder", comment: "Email"), text: Binding(
                         get: { model.email },
                         set: { model.email = $0 }
                     ))
@@ -39,7 +39,7 @@ struct ProfileCompletionView: View {
 
                     if let avatarURL = model.avatarURL {
                         HStack {
-                            Text("Ảnh đại diện")
+                            Text(NSLocalizedString("l10n.profile.avatar", comment: "Avatar"))
                             Spacer()
                             Text(avatarURL.absoluteString)
                                 .font(.footnote)
@@ -47,7 +47,7 @@ struct ProfileCompletionView: View {
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                         }
-                        .accessibilityLabel("Ảnh đại diện")
+                        .accessibilityLabel(NSLocalizedString("l10n.profile.avatar", comment: "Avatar"))
                     }
                 }
 
@@ -63,7 +63,7 @@ struct ProfileCompletionView: View {
                                     .fill(Color.red.opacity(0.9))
                             )
                             .listRowInsets(EdgeInsets())
-                            .accessibilityLabel("Thông báo lỗi")
+                            .accessibilityLabel(NSLocalizedString("l10n.profile.error.label", comment: "Error message"))
                             .accessibilityHint(error)
                     }
                 }
@@ -77,20 +77,20 @@ struct ProfileCompletionView: View {
                             ProgressView()
                                 .frame(maxWidth: .infinity)
                         } else {
-                            Text("Tiếp tục")
+                            Text(NSLocalizedString("l10n.profile.action.continue", comment: "Continue"))
                                 .frame(maxWidth: .infinity)
                         }
                     }
                     .disabled(!isFormValid || model.isLoading)
-                    .accessibilityLabel("Gửi thông tin hồ sơ")
+                    .accessibilityLabel(NSLocalizedString("l10n.profile.submit.accessibility", comment: "Submit profile"))
                 } footer: {
-                    Text("Tên và email là bắt buộc để hoàn tất hồ sơ.")
+                    Text(NSLocalizedString("l10n.profile.footer", comment: "Profile footer"))
                 }
             }
-            .navigationTitle("Hoàn tất hồ sơ")
+            .navigationTitle(NSLocalizedString("l10n.profile.title", comment: "Complete Profile"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Đóng") {
+                    Button(NSLocalizedString("l10n.common.close", comment: "Close")) {
                         model.requiresProfileCompletion = false
                     }
                 }

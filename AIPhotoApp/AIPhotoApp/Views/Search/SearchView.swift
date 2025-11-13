@@ -59,7 +59,7 @@ struct SearchView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text("Search")
+                    Text(L10n.tr("l10n.search.title"))
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(Color.primary)
                 }
@@ -67,7 +67,7 @@ struct SearchView: View {
             .searchable(
                 text: $searchText,
                 placement: .navigationBarDrawer(displayMode: .always),
-                prompt: "Search templates…"
+                prompt: Text(L10n.tr("l10n.search.prompt"))
             )
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
@@ -122,17 +122,17 @@ struct SearchView: View {
         }
         .scrollClipDisabled(false)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("Category filters"))
+        .accessibilityLabel(Text(L10n.tr("l10n.search.categoryFilters")))
     }
     
     private var filterSection: some View {
-        Picker("Filter", selection: $selectedFilter) {
+        Picker(L10n.tr("l10n.search.filter"), selection: $selectedFilter) {
             ForEach(FilterType.allCases) { filter in
                 Text(filter.rawValue).tag(filter)
             }
         }
         .pickerStyle(.segmented)
-        .accessibilityLabel(Text("Template filters"))
+        .accessibilityLabel(Text(L10n.tr("l10n.search.templateFilters")))
     }
     
     private var templatesGrid: some View {
@@ -147,7 +147,7 @@ struct SearchView: View {
                     )
                     .overlay(alignment: .topTrailing) {
                         if home.isFavorite(item) {
-                            GlassChip(text: "Fav", systemImage: "heart.fill")
+                            GlassChip(text: L10n.tr("l10n.common.fav"), systemImage: "heart.fill")
                                 .padding(8)
                         }
                     }
@@ -158,8 +158,8 @@ struct SearchView: View {
                         }
                     }
                     .contextMenu {
-                        Button("Preview", systemImage: "eye") {}
-                        Button(home.isFavorite(item) ? "Remove Favorite" : "Add Favorite",
+                        Button(L10n.tr("l10n.templates.preview"), systemImage: "eye") {}
+                        Button(home.isFavorite(item) ? L10n.tr("l10n.templates.removeFavorite") : L10n.tr("l10n.templates.addFavorite"),
                                systemImage: home.isFavorite(item) ? "heart.slash" : "heart") {
                             home.toggleFavorite(item)
                         }
@@ -177,7 +177,7 @@ struct SearchView: View {
             ProgressView()
                 .tint(GlassTokens.textPrimary)
                 .scaleEffect(1.2)
-            Text("Searching…")
+            Text(L10n.tr("l10n.search.searching"))
                 .font(.subheadline)
                 .foregroundStyle(GlassTokens.textSecondary)
         }
@@ -191,18 +191,18 @@ struct SearchView: View {
                 .font(.system(size: 64, weight: .light))
                 .foregroundStyle(GlassTokens.textSecondary.opacity(0.6))
             
-            Text(searchText.isEmpty ? "Start searching" : "No results found")
+            Text(searchText.isEmpty ? L10n.tr("l10n.search.start") : L10n.tr("l10n.search.noResults"))
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(GlassTokens.textPrimary)
             
             if !searchText.isEmpty {
-                Text("Try different keywords or filters")
+                Text(L10n.tr("l10n.search.tryDifferent"))
                     .font(.subheadline)
                     .foregroundStyle(GlassTokens.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
             } else {
-                Text("Search for templates by name, category, or tag")
+                Text(L10n.tr("l10n.search.hint"))
                     .font(.subheadline)
                     .foregroundStyle(GlassTokens.textSecondary)
                     .multilineTextAlignment(.center)

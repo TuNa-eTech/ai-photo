@@ -14,10 +14,10 @@ struct MainTabView: View {
     @State private var selectedTab: TabItem = .home
     
     enum TabItem: String, CaseIterable {
-        case home = "Home"
-        case projects = "Projects"
-        case profile = "Profile"
-        case search = "Search"
+        case home = "l10n.tab.home"
+        case projects = "l10n.tab.projects"
+        case profile = "l10n.tab.profile"
+        case search = "l10n.tab.search"
         
         var icon: String {
             switch self {
@@ -26,6 +26,10 @@ struct MainTabView: View {
             case .profile: return "person.fill"
             case .search: return "magnifyingglass"
             }
+        }
+        
+        var localizedLabel: String {
+            L10n.tr(self.rawValue)
         }
     }
     
@@ -38,28 +42,28 @@ struct MainTabView: View {
                 Tab(value: TabItem.home) {
                     HomeView()
                 } label: {
-                    Label(TabItem.home.rawValue, systemImage: TabItem.home.icon)
+                    Label(TabItem.home.localizedLabel, systemImage: TabItem.home.icon)
                 }
                 
                 // Projects Tab
                 Tab(value: TabItem.projects) {
                     MyProjectsView()
                 } label: {
-                    Label(TabItem.projects.rawValue, systemImage: TabItem.projects.icon)
+                    Label(TabItem.projects.localizedLabel, systemImage: TabItem.projects.icon)
                 }
                 
                 // Profile Tab
                 Tab(value: TabItem.profile) {
                     ProfileView()
                 } label: {
-                    Label(TabItem.profile.rawValue, systemImage: TabItem.profile.icon)
+                    Label(TabItem.profile.localizedLabel, systemImage: TabItem.profile.icon)
                 }
                 
                 // Search Tab (trailing end)
                 Tab(value: TabItem.search, role: .search) {
                     SearchView()
                 } label: {
-                    Label(TabItem.search.rawValue, systemImage: TabItem.search.icon)
+                    Label(TabItem.search.localizedLabel, systemImage: TabItem.search.icon)
                 }
             }
             .tint(GlassTokens.textPrimary)

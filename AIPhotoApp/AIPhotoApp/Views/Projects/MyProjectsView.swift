@@ -6,7 +6,9 @@
 //
 
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#endif
 
 struct MyProjectsView: View {
     @State private var viewModel = ProjectsViewModel()
@@ -28,7 +30,7 @@ struct MyProjectsView: View {
                     projectsGrid
                 }
             }
-            .navigationTitle("My Projects")
+            .navigationTitle(L10n.tr("l10n.projects.title"))
             .navigationBarTitleDisplayMode(.large)
             .onAppear {
                 viewModel.loadProjects()
@@ -79,7 +81,7 @@ struct MyProjectsView: View {
                             projectToDelete = project
                             showDeleteConfirmation = true
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label(L10n.tr("l10n.projects.delete"), systemImage: "trash")
                         }
                     }
                 }
@@ -88,21 +90,21 @@ struct MyProjectsView: View {
             .padding(.vertical, 16)
         }
         .confirmationDialog(
-            "Delete Project",
+            L10n.tr("l10n.projects.deleteTitle"),
             isPresented: $showDeleteConfirmation,
             presenting: projectToDelete
         ) { project in
-            Button("Delete", role: .destructive) {
+            Button(L10n.tr("l10n.projects.delete"), role: .destructive) {
                 deleteProject(project)
             }
-            Button("Cancel", role: .cancel) {
+            Button(L10n.tr("l10n.common.cancel"), role: .cancel) {
                 projectToDelete = nil
             }
         } message: { project in
-            Text("Are you sure you want to delete \"\(project.templateName)\"? This action cannot be undone.")
+            Text(L10n.tr("l10n.projects.confirmDelete", project.templateName))
         }
-        .alert("Delete Failed", isPresented: $showDeleteError) {
-            Button("OK", role: .cancel) {
+        .alert(L10n.tr("l10n.projects.deleteFailed"), isPresented: $showDeleteError) {
+            Button(L10n.tr("l10n.common.ok"), role: .cancel) {
                 deleteError = nil
             }
         } message: {
@@ -131,11 +133,11 @@ struct MyProjectsView: View {
                 .font(.system(size: 64, weight: .light))
                 .foregroundStyle(GlassTokens.textSecondary.opacity(0.6))
             
-            Text("No Projects Yet")
+            Text(L10n.tr("l10n.projects.noneTitle"))
                 .font(.title2.weight(.bold))
                 .foregroundStyle(GlassTokens.textPrimary)
             
-            Text("Start creating amazing images with AI templates!")
+            Text(L10n.tr("l10n.projects.noneSubtitle"))
                 .font(.subheadline)
                 .foregroundStyle(GlassTokens.textSecondary)
                 .multilineTextAlignment(.center)
@@ -144,7 +146,7 @@ struct MyProjectsView: View {
             Button {
                 showAllTemplates = true
             } label: {
-                Label("Explore Templates", systemImage: "sparkles")
+                Label(L10n.tr("l10n.projects.explore"), systemImage: "sparkles")
                     .font(.headline)
             }
             .buttonStyle(GlassCTAButtonStyle())

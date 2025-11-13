@@ -48,7 +48,7 @@ struct ProjectDetailView: View {
                         if project.status == .completed {
                             HStack {
                                 Image(systemName: "checkmark.circle.fill")
-                                Text("Completed")
+                                Text(L10n.tr("l10n.projects.completed"))
                             }
                             .foregroundStyle(.green)
                         }
@@ -60,20 +60,20 @@ struct ProjectDetailView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Project Details")
+            .navigationTitle(L10n.tr("l10n.projects.details"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(role: .destructive) {
                         showDeleteConfirmation = true
                     } label: {
-                        Label("Delete", systemImage: "trash")
+                        Label(L10n.tr("l10n.projects.delete"), systemImage: "trash")
                             .foregroundStyle(.red)
                     }
                 }
                 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Close") {
+                    Button(L10n.tr("l10n.common.close")) {
                         dismiss()
                     }
                 }
@@ -83,17 +83,18 @@ struct ProjectDetailView: View {
                         Button {
                             saveToPhotos(image)
                         } label: {
-                            Label("Save", systemImage: "square.and.arrow.down")
+                            Label(L10n.tr("l10n.common.save"), systemImage: "square.and.arrow.down")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(GlassCTAButtonStyle())
+                        // swiftlint:disable:next i18n_no_hardcoded_string_literals
                         .accessibilityLabel(Text("Save image to Photos"))
                         
                         ShareLink(
                             item: Image(uiImage: image),
-                            preview: SharePreview("My AI Image", image: Image(uiImage: image))
+                            preview: SharePreview(L10n.tr("l10n.share.previewTitle"), image: Image(uiImage: image))
                         ) {
-                            Label("Share", systemImage: "square.and.arrow.up")
+                            Label(L10n.tr("l10n.common.share"), systemImage: "square.and.arrow.up")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(GlassCTAButtonStyle())
@@ -102,32 +103,32 @@ struct ProjectDetailView: View {
                 }
             }
             .confirmationDialog(
-                "Delete Project",
+                L10n.tr("l10n.projects.deleteTitle"),
                 isPresented: $showDeleteConfirmation,
                 titleVisibility: .visible
             ) {
-                Button("Delete", role: .destructive) {
+                Button(L10n.tr("l10n.projects.delete"), role: .destructive) {
                     dismiss()
                     onDelete()
                 }
-                Button("Cancel", role: .cancel) { }
+                Button(L10n.tr("l10n.common.cancel"), role: .cancel) { }
             } message: {
-                Text("Are you sure you want to delete \"\(project.templateName)\"? This action cannot be undone.")
+                Text(L10n.tr("l10n.projects.confirmDelete", project.templateName))
             }
-            .alert("Saved", isPresented: $showSavedAlert) {
-                Button("OK", role: .cancel) { }
+            .alert(L10n.tr("l10n.photo.savedTitle"), isPresented: $showSavedAlert) {
+                Button(L10n.tr("l10n.common.ok"), role: .cancel) { }
             } message: {
-                Text("Image has been saved to your Photos.")
+                Text(L10n.tr("l10n.photo.savedMessage"))
             }
-            .alert("Permission Required", isPresented: $showPermissionDeniedAlert) {
-                Button("Settings") {
+            .alert(L10n.tr("l10n.photo.permissionTitle"), isPresented: $showPermissionDeniedAlert) {
+                Button(L10n.tr("l10n.common.settings")) {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
                         UIApplication.shared.open(url)
                     }
                 }
-                Button("Cancel", role: .cancel) { }
+                Button(L10n.tr("l10n.common.cancel"), role: .cancel) { }
             } message: {
-                Text("Please enable photo library access in Settings to save images.")
+                Text(L10n.tr("l10n.photo.permissionMessage"))
             }
         }
     }

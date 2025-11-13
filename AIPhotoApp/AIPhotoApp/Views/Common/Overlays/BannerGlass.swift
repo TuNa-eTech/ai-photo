@@ -21,7 +21,7 @@ struct BannerGlass: View {
                 .lineLimit(2)
             Spacer()
             if let retry {
-                Button("Thử lại", action: retry)
+                Button(L10n.tr("l10n.common.retry"), action: retry)
                     .buttonStyle(GlassCTAButtonStyle())
             }
         }
@@ -36,6 +36,7 @@ struct BannerGlass: View {
     }
 }
 
+ // swiftlint:disable i18n_no_hardcoded_string_literals
 #Preview {
     VStack(spacing: 16) {
         BannerGlass(text: "Error loading data", tint: .red)
@@ -46,4 +47,5 @@ struct BannerGlass: View {
     .padding()
     .background(Color.black)
 }
+// swiftlint:enable i18n_no_hardcoded_string_literals
 

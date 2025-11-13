@@ -95,7 +95,7 @@ final class CreditsViewModel {
             }
             
             // Other network errors should be shown to user
-            errorMessage = "Failed to load credits: \(error.localizedDescription)"
+            errorMessage = String(format: NSLocalizedString("l10n.credits.loadFailed", comment: "Failed to load credits"), error.localizedDescription)
             isLoading = false
             print("❌ Failed to refresh credits balance: \(error.localizedDescription)")
         } catch {
@@ -107,7 +107,7 @@ final class CreditsViewModel {
                 return
             }
             
-            errorMessage = "Failed to load credits: \(error.localizedDescription)"
+            errorMessage = String(format: NSLocalizedString("l10n.credits.loadFailed", comment: "Failed to load credits"), error.localizedDescription)
             isLoading = false
             print("❌ Failed to refresh credits balance: \(error.localizedDescription)")
         }
@@ -140,7 +140,7 @@ final class CreditsViewModel {
         
         // Verify product is available
         guard iapService.products.contains(where: { $0.id == product.id }) else {
-            errorMessage = "Product not available. Please try again."
+            errorMessage = NSLocalizedString("l10n.purchase.productNotAvailable", comment: "Product not available")
             isPurchasing = false
             return
         }
@@ -160,7 +160,7 @@ final class CreditsViewModel {
             
             // 3. Update credits balance
             creditsBalance = response.new_balance
-            successMessage = "Successfully purchased \(response.credits_added) credits!"
+            successMessage = String(format: NSLocalizedString("l10n.purchase.success", comment: "Purchase success"), response.credits_added)
             isPurchasing = false
             
             // Haptic feedback on success
@@ -184,22 +184,22 @@ final class CreditsViewModel {
                 
             case .pending:
                 // Purchase is pending approval
-                errorMessage = "Your purchase is pending approval. Credits will be added once approved."
+                errorMessage = NSLocalizedString("l10n.purchase.pending", comment: "Purchase pending")
                 
             case .verificationFailed(let underlyingError):
-                errorMessage = "Transaction verification failed. Please contact support if this persists."
+                errorMessage = NSLocalizedString("l10n.purchase.verificationFailed", comment: "Verification failed")
                 print("❌ Verification failed: \(underlyingError.localizedDescription)")
                 
             case .purchaseFailed(let underlyingError):
-                errorMessage = "Purchase failed: \(underlyingError.localizedDescription)"
+                errorMessage = String(format: NSLocalizedString("l10n.purchase.failedWithError", comment: "Purchase failed with error"), underlyingError.localizedDescription)
                 print("❌ Purchase failed: \(underlyingError.localizedDescription)")
                 
             case .unknown:
-                errorMessage = "An unexpected error occurred. Please try again."
+                errorMessage = NSLocalizedString("l10n.purchase.unknown", comment: "Unknown purchase error")
                 print("❌ Unknown purchase error")
             }
         } catch {
-            errorMessage = "Purchase failed: \(error.localizedDescription)"
+            errorMessage = String(format: NSLocalizedString("l10n.purchase.failedGeneric", comment: "Purchase failed"), error.localizedDescription)
             isPurchasing = false
             print("❌ Purchase failed: \(error.localizedDescription)")
         }
@@ -227,7 +227,7 @@ final class CreditsViewModel {
                 
                 // 4. Update credits balance
                 creditsBalance = response.new_balance
-                successMessage = "Bạn đã nhận được 1 credit!"
+                successMessage = NSLocalizedString("l10n.ads.rewardReceived", comment: "Received reward credit")
                 isWatchingAd = false
                 
                 // Haptic feedback on success
@@ -243,23 +243,23 @@ final class CreditsViewModel {
             } else {
                 // User closed ad before completing
                 isWatchingAd = false
-                errorMessage = "Bạn cần xem hết quảng cáo để nhận credit."
+                errorMessage = NSLocalizedString("l10n.ads.mustComplete", comment: "Must complete ad to earn credit")
             }
         } catch let error as RewardedAdsError {
             isWatchingAd = false
             
             switch error {
             case .adNotLoaded:
-                errorMessage = "Quảng cáo chưa sẵn sàng. Vui lòng thử lại sau."
+                errorMessage = NSLocalizedString("l10n.ads.notReady", comment: "Ad not ready")
             case .presentationFailed(let underlyingError):
-                errorMessage = "Không thể hiển thị quảng cáo: \(underlyingError.localizedDescription)"
+                errorMessage = String(format: NSLocalizedString("l10n.ads.cannotPresentWithError", comment: "Cannot present ad with error"), underlyingError.localizedDescription)
             case .userCancelled:
                 // User cancelled - don't show error
                 break
             }
         } catch {
             isWatchingAd = false
-            errorMessage = "Lỗi khi xem quảng cáo: \(error.localizedDescription)"
+            errorMessage = String(format: NSLocalizedString("l10n.ads.watchError", comment: "Error watching ad"), error.localizedDescription)
             print("❌ Failed to watch rewarded ad: \(error.localizedDescription)")
         }
     }

@@ -427,5 +427,8 @@ Chúc mừng\! Bạn đã thiết lập xong luồng deploy hiện đại từ l
 **Mẹo nhỏ:** Khi code xong, đừng quên chuyển về môi trường local:
 
 ```bash
+ssh-add ~/.ssh/id_rsa
+docker context use prod_host
+docker-compose up -d --build
 docker context use default
 ```

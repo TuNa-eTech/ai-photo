@@ -89,7 +89,7 @@ struct ResultView: View {
                     .padding(.horizontal, 20)
                     
                     if showZoomHint, processedImage != nil {
-                        Text("Double‑tap to zoom")
+                        Text(L10n.tr("l10n.result.doubleTapZoom"))
                             .font(.caption2)
                             .foregroundStyle(GlassTokens.textSecondary)
                             .padding(.top, 8)
@@ -103,14 +103,14 @@ struct ResultView: View {
                     
                     Spacer()
                 }
-                .navigationTitle("Result")
+                .navigationTitle(L10n.tr("l10n.result.title"))
                 .toolbarBackground(.visible, for: .navigationBar)
                 .toolbarBackground(.ultraThinMaterial.opacity(0.9), for: .navigationBar)
                 .toolbarColorScheme(.light, for: .navigationBar)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") { dismiss() }
+                        Button(L10n.tr("l10n.common.done")) { dismiss() }
                             .foregroundStyle(GlassTokens.textPrimary)
                     }
                 }
@@ -123,17 +123,17 @@ struct ResultView: View {
                                 Button {
                                     saveToPhotos(after)
                                 } label: {
-                                    Label("Save", systemImage: "square.and.arrow.down")
+                                    Label(L10n.tr("l10n.common.save"), systemImage: "square.and.arrow.down")
                                         .frame(maxWidth: .infinity)
                                 }
                                 .buttonStyle(GlassCTAButtonStyle())
-                                .accessibilityLabel(Text("Save image to Photos"))
+                                .accessibilityLabel(Text(L10n.tr("l10n.photo.accessibility.saveToPhotos")))
                                 
                                 ShareLink(
                                     item: Image(uiImage: after),
                                     preview: SharePreview("My AI Image", image: Image(uiImage: after))
                                 ) {
-                                    Label("Share", systemImage: "square.and.arrow.up")
+                                    Label(L10n.tr("l10n.common.share"), systemImage: "square.and.arrow.up")
                                         .frame(maxWidth: .infinity)
                                 }
                                 .buttonStyle(GlassCTAButtonStyle())
@@ -144,7 +144,7 @@ struct ResultView: View {
                             NavigationLink {
                                 MyProjectsView()
                             } label: {
-                                Label("View All Projects", systemImage: "folder")
+                                Label(L10n.tr("l10n.projects.viewAll"), systemImage: "folder")
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(GlassCTAButtonStyle())
@@ -171,20 +171,20 @@ struct ResultView: View {
         .onAppear {
             processedImage = ProjectsStorageManager.shared.getProjectImage(projectId: project.id.uuidString)
         }
-        .alert("Saved", isPresented: $showSavedAlert) {
-            Button("OK", role: .cancel) { }
+        .alert(L10n.tr("l10n.photo.savedTitle"), isPresented: $showSavedAlert) {
+            Button(L10n.tr("l10n.common.ok"), role: .cancel) { }
         } message: {
-            Text("Image has been saved to your Photos.")
+            Text(L10n.tr("l10n.photo.savedMessage"))
         }
-        .alert("Permission Required", isPresented: $showPermissionDeniedAlert) {
-            Button("Settings") {
+        .alert(L10n.tr("l10n.photo.permissionTitle"), isPresented: $showPermissionDeniedAlert) {
+            Button(L10n.tr("l10n.common.settings")) {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }
             }
-            Button("Cancel", role: .cancel) { }
+            Button(L10n.tr("l10n.common.cancel"), role: .cancel) { }
         } message: {
-            Text("Please enable photo library access in Settings to save images.")
+            Text(L10n.tr("l10n.photo.permissionMessage"))
         }
     }
     
@@ -338,29 +338,39 @@ private struct CompareView: View {
                     .frame(width: 2)
                     .position(x: geo.size.width * position, y: geo.size.height / 2)
 
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                GlassTokens.accent1.opacity(0.4),
-                                GlassTokens.accent2.opacity(0.3)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    GlassTokens.accent1.opacity(0.4),
+                                    GlassTokens.accent2.opacity(0.3)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-                    .background(.ultraThinMaterial.opacity(0.9))
-                    .overlay(Circle().stroke(GlassTokens.borderColor.opacity(0.4), lineWidth: 1.5))
-                    .frame(width: 32, height: 32)
-                    .position(x: geo.size.width * position, y: geo.size.height / 2)
-                    .shadow(
-                        color: GlassTokens.shadowColor,
-                        radius: 8,
-                        x: 0,
-                        y: 4
-                    )
-                    .accessibilityLabel(Text("Compare slider"))
-                    .accessibilityAddTraits(.isButton)
+                        .background(.ultraThinMaterial.opacity(0.9))
+                        .overlay(Circle().stroke(GlassTokens.borderColor.opacity(0.4), lineWidth: 1.5))
+                    
+                    HStack(spacing: 2) {
+                        Image(systemName: "chevron.left")
+                            .font(.caption2.weight(.semibold))
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .foregroundStyle(GlassTokens.textPrimary)
+                }
+                .frame(width: 32, height: 32)
+                .position(x: geo.size.width * position, y: geo.size.height / 2)
+//                .shadow(
+//                    color: GlassTokens.shadowColor,
+//                    radius: 8,
+//                    x: 0,
+//                    y: 4
+//                )
+//                .accessibilityLabel(Text("Compare slider"))
+//                .accessibilityAddTraits(.isButton)
             }
             .contentShape(Rectangle())
             .gesture(

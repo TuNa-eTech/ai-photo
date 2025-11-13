@@ -21,104 +21,104 @@ struct InsufficientCreditsView: View {
      @State private var hasRefreshed = false
      
      var body: some View {
-         ZStack {
-             GlassBackgroundView()
-             
-             ScrollView(showsIndicators: false) {
-                 VStack(spacing: 24) {
-                     headerSection
-                     optionsSection
-                     infoSection
+          ZStack {
+              GlassBackgroundView()
+              
+              ScrollView(showsIndicators: false) {
+                  VStack(spacing: 24) {
+                      headerSection
+                      optionsSection
+                      infoSection
+                  }
+                  .padding(.horizontal, 20)
+                  .padding(.top, 20)
+                  .padding(.bottom, 40)
+              }
+              
+              if showLoadingOverlay {
+                  loadingOverlay
+              }
+          }
+          .navigationTitle(L10n.tr("l10n.credits.notEnoughTitle"))
+          .navigationBarTitleDisplayMode(.inline)
+          .task {
+              // Only refresh once when first entering the view
+              if !hasRefreshed {
+                  await creditsViewModel.refreshCreditsBalance()
+                  hasRefreshed = true
+              }
+          }
+         .sheet(isPresented: $showCreditsPurchase) {
+             CreditsPurchaseView()
+                 .environment(authViewModel)
+         }
+         .alert(L10n.tr("l10n.common.notice"), isPresented: .constant(creditsViewModel.errorMessage != nil)) {
+             Button(L10n.tr("l10n.common.ok")) {
+                 creditsViewModel.errorMessage = nil
+             }
+         } message: {
+             if let error = creditsViewModel.errorMessage {
+                 Text(error)
+             }
+         }
+         .alert(L10n.tr("l10n.common.success"), isPresented: .constant(creditsViewModel.successMessage != nil)) {
+             Button(L10n.tr("l10n.common.ok")) {
+                 creditsViewModel.successMessage = nil
+                 // Auto-pop on success
+                 if creditsViewModel.successMessage != nil {
+                     dismiss()
                  }
-                 .padding(.horizontal, 20)
-                 .padding(.top, 20)
-                 .padding(.bottom, 40)
              }
-             
-             if showLoadingOverlay {
-                 loadingOverlay
+         } message: {
+             if let message = creditsViewModel.successMessage {
+                 Text(message)
              }
          }
-         .navigationTitle("Không đủ Credits")
-         .navigationBarTitleDisplayMode(.inline)
-         .task {
-             // Only refresh once when first entering the view
-             if !hasRefreshed {
+         .onChange(of: creditsViewModel.successMessage) { oldValue, newValue in
+             if newValue != nil {
+                 Task {
+                     try? await Task.sleep(for: .milliseconds(500))
+                     dismiss()
+                 }
+             }
+         }
+         .onReceive(NotificationCenter.default.publisher(for: .creditsBalanceUpdated)) { _ in
+             // Auto-dismiss InsufficientCreditsView when credits are added from purchase or rewarded ad
+             Task { @MainActor in
                  await creditsViewModel.refreshCreditsBalance()
-                 hasRefreshed = true
+                 if creditsViewModel.creditsBalance > 0 {
+                     try? await Task.sleep(for: .milliseconds(300))
+                     dismiss()
+                 }
              }
          }
-        .sheet(isPresented: $showCreditsPurchase) {
-            CreditsPurchaseView()
-                .environment(authViewModel)
-        }
-        .alert("Thông báo", isPresented: .constant(creditsViewModel.errorMessage != nil)) {
-            Button("OK") {
-                creditsViewModel.errorMessage = nil
-            }
-        } message: {
-            if let error = creditsViewModel.errorMessage {
-                Text(error)
-            }
-        }
-        .alert("Thành công", isPresented: .constant(creditsViewModel.successMessage != nil)) {
-            Button("OK") {
-                creditsViewModel.successMessage = nil
-                // Auto-pop on success
-                if creditsViewModel.successMessage != nil {
-                    dismiss()
-                }
-            }
-        } message: {
-            if let message = creditsViewModel.successMessage {
-                Text(message)
-            }
-        }
-        .onChange(of: creditsViewModel.successMessage) { oldValue, newValue in
-            if newValue != nil {
-                Task {
-                    try? await Task.sleep(for: .milliseconds(500))
-                    dismiss()
-                }
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .creditsBalanceUpdated)) { _ in
-            // Auto-dismiss InsufficientCreditsView when credits are added from purchase or rewarded ad
-            Task { @MainActor in
-                await creditsViewModel.refreshCreditsBalance()
-                if creditsViewModel.creditsBalance > 0 {
-                    try? await Task.sleep(for: .milliseconds(300))
-                    dismiss()
-                }
-            }
-        }
-    }
+     }
     
     // MARK: - Header
-    private var headerSection: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [
-                            GlassTokens.accent1,
-                            GlassTokens.accent2
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-            Text("Bạn không đủ credits")
-                .font(.title2.bold())
-                .foregroundStyle(GlassTokens.textPrimary)
-            Text("Chọn một trong các cách sau để tiếp tục")
-                .font(.subheadline)
-                .foregroundStyle(GlassTokens.textSecondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.vertical, 8)
-    }
+     private var headerSection: some View {
+         VStack(spacing: 12) {
+             Image(systemName: "exclamationmark.triangle.fill")
+                 .font(.system(size: 48))
+                 .foregroundStyle(
+                     LinearGradient(
+                         colors: [
+                             GlassTokens.accent1,
+                             GlassTokens.accent2
+                         ],
+                         startPoint: .topLeading,
+                         endPoint: .bottomTrailing
+                     )
+                 )
+             Text(L10n.tr("l10n.credits.header.title"))
+                 .font(.title2.bold())
+                 .foregroundStyle(GlassTokens.textPrimary)
+             Text(L10n.tr("l10n.credits.header.subtitle"))
+                 .font(.subheadline)
+                 .foregroundStyle(GlassTokens.textSecondary)
+                 .multilineTextAlignment(.center)
+         }
+         .padding(.vertical, 8)
+     }
     
     // MARK: - Options
     private var optionsSection: some View {
@@ -129,99 +129,99 @@ struct InsufficientCreditsView: View {
     }
     
     private var watchAdCard: some View {
-        OptionCard(
-            icon: "play.circle.fill",
-            title: "Xem quảng cáo",
-            description: "Xem quảng cáo để nhận 1 credit miễn phí",
-            buttonText: "Xem ngay",
-            gradientColors: [
-                GlassTokens.accent1,
-                GlassTokens.accent2
-            ],
-            isLoading: creditsViewModel.isWatchingAd,
-            action: {
-                guard let viewController = UIApplication.topMostViewController() else {
-                    creditsViewModel.errorMessage = "Không thể hiển thị quảng cáo."
-                    return
-                }
-                showLoadingOverlay = true
-                Task {
-                    await creditsViewModel.watchRewardedAd(presenting: viewController)
-                    showLoadingOverlay = false
-                    await creditsViewModel.refreshCreditsBalance()
-                }
-            }
-        )
-    }
+         OptionCard(
+             icon: "play.circle.fill",
+             title: L10n.tr("l10n.ads.watchTitle"),
+             description: L10n.tr("l10n.ads.watchDesc"),
+             buttonText: L10n.tr("l10n.ads.watchNow"),
+             gradientColors: [
+                 GlassTokens.accent1,
+                 GlassTokens.accent2
+             ],
+             isLoading: creditsViewModel.isWatchingAd,
+             action: {
+                 guard let viewController = UIApplication.topMostViewController() else {
+                     creditsViewModel.errorMessage = L10n.tr("l10n.ads.cannotPresent")
+                     return
+                 }
+                 showLoadingOverlay = true
+                 Task {
+                     await creditsViewModel.watchRewardedAd(presenting: viewController)
+                     showLoadingOverlay = false
+                     await creditsViewModel.refreshCreditsBalance()
+                 }
+             }
+         )
+     }
     
     private var purchaseCreditsCard: some View {
-        OptionCard(
-            icon: "creditcard.fill",
-            title: "Mua Credits",
-            description: "Mua gói credits với giá ưu đãi",
-            buttonText: "Mua ngay",
-            gradientColors: [
-                GlassTokens.primary1,
-                GlassTokens.primary2
-            ],
-            isLoading: false,
-            action: {
-                showCreditsPurchase = true
-            }
-        )
-    }
+         OptionCard(
+             icon: "creditcard.fill",
+             title: L10n.tr("l10n.credits.buyTitle"),
+             description: L10n.tr("l10n.credits.buyDesc"),
+             buttonText: L10n.tr("l10n.credits.buyNow"),
+             gradientColors: [
+                 GlassTokens.primary1,
+                 GlassTokens.primary2
+             ],
+             isLoading: false,
+             action: {
+                 showCreditsPurchase = true
+             }
+         )
+     }
     
     // MARK: - Info
-    private var infoSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "info.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [
-                                GlassTokens.accent1.opacity(0.9),
-                                GlassTokens.accent2.opacity(0.8)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                Text("Thông tin")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(GlassTokens.textPrimary)
-            }
-            VStack(alignment: .leading, spacing: 8) {
-                InsufficientCreditsInfoRow(icon: "checkmark.circle.fill", text: "1 credit = 1 lần xử lý ảnh")
-                InsufficientCreditsInfoRow(icon: "checkmark.circle.fill", text: "Credits không bao giờ hết hạn")
-                InsufficientCreditsInfoRow(icon: "checkmark.circle.fill", text: "Thanh toán an toàn qua App Store")
-            }
-        }
-        .padding(20)
-        .glassCard()
-    }
+     private var infoSection: some View {
+         VStack(alignment: .leading, spacing: 12) {
+             HStack(spacing: 8) {
+                 Image(systemName: "info.circle.fill")
+                     .font(.caption)
+                     .foregroundStyle(
+                         LinearGradient(
+                             colors: [
+                                 GlassTokens.accent1.opacity(0.9),
+                                 GlassTokens.accent2.opacity(0.8)
+                             ],
+                             startPoint: .topLeading,
+                             endPoint: .bottomTrailing
+                         )
+                     )
+                 Text(L10n.tr("l10n.credits.info"))
+                     .font(.subheadline.weight(.semibold))
+                     .foregroundStyle(GlassTokens.textPrimary)
+             }
+             VStack(alignment: .leading, spacing: 8) {
+                 InsufficientCreditsInfoRow(icon: "checkmark.circle.fill", text: L10n.tr("l10n.credits.info.1"))
+                 InsufficientCreditsInfoRow(icon: "checkmark.circle.fill", text: L10n.tr("l10n.credits.info.2"))
+                 InsufficientCreditsInfoRow(icon: "checkmark.circle.fill", text: L10n.tr("l10n.credits.info.3"))
+             }
+         }
+         .padding(20)
+         .glassCard()
+     }
     
     // MARK: - Loading Overlay
-    private var loadingOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.3)
-                .ignoresSafeArea()
-            VStack(spacing: 16) {
-                ProgressView()
-                    .progressViewStyle(.circular)
-                    .scaleEffect(1.5)
-                    .tint(.white)
-                Text("Đang tải quảng cáo...")
-                    .font(.subheadline)
-                    .foregroundStyle(.white)
-            }
-            .padding(32)
-            .background(
-                .ultraThinMaterial,
-                in: RoundedRectangle(cornerRadius: GlassTokens.radiusCard)
-            )
-        }
-    }
+     private var loadingOverlay: some View {
+         ZStack {
+             Color.black.opacity(0.3)
+                 .ignoresSafeArea()
+             VStack(spacing: 16) {
+                 ProgressView()
+                     .progressViewStyle(.circular)
+                     .scaleEffect(1.5)
+                     .tint(.white)
+                 Text(L10n.tr("l10n.ads.loading"))
+                     .font(.subheadline)
+                     .foregroundStyle(.white)
+             }
+             .padding(32)
+             .background(
+                 .ultraThinMaterial,
+                 in: RoundedRectangle(cornerRadius: GlassTokens.radiusCard)
+             )
+         }
+     }
 }
 
 // MARK: - Option Card

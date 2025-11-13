@@ -17,10 +17,10 @@ struct TrendingNowSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            TemplateSectionHeader(title: "Trending Now", onSeeAllTap: onSeeAllTap)
+            TemplateSectionHeader(title: L10n.tr("l10n.home.trendingNow"), onSeeAllTap: onSeeAllTap)
             
             if templates.isEmpty && !isLoading {
-                TemplateSectionEmptyState(message: "No more trending templates")
+                TemplateSectionEmptyState(message: L10n.tr("l10n.home.noTrendingTemplates"))
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 16) {

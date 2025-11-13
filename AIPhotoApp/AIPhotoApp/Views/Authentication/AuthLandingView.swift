@@ -9,6 +9,7 @@ import AuthenticationServices
 
 struct AuthLandingView: View {
     @Environment(AuthViewModel.self) private var model
+    @Environment(LocalizationModel.self) private var i18n
     
     @State private var showCard = false
     @State private var logoScale: CGFloat = 0.8
@@ -36,9 +37,36 @@ struct AuthLandingView: View {
                         // Main glass card
                         AuthGlassCard {
                             VStack(spacing: 24) {
+                                // Language switcher
+                                HStack {
+                                    Spacer()
+                                    Menu {
+                                        ForEach(AppLanguage.allCases, id: \.self) { lang in
+                                            Button(action: { i18n.setLanguage(lang) }) {
+                                                Text(lang.localizedDisplayName)
+                                            }
+                                        }
+                                    } label: {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "globe")
+                                            Text(i18n.language.localizedDisplayName)
+                                                .font(.footnote.weight(.semibold))
+                                        }
+                                        .foregroundStyle(GlassTokens.textPrimary)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(.ultraThinMaterial.opacity(0.9), in: Capsule())
+                                        .overlay(Capsule().stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8))
+                                        .shadow(color: GlassTokens.shadowColor, radius: GlassTokens.shadowRadius, x: 0, y: GlassTokens.shadowY)
+                                        .accessibilityLabel(Text(L10n.tr("l10n.settings.language")))
+                                        .accessibilityValue(Text(i18n.language.localizedDisplayName))
+                                        .accessibilityHint(Text(L10n.tr("l10n.settings.language.hint")))
+                                        .accessibilityIdentifier("language_menu")
+                                    }
+                                }
                                 // Hero text
                                 VStack(spacing: 8) {
-                                    Text("Chào mừng đến")
+                                    Text(L10n.tr("l10n.auth.welcome.to"))
                                         .font(.title2)
                                         .foregroundStyle(GlassTokens.textSecondary)
                                     
@@ -46,7 +74,7 @@ struct AuthLandingView: View {
                                         .font(.largeTitle.bold())
                                         .foregroundStyle(GlassTokens.textPrimary)
                                     
-                                    Text("Biến ảnh thành phong cách AI")
+                                    Text(L10n.tr("l10n.auth.subtitle"))
                                         .font(.body)
                                         .foregroundStyle(GlassTokens.textSecondary)
                                         .multilineTextAlignment(.center)
@@ -78,10 +106,13 @@ struct AuthLandingView: View {
                                         radius: 15,
                                         y: 8
                                     )
+                                    .accessibilityLabel(Text(L10n.tr("l10n.auth.signin.apple")))
+                                    .accessibilityHint(Text(L10n.tr("l10n.auth.signin.apple.hint")))
+                                    .accessibilityIdentifier("signin_apple")
                                     
                                     // Google Sign In
                                     GlassSignInButton(
-                                        title: "Tiếp tục với Google",
+                                        title: L10n.tr("l10n.auth.google"),
                                         icon: "GoogleIcon",
                                         style: .google
                                     ) {
@@ -91,22 +122,22 @@ struct AuthLandingView: View {
                                 
                                 // Terms & Privacy
                                 VStack(spacing: 4) {
-                                    Text("Bằng việc tiếp tục, bạn đồng ý với")
+                                    Text(L10n.tr("l10n.auth.terms.prefix"))
                                         .font(.caption)
                                         .foregroundStyle(GlassTokens.textSecondary)
                                     
                                     HStack(spacing: 16) {
-                                        Link("Điều khoản", destination: URL(string: "https://example.com/terms")!)
-                                            .font(.caption.weight(.medium))
-                                            .foregroundStyle(GlassTokens.textPrimary)
-                                        
-                                        Text("•")
-                                            .foregroundStyle(GlassTokens.textSecondary)
-                                        
-                                        Link("Chính sách", destination: URL(string: "https://example.com/privacy")!)
-                                            .font(.caption.weight(.medium))
-                                            .foregroundStyle(GlassTokens.textPrimary)
-                                    }
+                                         Link(L10n.tr("l10n.auth.terms"), destination: URL(string: "https://bokphoto.e-tech.network/terms")!)
+                                             .font(.caption.weight(.medium))
+                                             .foregroundStyle(GlassTokens.textPrimary)
+                                         
+                                         Text("•")
+                                             .foregroundStyle(GlassTokens.textSecondary)
+                                         
+                                         Link(L10n.tr("l10n.auth.privacy"), destination: URL(string: "https://bokphoto.e-tech.network/privacy")!)
+                                             .font(.caption.weight(.medium))
+                                             .foregroundStyle(GlassTokens.textPrimary)
+                                     }
                                 }
                                 .padding(.top, 8)
                             }
@@ -193,6 +224,7 @@ struct BrandLogoView: View {
                     )
                 )
         }
+        .accessibilityHidden(true) // Decorative
     }
 }
 
@@ -322,6 +354,9 @@ struct GlassSignInButton: View {
             y: isPressed ? 6 : 8
         )
         .animation(.easeInOut(duration: 0.15), value: isPressed)
+        .accessibilityLabel(Text(title))
+        .accessibilityHint(Text(style == .google ? L10n.tr("l10n.auth.google.hint") : L10n.tr("l10n.common.ok")))
+        .accessibilityIdentifier(style == .google ? "signin_google" : "signin_custom")
     }
 }
 
@@ -337,7 +372,7 @@ struct LoadingGlassOverlay: View {
                 ProgressView()
                     .tint(GlassTokens.textPrimary)
                 
-                Text("Đang xử lý...")
+                Text(L10n.tr("l10n.common.processing"))
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(GlassTokens.textPrimary)
             }

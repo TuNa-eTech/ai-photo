@@ -1,13 +1,8 @@
-//
-//  NotificationManager.swift
-//  AIPhotoApp
-//
-//  Local notifications for background processing completion
-//
-
 import Foundation
 import UserNotifications
+#if canImport(UIKit)
 import UIKit
+#endif
 
 final class NotificationManager {
     static let shared = NotificationManager()
@@ -33,7 +28,9 @@ final class NotificationManager {
         content.title = "Image Ready! 🎨"
         content.body = "Your \(templateName) image has been processed"
         content.sound = .default
+        #if canImport(UIKit)
         content.badge = NSNumber(value: UIApplication.shared.applicationIconBadgeNumber + 1)
+        #endif
         
         // Schedule immediately
         let request = UNNotificationRequest(
@@ -53,5 +50,10 @@ final class NotificationManager {
     func clearBadge() {
         UNUserNotificationCenter.current().setBadgeCount(0)
     }
+}
+
+/// Credits balance update notification used across the app
+extension Notification.Name {
+    static let creditsBalanceUpdated = Notification.Name("creditsBalanceUpdated")
 }
 

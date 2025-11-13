@@ -13,7 +13,7 @@ struct ProfileHeroCard: View {
     let name: String
     let email: String
     let avatarURL: String?
-    let memberSince: String?
+    let credits: String?
     
     var body: some View {
         VStack(spacing: 16) {
@@ -77,19 +77,50 @@ struct ProfileHeroCard: View {
                     .lineLimit(1)
             }
             
-            // Member badge
-            if let memberSince = memberSince {
-                HStack(spacing: 6) {
-                    Image(systemName: "sparkles")
+            // Credits display
+            if let credits = credits {
+                VStack(spacing: 6) {
+                    Text(L10n.tr("l10n.profile.stats.credits"))
                         .font(.caption)
-                    Text("Member since \(memberSince)")
-                        .font(.caption)
+                        .foregroundStyle(GlassTokens.textSecondary)
+                    
+                    HStack(spacing: 8) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 20, weight: .semibold))
+                        
+                        Text(credits)
+                            .font(.system(size: 32, weight: .bold))
+                            .contentTransition(.numericText())
+                    }
+                    .foregroundStyle(GlassTokens.textPrimary)
                 }
-                .foregroundStyle(GlassTokens.textSecondary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(.ultraThinMaterial.opacity(0.6), in: Capsule())
-                .overlay(Capsule().stroke(GlassTokens.borderColor.opacity(0.2), lineWidth: 0.8))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .padding(.horizontal, 20)
+                .background(
+                    RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                        .fill(.ultraThinMaterial.opacity(0.5))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    GlassTokens.accent1.opacity(0.3),
+                                    GlassTokens.accent2.opacity(0.2)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
+                .shadow(
+                    color: GlassTokens.accent1.opacity(0.2),
+                    radius: 8,
+                    x: 0,
+                    y: 4
+                )
             }
         }
         .frame(maxWidth: .infinity)
@@ -308,7 +339,7 @@ struct DangerButton: View {
             name: "Anh Tu",
             email: "anhtu@example.com",
             avatarURL: nil,
-            memberSince: "Oct 2025"
+            credits: "500"
         )
         .padding()
     }

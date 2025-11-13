@@ -56,9 +56,3 @@ enum AppConfig {
     
     static let baseURL: String = selectedBaseURLString
 }
-
-// MARK: - Notification Names
-
-extension Notification.Name {
-    static let creditsBalanceUpdated = Notification.Name("creditsBalanceUpdated")
-}

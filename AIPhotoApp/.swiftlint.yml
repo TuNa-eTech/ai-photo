@@ -1,0 +1,60 @@
+# SwiftLint configuration for i18n hardening
+# Enforces: no hardcoded string literals in SwiftUI initializers and common title/alert APIs.
+# Allow: L10n.tr("key"), LocalizedStringKey("key"), NSLocalizedString("key", ...)
+# Disable in Previews/DEBUG snippets via:
+#   // swiftlint:disable:next i18n_no_hardcoded_string_literals
+
+disabled_rules:
+  - trailing_whitespace
+  - line_length
+
+# Limit linting to the iOS app sources
+included:
+  - AIPhotoApp/AIPhotoApp
+
+excluded:
+  - AIPhotoApp/AIPhotoAppTests
+  - AIPhotoApp/AIPhotoAppUITests
+  - AIPhotoApp/AIPhotoApp/**/Generated
+  - AIPhotoApp/AIPhotoApp/**/Mocks
+  # Common preview/test/demo folders (best-effort)
+  - AIPhotoApp/AIPhotoApp/**/Previews
+  - AIPhotoApp/AIPhotoApp/**/Preview
+  - AIPhotoApp/AIPhotoApp/**/*+Preview*.swift
+  - AIPhotoApp/AIPhotoApp/**/Preview*.swift
+
+custom_rules:
+  i18n_no_hardcoded_string_literals:
+    name: "No hardcoded string literals in UI"
+    # This regex flags string literals passed directly to SwiftUI/Text APIs:
+    # - Text("..."), Button("..."), Label("..."), NavigationLink("..."),
+    # - Section("..."), Toggle("..."), Picker("..."), TextField("..."), SecureField("..."),
+    # - .alert("..."), .navigationTitle("..."), .title("..."), .message("...")
+    #
+    # It attempts to avoid matching already-localized forms like:
+    #   Text(L10n.tr("...")) or Text(LocalizedStringKey("...")) or Alert(L10n.tr("..."))
+    # Note: SwiftLint custom rules are text-based; inline disable comments might be needed in rare edge cases.
+    regex: '(?<!L10n\\.tr\\(|LocalizedStringKey\\(|NSLocalizedString\\()\\b(Text|Button|Label|NavigationLink|Section|Toggle|Picker|TextField|SecureField|Alert|navigationTitle|title|message)\\s*\\(\\s*"([^"\\\\]|\\\\.)+"'
+    message: "Use L10n.tr(...) or LocalizedStringKey(...) instead of hardcoded string literals."
+    severity: error
+    included:
+      - AIPhotoApp/AIPhotoApp
+    excluded:
+      # Allow literal strings in previews (visual-only), tests, and known debug helpers
+      - AIPhotoApp/AIPhotoApp/**/*Preview*.swift
+      - AIPhotoApp/AIPhotoApp/**/*+Preview*.swift
+      - AIPhotoApp/AIPhotoApp/**/Previews/**
+      - AIPhotoApp/AIPhotoApp/**/Preview/**
+      - AIPhotoApp/AIPhotoAppTests/**
+      - AIPhotoApp/AIPhotoAppUITests/**
+
+# Notes:
+# - Add a Run Script in the Xcode target (Build Phases) before "Compile Sources":
+#     if which swiftlint > /dev/null; then
+#       swiftlint --quiet
+#     else
+#       echo "warning: SwiftLint not installed; download from https://github.com/realm/SwiftLint"
+#     fi
+#
+# - For indispensable preview-only literals, add:
+#     // swiftlint:disable:next i18n_no_hardcoded_string_literals

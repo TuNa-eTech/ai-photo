@@ -15,7 +15,7 @@ struct SplashView: View {
             VStack(spacing: 12) {
                 ProgressView()
                     .progressViewStyle(CircularProgressViewStyle())
-                Text("Đang tải...")
+                Text(L10n.tr("l10n.common.loading"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

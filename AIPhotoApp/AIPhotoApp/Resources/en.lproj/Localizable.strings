@@ -1,0 +1,265 @@
+/* English Localizable.strings */
+
+"l10n.camera.unavailable" = "Camera not available";
+"l10n.image.select" = "Select Photo";
+"l10n.image.source" = "Choose Photo Source";
+"l10n.image.source.library" = "From Library";
+"l10n.image.source.camera" = "Take Photo";
+"l10n.common.cancel" = "Cancel";
+"l10n.common.ok" = "OK";
+"l10n.common.success" = "Success";
+"l10n.ads.cannotPresent" = "Unable to present ad.";
+"l10n.credits.buyTitle" = "Buy Credits";
+"l10n.credits.buyDesc" = "Buy credit packages at a great price";
+"l10n.credits.buyNow" = "Buy Now";
+"l10n.ads.notReady" = "Ad is not ready. Please try again later.";
+"l10n.ads.cannotPresentWithError" = "Unable to present ad: %@";
+"l10n.ads.watchError" = "Error while watching ad: %@";
+"l10n.auth.googleCannotPresent" = "Cannot present Google sign-in screen.";
+"l10n.auth.sessionInvalid" = "Invalid session. Please try again.";
+"l10n.auth.invalidProfile" = "Please enter a valid name and email.";
+"l10n.auth.signInFailed" = "Sign in failed. Please try again.";
+"l10n.profile.avatar" = "Avatar";
+/* Additional keys for Template Selection, Credits flows, and common */
+
+"l10n.common.notice" = "Notice";
+"l10n.common.info" = "Information";
+
+"l10n.image.navTitle" = "Select Photo";
+"l10n.image.cannotLoadTitle" = "Cannot load image";
+"l10n.image.cannotLoadTip" = "Cannot load this image. If it’s stored in iCloud, please download it first and try again.";
+"l10n.image.unknownError" = "Unknown error";
+"l10n.image.instructions.title" = "Select an image to process";
+"l10n.image.instructions.subtitle" = "Choose a photo from your library to apply %@ style";
+"l10n.image.source.hint" = "Choose from library or take a photo";
+"l10n.image.process" = "Process Image";
+"l10n.camera.unavailable.message" = "This device does not support the camera or is running on the Simulator.";
+"l10n.template.new" = "New Template";
+
+"l10n.credits.notEnoughTitle" = "Not enough Credits";
+"l10n.credits.header.title" = "You don't have enough credits";
+"l10n.credits.header.subtitle" = "Choose one of the following to continue";
+"l10n.ads.watchTitle" = "Watch Ad";
+"l10n.ads.watchDesc" = "Watch an ad to get 1 free credit";
+"l10n.ads.watchNow" = "Watch now";
+"l10n.credits.info" = "Information";
+"l10n.credits.info.1" = "1 credit = 1 image processing";
+"l10n.credits.info.2" = "Credits never expire";
+"l10n.credits.info.3" = "Secure payment via App Store";
+"l10n.ads.loading" = "Loading ad...";
+"l10n.ads.rewardReceived" = "You received 1 credit!";
+"l10n.ads.mustComplete" = "You must watch the entire ad to receive a credit.";
+"l10n.ads.userCancelled" = "You closed the ad before completion.";
+/* Purchase flow and auth additions */
+
+"l10n.purchase.productNotAvailable" = "Product not available. Please try again.";
+"l10n.purchase.pending" = "Your purchase is pending approval. Credits will be added once approved.";
+"l10n.purchase.verificationFailed" = "Transaction verification failed. Please contact support if this persists.";
+"l10n.purchase.failedWithError" = "Purchase failed: %@";
+"l10n.purchase.unknown" = "An unexpected error occurred. Please try again.";
+"l10n.purchase.failedGeneric" = "Purchase failed: %@";
+"l10n.purchase.success" = "Successfully purchased %d credits!";
+
+"l10n.credits.loadFailed" = "Failed to load credits: %@";
+
+"l10n.auth.appleCredentialMissing" = "Unable to obtain Apple credential.";
+/* ProfileCompletionView */
+"l10n.profile.section.title" = "Personal Information";
+"l10n.profile.name.placeholder" = "Full Name";
+"l10n.profile.email.placeholder" = "Email";
+"l10n.profile.error.label" = "Error message";
+"l10n.profile.action.continue" = "Continue";
+"l10n.profile.submit.accessibility" = "Submit profile information";
+"l10n.profile.footer" = "Name and email are required to complete your profile.";
+"l10n.profile.title" = "Complete Profile";
+"l10n.common.close" = "Close";
+
+/* AuthLandingView */
+"l10n.auth.welcome.to" = "Welcome to";
+"l10n.auth.subtitle" = "Turn photos into AI styles";
+"l10n.auth.google" = "Continue with Google";
+"l10n.auth.terms.prefix" = "By continuing, you agree to";
+"l10n.auth.terms" = "Terms";
+"l10n.auth.privacy" = "Privacy Policy";
+"l10n.common.processing" = "Processing...";
+
+/* AuthViewModel Apple credential */
+"l10n.auth.appleCredentialMissing" = "Unable to obtain Apple credential.";
+
+/* Purchase flow (VI parity) */
+"l10n.purchase.productNotAvailable" = "Product not available. Please try again.";
+"l10n.purchase.pending" = "Your purchase is pending approval. Credits will be added once approved.";
+"l10n.purchase.verificationFailed" = "Transaction verification failed. Please contact support if this persists.";
+"l10n.purchase.failedWithError" = "Purchase failed: %@";
+"l10n.purchase.unknown" = "An unexpected error occurred. Please try again.";
+"l10n.purchase.failedGeneric" = "Purchase failed: %@";
+"l10n.purchase.success" = "Successfully purchased %d credits!";
+"l10n.credits.loadFailed" = "Failed to load credits: %@";
+/* Tab Navigation */
+"l10n.tab.home" = "Home";
+"l10n.tab.projects" = "Projects";
+"l10n.tab.profile" = "Profile";
+"l10n.tab.search" = "Search";
+
+/* Home Screen */
+"l10n.home.loading" = "Loading…";
+"l10n.home.seeAll" = "See All";
+"l10n.home.trendingNow" = "Trending Now";
+"l10n.home.noTrendingTemplates" = "No more trending templates";
+"l10n.home.new" = "New";
+"l10n.home.noNewTemplates" = "No new templates";
+"l10n.home.loadingTemplate" = "Loading trending template...";
+
+/* Language selection in Profile */
+"l10n.settings.language" = "Language";
+"l10n.language.selectTitle" = "Select Language";
+"l10n.language.changedTitle" = "Language Changed";
+"l10n.language.restartMessage" = "Please restart the app to apply the new language.";
+"l10n.language.english" = "English";
+"l10n.language.vietnamese" = "Vietnamese";
+
+/* Profile screen localization */
+"l10n.profile.navTitle" = "Profile";
+"l10n.common.edit" = "Edit";
+"l10n.profile.stats.credits" = "Credits";
+"l10n.profile.stats.used" = "Used";
+"l10n.profile.stats.favorites" = "Favorites";
+"l10n.profile.section.account" = "ACCOUNT";
+"l10n.profile.section.preferences" = "PREFERENCES";
+"l10n.profile.section.about" = "ABOUT";
+"l10n.profile.buyCredits.title" = "Buy Credits";
+"l10n.profile.buyCredits.subtitle" = "Purchase credits to process images";
+"l10n.profile.edit.title" = "Edit Profile";
+"l10n.profile.edit.subtitle" = "Update your information";
+"l10n.profile.email.title" = "Email";
+"l10n.profile.privacy.title" = "Privacy & Security";
+"l10n.profile.privacy.subtitle" = "Manage your data";
+"l10n.profile.appearance.title" = "Appearance";
+"l10n.profile.appearance.subtitle" = "Beige Theme";
+"l10n.profile.help.title" = "Help & Support";
+"l10n.profile.help.subtitle" = "FAQs and contact";
+"l10n.profile.terms.title" = "Terms of Service";
+"l10n.profile.aboutPrivacy.title" = "Privacy Policy";
+"l10n.profile.logout" = "Logout";
+"l10n.profile.logout.confirmTitle" = "Logout";
+"l10n.profile.logout.confirmMessage" = "Are you sure you want to logout?";
+"l10n.profile.deleteAccount" = "Delete Account";
+"l10n.profile.delete.confirmTitle" = "Delete Account";
+"l10n.profile.delete.confirmMessage" = "This action cannot be undone. All your data will be permanently deleted.";
+"l10n.profile.memberSince" = "Member since %@";
+
+"l10n.profile.notifications.title" = "Push Notifications";
+"l10n.profile.notifications.subtitle" = "Get updates about new templates";
+"l10n.profile.emailUpdates.title" = "Email Updates";
+"l10n.profile.emailUpdates.subtitle" = "Receive newsletters and tips";
+
+/* App metadata and Profile placeholders */
+"l10n.app.versionLabel" = "%@ • Version %@";
+"l10n.app.name" = "AI Photo App";
+"l10n.profile.placeholder.user" = "User";
+"l10n.profile.placeholder.email" = "user@example.com";
+
+
+/* Accessibility - Login language switch and sign-in buttons */
+"l10n.settings.language.hint" = "Double-tap to change app language";
+"l10n.auth.signin.apple" = "Continue with Apple";
+"l10n.auth.signin.apple.hint" = "Sign in securely with your Apple ID";
+"l10n.auth.google.hint" = "Sign in with your Google account";
+
+/* === i18n hardening backfill (EN) === */
+"l10n.common.error" = "Error";
+"l10n.common.save" = "Save";
+"l10n.common.share" = "Share";
+"l10n.common.retry" = "Retry";
+"l10n.common.loading" = "Loading...";
+"l10n.common.seeAll" = "See All";
+"l10n.common.settings" = "Settings";
+"l10n.common.done" = "Done";
+
+/* CreditsPurchaseView */
+"l10n.credits.balance" = "Credits Balance";
+"l10n.credits.active" = "Active";
+"l10n.credits.choosePackage" = "Choose a Package";
+"l10n.credits.plan.subtitle" = "Select the perfect plan for you";
+"l10n.credits.noProducts" = "No products available";
+"l10n.credits.checkConnection" = "Please check your connection and try again";
+"l10n.credits.bestValue" = "BEST VALUE";
+"l10n.credits.perCredit" = "%@/credit";
+"l10n.credits.xCredits" = "%d credits";
+
+/* Search / Templates */
+"l10n.search.title" = "Search";
+"l10n.search.searching" = "Searching…";
+"l10n.search.tryDifferent" = "Try different keywords or filters";
+"l10n.search.hint" = "Search for templates by name, category, or tag";
+"l10n.search.categoryFilters" = "Category filters";
+"l10n.search.templateFilters" = "Template filters";
+"l10n.search.filter" = "Filter";
+
+"l10n.templates.loading" = "Loading templates...";
+"l10n.templates.all" = "All Templates";
+"l10n.templates.none" = "No Templates Found";
+"l10n.templates.loadMore" = "Load More";
+"l10n.templates.preview" = "Preview";
+"l10n.templates.addFavorite" = "Add Favorite";
+"l10n.templates.removeFavorite" = "Remove Favorite";
+
+/* Projects */
+"l10n.projects.title" = "My Projects";
+"l10n.projects.completed" = "Completed";
+"l10n.projects.details" = "Project Details";
+"l10n.projects.delete" = "Delete";
+"l10n.projects.confirmDelete" = "Are you sure you want to delete \"%@\"? This action cannot be undone.";
+"l10n.projects.deleteFailed" = "Delete Failed";
+"l10n.projects.noneTitle" = "No Projects Yet";
+"l10n.projects.noneSubtitle" = "Start creating amazing images with AI templates!";
+"l10n.projects.explore" = "Explore Templates";
+
+/* Result / Photo permissions */
+"l10n.result.title" = "Result";
+"l10n.result.doubleTapZoom" = "Double‑tap to zoom";
+"l10n.photo.savedTitle" = "Saved";
+"l10n.photo.savedMessage" = "Image has been saved to your Photos.";
+"l10n.photo.permissionTitle" = "Permission Required";
+"l10n.photo.permissionMessage" = "Please enable photo library access in Settings to save images.";
+
+/* Image Processing / Credits */
+"l10n.credits.title" = "Credits";
+"l10n.credits.get" = "Get Credits";
+"l10n.common.retryVerb" = "Retry";
+
+/* Greetings / Headers */
+"l10n.greeting.user" = "Hello %@";
+
+/* Debug (DEBUG builds) */
+"l10n.debug.noUrl" = "No URL";
+"l10n.debug.failedWithError" = "Failed: %@";
+"l10n.debug.status.ok" = "AI Engine: OK • API ~%@ms";
+
+/* === i18n hardening backfill (EN addendum) === */
+"l10n.common.fav" = "Fav";
+"l10n.search.start" = "Start searching";
+"l10n.search.noResults" = "No results found";
+"l10n.search.prompt" = "Search templates…";
+"l10n.projects.deleteTitle" = "Delete Project";
+"l10n.share.previewTitle" = "My AI Image";
+
+/* === i18n hardening backfill (EN - processing statuses) === */
+"l10n.processing.title.ready" = "Ready to Process";
+"l10n.processing.title.preparing" = "Preparing Image...";
+"l10n.processing.title.uploading" = "Uploading Image...";
+"l10n.processing.title.processing" = "Processing with AI...";
+"l10n.processing.title.background" = "Processing in Background";
+"l10n.processing.title.completed" = "Complete! ✓";
+"l10n.processing.title.failed" = "Processing Failed";
+
+"l10n.processing.msg.idle" = "Starting image processing";
+"l10n.processing.msg.preparing" = "Optimizing your image for AI processing";
+"l10n.processing.msg.uploading" = "Sending to AI server";
+"l10n.processing.msg.processing" = "Applying %@ style... This may take 30-60 seconds";
+"l10n.processing.msg.background" = "You can close the app - we'll notify when done";
+"l10n.processing.msg.completed" = "Your image is ready!";
+
+/* InsufficientCreditsView keys */
+"l10n.photo.accessibility.saveToPhotos" = "Save image to Photos";
+"l10n.projects.viewAll" = "View All Projects";

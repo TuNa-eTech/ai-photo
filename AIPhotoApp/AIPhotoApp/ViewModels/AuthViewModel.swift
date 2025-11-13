@@ -53,7 +53,7 @@ final class AuthViewModel {
     @MainActor
     func signInWithGoogle() {
         guard let presenter = UIApplication.topMostViewController() else {
-            self.errorMessage = "Không thể trình bày màn hình đăng nhập Google."
+            self.errorMessage = NSLocalizedString("l10n.auth.googleCannotPresent", comment: "Cannot present Google sign-in")
             return
         }
         isLoading = true
@@ -91,7 +91,7 @@ final class AuthViewModel {
                 let rawNonce = appleRawNonce
             else {
                 self.isLoading = false
-                self.errorMessage = "Không lấy được Apple credential."
+                self.errorMessage = NSLocalizedString("l10n.auth.appleCredentialMissing", comment: "Apple credential missing")
                 return
             }
             Task { @MainActor in
@@ -110,13 +110,13 @@ final class AuthViewModel {
     @MainActor
     func submitProfile() {
         guard let sess = session else {
-            self.errorMessage = "Phiên đăng nhập không hợp lệ. Vui lòng thử lại."
+            self.errorMessage = NSLocalizedString("l10n.auth.sessionInvalid", comment: "Invalid session")
             return
         }
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               isValidEmail(email)
         else {
-            self.errorMessage = "Vui lòng nhập tên và email hợp lệ."
+            self.errorMessage = NSLocalizedString("l10n.auth.invalidProfile", comment: "Invalid name/email")
             return
         }
         isLoading = true

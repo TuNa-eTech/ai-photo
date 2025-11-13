@@ -10,6 +10,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @Environment(AuthViewModel.self) private var model
+    @Environment(LocalizationModel.self) private var i18n
     
     @Environment(\.dismiss) private var dismiss
     @State private var showEditProfile = false
@@ -22,6 +23,15 @@ struct ProfileView: View {
     @State private var notificationsEnabled = true
     @State private var emailUpdatesEnabled = false
     
+    // Webview states
+    @State private var showPrivacyWebView = false
+    @State private var showTermsWebView = false
+    @State private var showHelpWebView = false
+    
+    // Language selection
+    @State private var showLanguageDialog = false
+    @State private var showRestartAlert = false
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -31,9 +41,6 @@ struct ProfileView: View {
                     VStack(spacing: 20) {
                         // Hero Card
                         heroSection
-                        
-                        // Stats Row
-                        statsSection
                         
                         // Account Settings
                         accountSection
@@ -55,25 +62,30 @@ struct ProfileView: View {
                     .padding(.bottom, 40)
                 }
             }
-            .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showEditProfile = true
-                    } label: {
-                        Text("Edit")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(GlassTokens.textPrimary)
-                    }
-                }
-            }
             .sheet(isPresented: $showEditProfile) {
                 ProfileEditView()
             }
             .sheet(isPresented: $showCreditsPurchase) {
                 CreditsPurchaseView()
                     .environment(model)
+            }
+            .sheet(isPresented: $showPrivacyWebView) {
+                WebViewSheet(
+                    title: L10n.tr("l10n.profile.aboutPrivacy.title"),
+                    url: URL(string: "https://bokphoto.e-tech.network/privacy") ?? URL(fileURLWithPath: "")
+                )
+            }
+            .sheet(isPresented: $showTermsWebView) {
+                WebViewSheet(
+                    title: L10n.tr("l10n.profile.terms.title"),
+                    url: URL(string: "https://bokphoto.e-tech.network/terms") ?? URL(fileURLWithPath: "")
+                )
+            }
+            .sheet(isPresented: $showHelpWebView) {
+                WebViewSheet(
+                    title: L10n.tr("l10n.profile.help.title"),
+                    url: URL(string: "https://bokphoto.e-tech.network/#faq") ?? URL(fileURLWithPath: "")
+                )
             }
             .task {
                 await creditsViewModel.refreshCreditsBalance()
@@ -89,21 +101,21 @@ struct ProfileView: View {
                     await creditsViewModel.refreshCreditsBalance()
                 }
             }
-            .alert("Logout", isPresented: $showLogoutConfirm) {
-                Button("Cancel", role: .cancel) {}
-                Button("Logout", role: .destructive) {
+            .alert(L10n.tr("l10n.profile.logout.confirmTitle"), isPresented: $showLogoutConfirm) {
+                Button(L10n.tr("l10n.common.cancel"), role: .cancel) {}
+                Button(L10n.tr("l10n.profile.logout"), role: .destructive) {
                     handleLogout()
                 }
             } message: {
-                Text("Are you sure you want to logout?")
+                Text(L10n.tr("l10n.profile.logout.confirmMessage"))
             }
-            .alert("Delete Account", isPresented: $showDeleteConfirm) {
-                Button("Cancel", role: .cancel) {}
-                Button("Delete", role: .destructive) {
+            .alert(L10n.tr("l10n.profile.delete.confirmTitle"), isPresented: $showDeleteConfirm) {
+                Button(L10n.tr("l10n.common.cancel"), role: .cancel) {}
+                Button(L10n.tr("l10n.profile.deleteAccount"), role: .destructive) {
                     handleDeleteAccount()
                 }
             } message: {
-                Text("This action cannot be undone. All your data will be permanently deleted.")
+                Text(L10n.tr("l10n.profile.delete.confirmMessage"))
             }
         }
     }
@@ -112,41 +124,19 @@ struct ProfileView: View {
     
     private var heroSection: some View {
         ProfileHeroCard(
-            name: model.name.isEmpty ? "User" : model.name,
-            email: model.email.isEmpty ? "user@example.com" : model.email,
+            name: model.name.isEmpty ? L10n.tr("l10n.profile.placeholder.user") : model.name,
+            email: model.email.isEmpty ? L10n.tr("l10n.profile.placeholder.email") : model.email,
             avatarURL: model.avatarURL?.absoluteString,
-            memberSince: memberSinceText()
+            credits: animatedCreditsValue
         )
     }
     
-    private var statsSection: some View {
-        HStack(spacing: 12) {
-            ProfileStatCard(
-                value: animatedCreditsValue,
-                label: "Credits",
-                icon: "star.fill"
-            )
-            
-            ProfileStatCard(
-                value: "24",
-                label: "Used",
-                icon: "square.grid.2x2"
-            )
-            
-            ProfileStatCard(
-                value: "12",
-                label: "Favorites",
-                icon: "heart.fill"
-            )
-        }
-    }
-    
     private var accountSection: some View {
-        SettingsSection(title: "ACCOUNT") {
+        SettingsSection(title: L10n.tr("l10n.profile.section.account")) {
             SettingsRow(
                 icon: "star.fill",
-                title: "Buy Credits",
-                subtitle: "Purchase credits to process images"
+                title: L10n.tr("l10n.profile.buyCredits.title"),
+                subtitle: L10n.tr("l10n.profile.buyCredits.subtitle")
             ) {
                 showCreditsPurchase = true
             }
@@ -156,8 +146,8 @@ struct ProfileView: View {
             
             SettingsRow(
                 icon: "person.circle",
-                title: "Edit Profile",
-                subtitle: "Update your information"
+                title: L10n.tr("l10n.profile.edit.title"),
+                subtitle: L10n.tr("l10n.profile.edit.subtitle")
             ) {
                 showEditProfile = true
             }
@@ -167,7 +157,7 @@ struct ProfileView: View {
             
             SettingsRow(
                 icon: "envelope",
-                title: "Email",
+                title: L10n.tr("l10n.profile.email.title"),
                 subtitle: model.email
             ) {
                 // TODO: Change email flow
@@ -179,21 +169,20 @@ struct ProfileView: View {
             
             SettingsRow(
                 icon: "lock.shield",
-                title: "Privacy & Security",
-                subtitle: "Manage your data"
+                title: L10n.tr("l10n.profile.privacy.title"),
+                subtitle: L10n.tr("l10n.profile.privacy.subtitle")
             ) {
-                // TODO: Privacy settings
-                print("Privacy tapped")
+                showPrivacyWebView = true
             }
         }
     }
     
     private var preferencesSection: some View {
-        SettingsSection(title: "PREFERENCES") {
+        SettingsSection(title: L10n.tr("l10n.profile.section.preferences")) {
             SettingsToggleRow(
                 icon: "bell.fill",
-                title: "Push Notifications",
-                subtitle: "Get updates about new templates",
+                title: L10n.tr("l10n.profile.notifications.title"),
+                subtitle: L10n.tr("l10n.profile.notifications.subtitle"),
                 isOn: $notificationsEnabled
             )
             
@@ -202,46 +191,68 @@ struct ProfileView: View {
             
             SettingsToggleRow(
                 icon: "envelope.badge",
-                title: "Email Updates",
-                subtitle: "Receive newsletters and tips",
+                title: L10n.tr("l10n.profile.emailUpdates.title"),
+                subtitle: L10n.tr("l10n.profile.emailUpdates.subtitle"),
                 isOn: $emailUpdatesEnabled
             )
             
             Divider()
                 .padding(.leading, 56)
             
-            SettingsRow(
-                icon: "paintbrush",
-                title: "Appearance",
-                subtitle: "Beige Theme"
-            ) {
-                // TODO: Theme picker
-                print("Appearance tapped")
+            // Language row as a Button so confirmationDialog anchors correctly to this control (iPad popover)
+            Button {
+                showLanguageDialog = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "globe")
+                        .font(.title3)
+                        .foregroundStyle(GlassTokens.textPrimary)
+                        .frame(width: 28, height: 28)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L10n.tr("l10n.settings.language"))
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(GlassTokens.textPrimary)
+                        Text(i18n.language == .english ? L10n.tr("l10n.language.english") : L10n.tr("l10n.language.vietnamese"))
+                            .font(.caption)
+                            .foregroundStyle(GlassTokens.textSecondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(GlassTokens.textSecondary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .contentShape(Rectangle())
             }
-            
-            Divider()
-                .padding(.leading, 56)
-            
-            SettingsRow(
-                icon: "globe",
-                title: "Language",
-                subtitle: "Tiếng Việt"
+            .buttonStyle(.plain)
+            .confirmationDialog(
+                L10n.tr("l10n.language.selectTitle"),
+                isPresented: $showLanguageDialog,
+                titleVisibility: .visible
             ) {
-                // TODO: Language picker
-                print("Language tapped")
+                Button(L10n.tr("l10n.language.english")) {
+                    i18n.setLanguage(.english) // runtime switch
+                }
+                Button(L10n.tr("l10n.language.vietnamese")) {
+                    i18n.setLanguage(.vietnamese) // runtime switch
+                }
+                Button(L10n.tr("l10n.common.cancel"), role: .cancel) { }
             }
         }
     }
     
     private var aboutSection: some View {
-        SettingsSection(title: "ABOUT") {
+        SettingsSection(title: L10n.tr("l10n.profile.section.about")) {
             SettingsRow(
                 icon: "info.circle",
-                title: "Help & Support",
-                subtitle: "FAQs and contact"
+                title: L10n.tr("l10n.profile.help.title"),
+                subtitle: L10n.tr("l10n.profile.help.subtitle")
             ) {
-                // TODO: Help screen
-                print("Help tapped")
+                showHelpWebView = true
             }
             
             Divider()
@@ -249,11 +260,10 @@ struct ProfileView: View {
             
             SettingsRow(
                 icon: "doc.text",
-                title: "Terms of Service",
+                title: L10n.tr("l10n.profile.terms.title"),
                 subtitle: nil
             ) {
-                // TODO: Open terms URL
-                print("Terms tapped")
+                showTermsWebView = true
             }
             
             Divider()
@@ -261,11 +271,10 @@ struct ProfileView: View {
             
             SettingsRow(
                 icon: "hand.raised",
-                title: "Privacy Policy",
+                title: L10n.tr("l10n.profile.aboutPrivacy.title"),
                 subtitle: nil
             ) {
-                // TODO: Open privacy URL
-                print("Privacy tapped")
+                showPrivacyWebView = true
             }
         }
     }
@@ -274,14 +283,14 @@ struct ProfileView: View {
         VStack(spacing: 12) {
             DangerButton(
                 icon: "rectangle.portrait.and.arrow.right",
-                title: "Logout"
+                title: L10n.tr("l10n.profile.logout")
             ) {
                 showLogoutConfirm = true
             }
             
             DangerButton(
                 icon: "trash",
-                title: "Delete Account"
+                title: L10n.tr("l10n.profile.deleteAccount")
             ) {
                 showDeleteConfirm = true
             }
@@ -294,7 +303,7 @@ struct ProfileView: View {
                 .font(.caption)
                 .foregroundStyle(GlassTokens.textSecondary)
             
-            Text("AI Photo App • Version \(appVersion())")
+            Text(L10n.tr("l10n.app.versionLabel", appDisplayName(), appVersion()))
                 .font(.caption)
                 .foregroundStyle(GlassTokens.textSecondary)
         }
@@ -308,13 +317,16 @@ struct ProfileView: View {
         "\(creditsViewModel.creditsBalance)"
     }
     
-    private func memberSinceText() -> String? {
-        guard let createdAt = model.createdAt else {
-            return nil
+    
+    private func appDisplayName() -> String {
+        if let displayName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String, !displayName.isEmpty {
+            return displayName
         }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM yyyy"
-        return formatter.string(from: createdAt)
+        if let name = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String, !name.isEmpty {
+            return name
+        }
+        // Fallback to localized app name if Info.plist keys are missing
+        return L10n.tr("l10n.app.name")
     }
     
     private func appVersion() -> String {
@@ -335,19 +347,24 @@ struct ProfileView: View {
     }
     
     private func handleDeleteAccount() {
-        // TODO: Implement delete account flow
-        print("Delete account requested")
+        Task { @MainActor in
+            do {
+                try await model.signOut()
+                dismiss()
+            } catch {
+                print("Delete account error: \(error)")
+            }
+        }
     }
 }
 
 // MARK: - Preview
 
 #Preview("Profile") {
-    let authViewModel = AuthViewModel(
-        authService: AuthService(),
-        userRepository: UserRepository()
-    )
-    return ProfileView()
+    let authViewModel = AuthViewModel(authService: AuthService(), userRepository: UserRepository())
+    let i18n = LocalizationModel()
+    ProfileView()
         .environment(authViewModel)
+        .environment(i18n)
 }
 

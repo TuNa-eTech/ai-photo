@@ -78,7 +78,7 @@ struct HomeView: View {
                 .overlay(alignment: .top) {
                     // Loading / Error banners
                     if home.isLoading {
-                        HUDGlass(text: "Đang tải…")
+                        HUDGlass(text: L10n.tr("l10n.home.loading"))
                             .transition(.opacity)
                             .padding(.top, 8)
                     } else if let err = home.errorMessage, !err.isEmpty {

@@ -239,5 +239,7 @@
 		<string>3qcr597p9d.skadnetwork</string>
 	</dict>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Ứng dụng cần dùng camera để chụp ảnh xử lý AI</string>
 </dict>
 </plist>

@@ -27,7 +27,7 @@ struct AllTemplatesView: View {
                         VStack {
                             ProgressView()
                                 .tint(GlassTokens.textPrimary)
-                            Text("Loading templates...")
+                            Text(L10n.tr("l10n.templates.loading"))
                                 .font(.subheadline)
                                 .foregroundStyle(GlassTokens.textSecondary)
                                 .padding(.top, 16)
@@ -50,7 +50,7 @@ struct AllTemplatesView: View {
                                         )
                                         .overlay(alignment: .topTrailing) {
                                             if viewModel.isFavorite(item) {
-                                                GlassChip(text: "Fav", systemImage: "heart.fill")
+                                                GlassChip(text: L10n.tr("l10n.common.fav"), systemImage: "heart.fill")
                                                     .padding(8)
                                             }
                                         }
@@ -59,8 +59,8 @@ struct AllTemplatesView: View {
                                             // Navigate to template selection if needed
                                         }
                                         .contextMenu {
-                                            Button("Preview", systemImage: "eye") {}
-                                            Button(viewModel.isFavorite(item) ? "Remove Favorite" : "Add Favorite",
+                                            Button(L10n.tr("l10n.templates.preview"), systemImage: "eye") {}
+                                            Button(viewModel.isFavorite(item) ? L10n.tr("l10n.templates.removeFavorite") : L10n.tr("l10n.templates.addFavorite"),
                                                    systemImage: viewModel.isFavorite(item) ? "heart.slash" : "heart") {
                                                 viewModel.toggleFavorite(item)
                                             }
@@ -75,7 +75,7 @@ struct AllTemplatesView: View {
                                             Image(systemName: "arrow.down.circle")
                                                 .font(.title3)
                                                 .foregroundStyle(GlassTokens.accent1)
-                                            Text("Load More")
+                                            Text(L10n.tr("l10n.templates.loadMore"))
                                                 .font(.caption)
                                                 .foregroundStyle(GlassTokens.textSecondary)
                                         }
@@ -87,7 +87,7 @@ struct AllTemplatesView: View {
                                     VStack(spacing: 8) {
                                         ProgressView()
                                             .tint(GlassTokens.textPrimary)
-                                        Text("Loading...")
+                                        Text(L10n.tr("l10n.common.loading"))
                                             .font(.caption)
                                             .foregroundStyle(GlassTokens.textSecondary)
                                     }
@@ -101,7 +101,7 @@ struct AllTemplatesView: View {
                     }
                 }
             }
-            .navigationTitle("All Templates")
+            .navigationTitle(L10n.tr("l10n.templates.all"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .tabBar)
         }
@@ -118,7 +118,7 @@ struct AllTemplatesView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(GlassTokens.textSecondary.opacity(0.6))
             
-            Text("No Templates Found")
+            Text(L10n.tr("l10n.templates.none"))
                 .font(.headline)
                 .foregroundStyle(GlassTokens.textPrimary)
             

@@ -172,11 +172,14 @@ enum RewardedAdsError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .adNotLoaded:
-            return "Quảng cáo chưa sẵn sàng. Vui lòng thử lại sau."
+            return NSLocalizedString("l10n.ads.notReady", comment: "Ad not ready")
         case .presentationFailed(let error):
-            return "Không thể hiển thị quảng cáo: \(error.localizedDescription)"
+            return String(
+                format: NSLocalizedString("l10n.ads.cannotPresentWithError", comment: "Cannot present ad with error"),
+                error.localizedDescription
+            )
         case .userCancelled:
-            return "Bạn đã đóng quảng cáo trước khi hoàn thành."
+            return NSLocalizedString("l10n.ads.userCancelled", comment: "User closed ad before completion")
         }
     }
 }

@@ -36,11 +36,11 @@ struct CreditsPurchaseView: View {
                     .padding(.bottom, 40)
                 }
             }
-            .navigationTitle("Buy Credits")
+            .navigationTitle(L10n.tr("l10n.credits.buyTitle"))
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") {
+                    Button(L10n.tr("l10n.common.close")) {
                         dismiss()
                     }
                     .foregroundStyle(GlassTokens.textPrimary)
@@ -62,8 +62,8 @@ struct CreditsPurchaseView: View {
                 await creditsViewModel.refreshCreditsBalance()
                 await creditsViewModel.loadProducts()
             }
-            .alert("Error", isPresented: .constant(creditsViewModel.errorMessage != nil)) {
-                Button("OK") {
+            .alert(L10n.tr("l10n.common.error"), isPresented: .constant(creditsViewModel.errorMessage != nil)) {
+                Button(L10n.tr("l10n.common.ok")) {
                     creditsViewModel.errorMessage = nil
                 }
             } message: {
@@ -71,8 +71,8 @@ struct CreditsPurchaseView: View {
                     Text(error)
                 }
             }
-            .alert("Success", isPresented: .constant(creditsViewModel.successMessage != nil)) {
-                Button("OK") {
+            .alert(L10n.tr("l10n.common.success"), isPresented: .constant(creditsViewModel.successMessage != nil)) {
+                Button(L10n.tr("l10n.common.ok")) {
                     creditsViewModel.successMessage = nil
                 }
             } message: {
@@ -133,7 +133,7 @@ struct CreditsPurchaseView: View {
             
             // Credits info - Modern horizontal layout
             VStack(alignment: .leading, spacing: 6) {
-                Text("Credits Balance")
+                Text(L10n.tr("l10n.credits.balance"))
                     .font(.caption.weight(.medium))
                     .foregroundStyle(GlassTokens.textSecondary.opacity(0.8))
                 
@@ -149,7 +149,7 @@ struct CreditsPurchaseView: View {
                         Circle()
                             .fill(GlassTokens.accent1.opacity(0.8))
                             .frame(width: 6, height: 6)
-                        Text("Active")
+                        Text(L10n.tr("l10n.credits.active"))
                             .font(.caption2.weight(.medium))
                             .foregroundStyle(GlassTokens.textSecondary.opacity(0.7))
                     }
@@ -192,11 +192,11 @@ struct CreditsPurchaseView: View {
             // Section Header - Harmonized styling
             HStack {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Choose a Package")
+                    Text(L10n.tr("l10n.credits.choosePackage"))
                         .font(.title2.weight(.bold))
                         .foregroundStyle(GlassTokens.textPrimary)
                     
-                    Text("Select the perfect plan for you")
+                    Text(L10n.tr("l10n.credits.plan.subtitle"))
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(GlassTokens.textSecondary.opacity(0.85))
                 }
@@ -245,11 +245,11 @@ struct CreditsPurchaseView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(GlassTokens.textSecondary.opacity(0.6))
             
-            Text("No products available")
+            Text(L10n.tr("l10n.credits.noProducts"))
                 .font(.headline)
                 .foregroundStyle(GlassTokens.textPrimary)
             
-            Text("Please check your connection and try again")
+            Text(L10n.tr("l10n.credits.checkConnection"))
                 .font(.subheadline)
                 .foregroundStyle(GlassTokens.textSecondary)
                 .multilineTextAlignment(.center)
@@ -292,15 +292,15 @@ struct CreditsPurchaseView: View {
                         )
                 }
                 
-                Text("Information")
+                Text(L10n.tr("l10n.common.info"))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(GlassTokens.textPrimary)
             }
             
             VStack(alignment: .leading, spacing: 10) {
-                InfoRow(icon: "checkmark.circle.fill", text: "Credits never expire")
-                InfoRow(icon: "checkmark.circle.fill", text: "Secure payment via App Store")
-                InfoRow(icon: "checkmark.circle.fill", text: "Instant activation after purchase")
+                InfoRow(icon: "checkmark.circle.fill", text: L10n.tr("l10n.credits.info.2"))
+                InfoRow(icon: "checkmark.circle.fill", text: L10n.tr("l10n.credits.info.3"))
+                InfoRow(icon: "checkmark.circle.fill", text: L10n.tr("l10n.credits.info.1"))
             }
             .padding(.top, 2)
         }
@@ -391,7 +391,7 @@ struct ProductCard: View {
                         if let credits = creditsCount, credits > 0 {
                             // Best Value Badge - show on last product (usually bestvalue)
                             if isLast {
-                                Text("BEST VALUE")
+                                Text(L10n.tr("l10n.credits.bestValue"))
                                     .font(.system(size: 9, weight: .bold))
                                     .foregroundStyle(GlassTokens.textPrimary.opacity(0.9))
                                     .padding(.horizontal, 8)
@@ -419,7 +419,7 @@ struct ProductCard: View {
                     }
                     
                     if let credits = creditsCount, credits > 0 {
-                        Text("\(credits) credits")
+                        Text(L10n.tr("l10n.credits.xCredits", credits))
                             .font(.subheadline)
                             .foregroundStyle(GlassTokens.textSecondary)
                     }
@@ -443,7 +443,7 @@ struct ProductCard: View {
                     if let credits = creditsCount, credits > 0 {
                         let pricePerCredit = calculatePricePerCredit(price: product.displayPrice, credits: credits)
                         if let pricePerCredit = pricePerCredit {
-                            Text("\(pricePerCredit)/credit")
+                            Text(L10n.tr("l10n.credits.perCredit", pricePerCredit))
                                 .font(.caption2)
                                 .foregroundStyle(GlassTokens.textSecondary)
                         }

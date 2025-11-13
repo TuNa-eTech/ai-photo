@@ -1,0 +1,3 @@
+/* Vietnamese InfoPlist.strings - system permission strings */
+
+"NSCameraUsageDescription" = "Ứng dụng cần dùng camera để chụp ảnh xử lý AI";

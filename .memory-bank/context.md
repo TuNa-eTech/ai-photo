@@ -162,6 +162,24 @@ Current work focus
 - **File Upload System:** ✅ COMPLETED - Working with thumbnail management and automatic cleanup.
 
 Recent changes (latest first)
+- ✅ TemplateSelectionView: Camera via Action Sheet (2025-11-13)
+  - Added camera capture option alongside library selection using an action sheet anchored to the pick button.
+  - New UIKit wrapper for camera: [AIPhotoApp/AIPhotoApp/Utilities/Camera/CameraPicker.swift](AIPhotoApp/AIPhotoApp/Utilities/Camera/CameraPicker.swift)
+  - Updated template image selection flow in: [AIPhotoApp/AIPhotoApp/Views/ImageProcessing/TemplateSelectionView.swift](AIPhotoApp/AIPhotoApp/Views/ImageProcessing/TemplateSelectionView.swift)
+    - Replaced direct PhotosPicker button with a “Chọn ảnh” button that opens a confirmation dialog (action sheet) with two options:
+      1) “Từ thư viện” → opens PhotosPicker via .photosPicker(isPresented:)
+      2) “Chụp ảnh” → opens CameraPicker via .sheet
+    - Moved confirmationDialog to be attached directly on the “Chọn ảnh” Button so that on iPad (regular width) the popover anchors correctly to the tapped button. On iPhone (compact width), it still presents as an action sheet from the bottom (platform default).
+    - Preserved the existing navigation: once selectedImage is set, showImageProcessing = true → navigate to ImageProcessingView.
+  - Added camera permission string in Info.plist: [AIPhotoApp/AIPhotoApp/Info.plist](AIPhotoApp/AIPhotoApp/Info.plist)
+    - NSCameraUsageDescription: “Ứng dụng cần dùng camera để chụp ảnh xử lý AI”
+  - Notes:
+    - Simulator does not provide a real camera; we show an alert “Camera không khả dụng” when unavailable.
+    - iPhone behavior (action sheet from bottom) is expected by HIG; iPad behavior now anchors to the button as desired.
+  - Files Created/Modified:
+    - Created: [AIPhotoApp/AIPhotoApp/Utilities/Camera/CameraPicker.swift](AIPhotoApp/AIPhotoApp/Utilities/Camera/CameraPicker.swift)
+    - Modified: [AIPhotoApp/AIPhotoApp/Views/ImageProcessing/TemplateSelectionView.swift](AIPhotoApp/AIPhotoApp/Views/ImageProcessing/TemplateSelectionView.swift)
+    - Modified: [AIPhotoApp/AIPhotoApp/Info.plist](AIPhotoApp/AIPhotoApp/Info.plist)
 - ✅ **In-App Purchase Credits System Integration (2025-11-09):**
   - **Database & Backend Core:**
     - Added `credits` field to User model (Int, default: 2)
