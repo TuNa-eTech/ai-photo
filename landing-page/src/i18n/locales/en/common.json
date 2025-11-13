@@ -1,0 +1,108 @@
+{
+  "nav": { "features": "Features", "pricing": "Pricing", "faq": "FAQ" },
+  "cta": { "download": "Download on iOS", "startFree": "Start with 2 free credits" },
+  "hero": {
+    "title": "Cinematic photos in one tap",
+    "subtitle": "Turn portraits into cinematic or anime styles in seconds. Fast, private, social-ready."
+  },
+  "features": {
+    "title": "Why AI Photo Studio",
+    "items": [
+      { "title": "Cinematic & Anime", "desc": "Hundreds of styles tuned for social media." },
+      { "title": "Fast & Private", "desc": "Optimized delivery, privacy-first processing." },
+      { "title": "Studio Quality", "desc": "Natural skin tones, sharp details." }
+    ]
+  },
+  "socialProof": { "title": "Trusted by creators" },
+  "testimonials": { "title": "What users say" },
+  "pricing": {
+    "title": "Simple pricing",
+    "toggle": { "monthly": "Monthly", "yearly": "Yearly (-20%)" },
+    "plans": [
+      { "name": "Starter", "priceM": 5, "priceY": 48, "features": ["50 credits", "All styles", "Standard support"] },
+      { "name": "Pro", "priceM": 12, "priceY": 115, "features": ["150 credits", "All styles", "Priority support"] },
+      { "name": "Studio", "priceM": 25, "priceY": 240, "features": ["400 credits", "All styles", "Priority support"] }
+    ],
+    "currency": "USD"
+  },
+  "faq": {
+    "title": "FAQ",
+    "items": [
+      { "q": "How does it work?", "a": "Upload a portrait and choose a style. Get results in seconds." },
+      { "q": "Is my data private?", "a": "We prioritize privacy. See our Privacy Policy for details." },
+      { "q": "Can I cancel anytime?", "a": "Yes, there’s no long-term commitment." }
+    ]
+  },
+  "form": {
+    "title": "Contact us",
+    "name": "Name",
+    "email": "Email",
+    "message": "Message",
+    "submit": "Send",
+    "success": "Thanks! We received your message.",
+    "error": "Something went wrong. Please try again.",
+    "validation": {
+      "name": "Please enter your name",
+      "email": "Please enter a valid email",
+      "message": "Please enter a message"
+    }
+  },
+  "footer": { "privacy": "Privacy", "terms": "Terms", "rights": "All rights reserved." },
+  "cookie": { "title": "Analytics cookies", "accept": "Accept", "reject": "Reject" },
+  "legal": {
+    "toc": "On this page",
+    "updated": "Updated: {{date}}",
+    "privacy": {
+      "title": "Privacy Policy",
+      "intro": "We value your privacy. This policy explains what data we collect, how we use it, and your choices.",
+      "sections": {
+        "collection": {
+          "title": "Information we collect",
+          "body": "We collect information you provide (e.g., contact details) and technical data like device and usage analytics to improve the service."
+        },
+        "usage": {
+          "title": "How we use information",
+          "body": "We use data to provide and improve features, personalize content, communicate updates, and ensure security."
+        },
+        "sharing": {
+          "title": "Sharing and disclosure",
+          "body": "We do not sell personal data. We may share with service providers under strict contractual controls or when required by law."
+        },
+        "retention": {
+          "title": "Data retention",
+          "body": "We retain data only as long as necessary for the purposes described or as required by law, after which it is securely deleted."
+        },
+        "contact": {
+          "title": "Contact",
+          "body": "Questions about privacy? Contact us at support@aiphotostudio.app."
+        }
+      }
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "intro": "These Terms govern your use of our website and services. By accessing or using them, you agree to these Terms.",
+      "sections": {
+        "acceptance": {
+          "title": "Acceptance of terms",
+          "body": "By using the Service, you confirm that you are at least 13 years old and have the legal capacity to agree to these Terms."
+        },
+        "accounts": {
+          "title": "Accounts",
+          "body": "You are responsible for safeguarding your account credentials and for all activities under your account."
+        },
+        "usage": {
+          "title": "Acceptable use",
+          "body": "Do not misuse the Service, engage in unlawful activity, infringe intellectual property, or disrupt others' use."
+        },
+        "liability": {
+          "title": "Limitation of liability",
+          "body": "To the maximum extent permitted by law, we are not liable for indirect or consequential damages arising from your use of the Service."
+        },
+        "contact": {
+          "title": "Contact",
+          "body": "For questions about these Terms, contact legal@aiphotostudio.app."
+        }
+      }
+    }
+  }
+}

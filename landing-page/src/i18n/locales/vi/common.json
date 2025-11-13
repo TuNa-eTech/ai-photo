@@ -1,0 +1,108 @@
+{
+  "nav": { "features": "Tính năng", "pricing": "Giá", "faq": "Hỏi đáp" },
+  "cta": { "download": "Tải app iOS", "startFree": "Bắt đầu với 2 credits miễn phí" },
+  "hero": {
+    "title": "Ảnh cinematic trong 1 chạm",
+    "subtitle": "Hàng trăm phong cách từ điện ảnh đến anime, tối ưu cho mạng xã hội, tải nhanh và riêng tư."
+  },
+  "features": {
+    "title": "Vì sao chọn AI Photo Studio",
+    "items": [
+      { "title": "Cinematic & Anime", "desc": "Hàng trăm phong cách tối ưu cho mạng xã hội." },
+      { "title": "Nhanh & Riêng tư", "desc": "Tối ưu tải và ưu tiên quyền riêng tư." },
+      { "title": "Chất lượng studio", "desc": "Giữ tông da tự nhiên và chi tiết sắc nét." }
+    ]
+  },
+  "socialProof": { "title": "Được tin dùng bởi creators" },
+  "testimonials": { "title": "Người dùng nói gì" },
+  "pricing": {
+    "title": "Giá minh bạch",
+    "toggle": { "monthly": "Theo tháng", "yearly": "Theo năm (-20%)" },
+    "plans": [
+      { "name": "Starter", "priceM": 5, "priceY": 48, "features": ["50 credits", "Toàn bộ phong cách", "Hỗ trợ tiêu chuẩn"] },
+      { "name": "Pro", "priceM": 12, "priceY": 115, "features": ["150 credits", "Toàn bộ phong cách", "Hỗ trợ ưu tiên"] },
+      { "name": "Studio", "priceM": 25, "priceY": 240, "features": ["400 credits", "Toàn bộ phong cách", "Hỗ trợ ưu tiên"] }
+    ],
+    "currency": "USD"
+  },
+  "faq": {
+    "title": "Câu hỏi thường gặp",
+    "items": [
+      { "q": "Ứng dụng hoạt động thế nào?", "a": "Tải ảnh chân dung và chọn phong cách. Kết quả chỉ trong vài giây." },
+      { "q": "Dữ liệu của tôi có an toàn?", "a": "Chúng tôi ưu tiên quyền riêng tư. Xem Chính sách riêng tư để biết thêm." },
+      { "q": "Có thể hủy bất kỳ lúc nào?", "a": "Có, không ràng buộc dài hạn." }
+    ]
+  },
+  "form": {
+    "title": "Liên hệ",
+    "name": "Họ tên",
+    "email": "Email",
+    "message": "Nội dung",
+    "submit": "Gửi",
+    "success": "Cảm ơn! Chúng tôi đã nhận được thông tin.",
+    "error": "Có lỗi xảy ra. Vui lòng thử lại.",
+    "validation": {
+      "name": "Vui lòng nhập họ tên",
+      "email": "Vui lòng nhập email hợp lệ",
+      "message": "Vui lòng nhập nội dung"
+    }
+  },
+  "footer": { "privacy": "Bảo mật", "terms": "Điều khoản", "rights": "Đã đăng ký bản quyền." },
+  "cookie": { "title": "Cookie phân tích", "accept": "Đồng ý", "reject": "Từ chối" },
+  "legal": {
+    "toc": "Mục lục",
+    "updated": "Cập nhật: {{date}}",
+    "privacy": {
+      "title": "Chính sách riêng tư",
+      "intro": "Chúng tôi tôn trọng quyền riêng tư của bạn. Chính sách này giải thích dữ liệu được thu thập, cách sử dụng và lựa chọn của bạn.",
+      "sections": {
+        "collection": {
+          "title": "Thông tin thu thập",
+          "body": "Chúng tôi thu thập thông tin bạn cung cấp (ví dụ: thông tin liên hệ) và dữ liệu kỹ thuật như thiết bị, hành vi sử dụng để cải thiện dịch vụ."
+        },
+        "usage": {
+          "title": "Mục đích sử dụng",
+          "body": "Dữ liệu được dùng để cung cấp/tối ưu tính năng, cá nhân hóa nội dung, gửi cập nhật và đảm bảo an toàn."
+        },
+        "sharing": {
+          "title": "Chia sẻ và công bố",
+          "body": "Chúng tôi không bán dữ liệu cá nhân. Có thể chia sẻ với nhà cung cấp dịch vụ theo hợp đồng nghiêm ngặt hoặc khi pháp luật yêu cầu."
+        },
+        "retention": {
+          "title": "Lưu trữ dữ liệu",
+          "body": "Chúng tôi chỉ lưu dữ liệu trong thời gian cần thiết cho các mục đích nêu trên hoặc theo luật định, sau đó sẽ xóa an toàn."
+        },
+        "contact": {
+          "title": "Liên hệ",
+          "body": "Câu hỏi về quyền riêng tư? Liên hệ: support@aiphotostudio.app."
+        }
+      }
+    },
+    "terms": {
+      "title": "Điều khoản dịch vụ",
+      "intro": "Các Điều khoản này điều chỉnh việc bạn sử dụng website và dịch vụ. Bằng cách truy cập/sử dụng, bạn đồng ý với Điều khoản.",
+      "sections": {
+        "acceptance": {
+          "title": "Chấp nhận điều khoản",
+          "body": "Khi sử dụng Dịch vụ, bạn xác nhận từ 13 tuổi trở lên và có đủ năng lực pháp lý để đồng ý với Điều khoản."
+        },
+        "accounts": {
+          "title": "Tài khoản",
+          "body": "Bạn chịu trách nhiệm bảo mật thông tin đăng nhập và mọi hoạt động phát sinh từ tài khoản của bạn."
+        },
+        "usage": {
+          "title": "Sử dụng hợp lệ",
+          "body": "Không lạm dụng Dịch vụ, không vi phạm pháp luật, không xâm phạm sở hữu trí tuệ hoặc gây gián đoạn trải nghiệm của người khác."
+        },
+        "liability": {
+          "title": "Giới hạn trách nhiệm",
+          "body": "Trong phạm vi tối đa cho phép bởi pháp luật, chúng tôi không chịu trách nhiệm cho các thiệt hại gián tiếp hoặc hệ quả phát sinh từ việc sử dụng Dịch vụ."
+        },
+        "contact": {
+          "title": "Liên hệ",
+          "body": "Câu hỏi về Điều khoản? Liên hệ: legal@aiphotostudio.app."
+        }
+      }
+    }
+  }
+}
