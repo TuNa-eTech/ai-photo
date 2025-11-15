@@ -42,28 +42,129 @@ enum TransactionStatus {
   refunded
 }
 
+enum StorageType {
+  local
+  s3
+  cdn
+}
+
+enum AssetKind {
+  thumbnail
+  preview
+  cover
+  sample
+}
+
+enum ProcessedImageStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+model File {
+  id           String       @id @default(uuid())
+  filename     String       @unique
+  originalName String       @map("original_name")
+  filePath     String       @map("file_path")    // Physical path
+  fileUrl      String       @map("file_url")     // Public access URL
+  fileSize     Int          @map("file_size")    // Bytes
+  mimeType     String       @map("mime_type")    // image/jpeg, etc.
+  width        Int?
+  height       Int?
+  format       String?      // jpeg, png, webp, etc.
+  quality      Int?         // 1-100 for compressed images
+  hash         String?      // File hash for deduplication
+  storageType  StorageType  @default(local) @map("storage_type") // local, s3, cdn
+  bucket       String?      // For cloud storage
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  templateAssets TemplateAsset[]
+  processedImages ProcessedImage[]
+
+  @@index([mimeType])
+  @@index([storageType])
+  @@index([hash])
+  @@map("files")
+}
+
+model TemplateAsset {
+  id          String    @id @default(uuid())
+  templateId  String    @map("template_id")
+  fileId      String    @map("file_id")
+  kind        AssetKind // thumbnail, preview, cover, sample
+  sortOrder   Int       @default(0) @map("sort_order")
+  altText     String?   @map("alt_text")
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  file     File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, kind])
+  @@index([templateId])
+  @@index([fileId])
+  @@map("template_assets")
+}
+
 model Template {
-  id             String             @id @default(uuid())
-  slug           String             @unique
-  name           String
-  description    String?
-  prompt         String?            // AI prompt template for image generation
-  negativePrompt String?            @map("negative_prompt") // What to avoid in generated images
-  modelProvider  String             @default("gemini") @map("model_provider") // AI provider: gemini, openai, midjourney
-  modelName      String             @default("gemini-1.5-pro") @map("model_name") // Specific model name/version
-  status         TemplateStatus     @default(draft)
-  visibility     TemplateVisibility @default(public)
-  thumbnailUrl   String?            @map("thumbnail_url")
-  publishedAt    DateTime?          @map("published_at")
-  usageCount     Int                @default(0) @map("usage_count")
-  tags           String[]           @default([])
-  createdAt      DateTime           @default(now()) @map("created_at")
-  updatedAt      DateTime           @updatedAt @map("updated_at")
+  id               String             @id @default(uuid())
+  slug             String             @unique
+  name             String
+  description      String?
+  prompt           String?            // AI prompt template for image generation
+  negativePrompt   String?            @map("negative_prompt") // What to avoid in generated images
+  modelProvider    String             @default("gemini") @map("model_provider") // AI provider: gemini, openai, midjourney
+  modelName        String             @default("gemini-1.5-pro") @map("model_name") // Specific model name/version
+  status           TemplateStatus     @default(draft)
+  visibility       TemplateVisibility @default(public)
+  thumbnailUrl     String?            @map("thumbnail_url") // @deprecated - use TemplateAsset instead
+  publishedAt      DateTime?          @map("published_at")
+  usageCount       Int                @default(0) @map("usage_count")
+  tags             String[]           @default([])
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  templateAssets TemplateAsset[]
+  processedImages ProcessedImage[]
 
   @@index([status])
   @@index([visibility])
   @@index([publishedAt])
   @@map("templates")
+}
+
+model ProcessedImage {
+  id               String              @id @default(uuid())
+  userId           String              @map("user_id")
+  templateId       String              @map("template_id")
+  originalFileId   String?             @map("original_file_id")  // For future image uploads
+  resultFileId     String              @map("result_file_id")    // Generated image file
+  prompt           String?
+  negativePrompt   String?             @map("negative_prompt")
+  modelUsed        String              @map("model_used")
+  modelVersion     String?             @map("model_version")
+  width            Int?
+  height           Int?
+  processingTimeMs Int?                @map("processing_time_ms")
+  creditsUsed      Int                 @default(1) @map("credits_used")
+  status           ProcessedImageStatus @default(completed)
+  error            String?
+  metadata         Json?               // Additional processing metadata
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template Template @relation(fields: [templateId], references: [id])
+  file     File     @relation(fields: [resultFileId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([templateId])
+  @@index([createdAt])
+  @@index([status])
+  @@map("processed_images")
 }
 
 model User {
@@ -77,6 +178,7 @@ model User {
   updatedAt   DateTime      @updatedAt @map("updated_at")
 
   transactions Transaction[]
+  processedImages ProcessedImage[]
 
   @@index([firebaseUid])
   @@index([email])

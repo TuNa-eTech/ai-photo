@@ -13,7 +13,8 @@ AI-powered photo styling platform for iOS, with a secure, scalable NestJS backen
 ## 🏗️ Architecture
 
 - **iOS App:** Native SwiftUI app for user interaction, photo selection, and AI style application.
-- **Backend:** NestJS service (containerized) for template management, image processing (via Gemini API), and secure file storage.
+- **Backend:** NestJS service (containerized) for template management, image processing (via Gemini API), and comprehensive file storage system.
+- **File Storage:** Local storage with database metadata using Prisma ORM, supporting thumbnail generation, file deduplication, and multiple asset types.
 - **Authentication:** 100% via Firebase Auth (Google/Apple login on iOS, backend verifies idToken). No backend login API.
 - **Profile Management:** `/v1/users/register` API for storing/updating user profile (not authentication).
 - **AI Processing:** Gemini API integration for real-time, high-quality image transformation.
@@ -27,7 +28,9 @@ AI-powered photo styling platform for iOS, with a secure, scalable NestJS backen
 - Browse and select AI style templates.
 - Upload and process photos with Gemini AI.
 - View, download, and share processed images.
-- Admins can add/edit templates and upgrade backend without affecting the app.
+- Advanced file storage system with metadata, thumbnails, and deduplication.
+- Template asset management (thumbnail, preview, cover, sample images).
+- Admins can add/edit templates and manage assets through admin interface.
 - Modern, minimal UI/UX with SwiftUI.
 
 ---
@@ -55,16 +58,46 @@ AI-powered photo styling platform for iOS, with a secure, scalable NestJS backen
 
 ### Backend Setup
 
-1. Clone the repo and enter `backend/`.
-2. Place your Firebase service account JSON in `backend/`.
+1. Clone the repo and enter `server/`.
+2. Place your Firebase service account JSON in `server/` (filename: `firebase-adminsdk.json`).
 3. Copy `.env.example` to `.env` and configure environment variables:
-    - `FIREBASE_SERVICE_ACCOUNT`, `PORT`, `DATABASE_URL`, `GEMINI_API_KEY`, etc.
+    - `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`
+    - `PORT`, `DATABASE_URL`, `GEMINI_API_KEY`
+    - `API_BASE_URL` (important for file URL generation)
+    - `CORS_ALLOWED_ORIGINS` for web apps
 4. Run the backend:
     ```bash
-    cd backend
-    go run ./cmd/api/main.go
+    cd server
+    npm run start:dev
     ```
 5. API runs on `http://localhost:8080` by default.
+
+### Docker Deployment (Production)
+
+1. **Configure Environment**: Set up `docker/.env` with production values:
+   ```bash
+   API_BASE_URL=https://your-api-domain.com
+   NODE_ENV=production
+   DEV_AUTH_ENABLED=0  # Use Firebase Auth in production
+   ```
+
+2. **Deploy with Docker Compose**:
+   ```bash
+   cd docker
+   docker-compose up -d --build
+   ```
+
+3. **Services Deployed**:
+   - **PostgreSQL Database** (port 55432)
+   - **NestJS API Server** (port 8080)
+   - **Web CMS Admin Panel** (port 5173)
+   - **Landing Page** (port 5174)
+   - **Adminer DB Admin** (port 5050)
+
+4. **Database Migration**:
+   ```bash
+   docker exec -it <container-name> npx prisma migrate deploy
+   ```
 
 ### iOS App Setup
 
@@ -77,14 +110,31 @@ AI-powered photo styling platform for iOS, with a secure, scalable NestJS backen
 
 ## 📑 API Endpoints (Summary)
 
-- `POST /v1/users/register`  
-  Register/update user profile (requires idToken, not for authentication).
+### Public Endpoints
+- `GET /v1/templates` - List published AI style templates
+- `GET /v1/templates/categories` - List template categories
+- `GET /v1/templates/trending` - List trending templates
 
-- `POST /v1/images/process`  
-  Process an image with a selected AI template (requires idToken).
+### User Endpoints (Firebase Auth Required)
+- `POST /v1/users/register` - Register/update user profile (requires idToken)
+- `POST /v1/images/process` - Process an image with selected AI template
+- `GET /v1/images` - List user's processed images
 
-- `GET /v1/templates`  
-  List available AI style templates (requires idToken).
+### Admin Endpoints (Firebase Auth Required)
+- `GET /v1/admin/templates` - List all templates (admin view)
+- `POST /v1/admin/templates` - Create new template
+- `PUT /v1/admin/templates/{slug}` - Update template
+- `DELETE /v1/admin/templates/{slug}` - Delete template
+- `POST /v1/admin/templates/{slug}/publish` - Publish template
+- `POST /v1/admin/templates/{slug}/assets` - Upload template assets (thumbnail, preview, cover, sample)
+- `DELETE /v1/admin/templates/{slug}/assets/{assetId}` - Delete template asset
+
+### File Storage System
+- **Automatic thumbnail generation** for uploaded images
+- **File deduplication** using SHA256 hashing
+- **Metadata extraction** (dimensions, format, quality)
+- **Multiple asset types** per template (thumbnail, preview, cover, sample)
+- **URL generation** based on `API_BASE_URL` environment variable
 
 See [`swagger/openapi.yaml`](swagger/openapi.yaml) and `.documents/api_specification.md` for full details.
 
@@ -120,11 +170,25 @@ See [`swagger/openapi.yaml`](swagger/openapi.yaml) and `.documents/api_specifica
 ```
 .
 ├── app_ios/                # iOS SwiftUI app
-├── backend/                # Go backend service
-├── .documents/             # Source of truth for requirements, API, workflow
-├── .memory-bank/           # Architecture, tech, product, context, tasks
-├── .box-testing/           # Test data, scripts, sandbox code
-├── swagger/openapi.yaml    # OpenAPI spec
+├── server/                 # NestJS backend service
+│   ├── src/
+│   │   ├── files/          # File storage service and controllers
+│   │   ├── templates/      # Template management with asset system
+│   │   ├── images/         # Image processing endpoints
+│   │   ├── users/          # User profile management
+│   │   ├── auth/           # Firebase authentication
+│   │   └── prisma/         # Database schema and migrations
+│   ├── public/             # Static file serving (thumbnails, uploads)
+│   └── prisma/             # Database schema and migration files
+├── docker/                 # Docker compose configuration
+│   ├── docker-compose.yml  # Multi-service deployment
+│   └── .env               # Production environment variables
+├── web-cms/               # Admin panel for template management
+├── landing-page/          # Public landing page
+├── .documents/            # Source of truth for requirements, API, workflow
+├── .memory-bank/          # Architecture, tech, product, context, tasks
+├── .box-testing/          # Test data, scripts, sandbox code
+├── swagger/openapi.yaml   # OpenAPI spec
 └── README.md
 ```
 

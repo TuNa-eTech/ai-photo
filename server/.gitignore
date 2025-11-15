@@ -12,3 +12,5 @@ firebase-adminsdk.json
 firebase-adminsdk*.json
 
 /generated/prisma
+
+dist/

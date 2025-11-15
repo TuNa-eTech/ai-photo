@@ -7,6 +7,7 @@ export enum AssetKind {
   THUMBNAIL = 'thumbnail',
   PREVIEW = 'preview',
   COVER = 'cover',
+  SAMPLE = 'sample',
 }
 
 /**

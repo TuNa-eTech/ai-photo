@@ -1,14 +1,14 @@
-import { Injectable, NotFoundException, ConflictException, UnprocessableEntityException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, UnprocessableEntityException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { FileService } from '../files/file.service';
 import { QueryTemplatesDto, SortKey } from './dto/query-templates.dto';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { UpdateTemplateDto } from './dto/update-template.dto';
 import { AssetKind, AssetUploadResponse } from './dto/upload-asset.dto';
 import { ApiCategory } from './dto/category.dto';
-import { Template, TemplateStatus } from '@prisma/client';
+import { Template, TemplateStatus, AssetKind as PrismaAssetKind } from '@prisma/client';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { randomUUID } from 'crypto';
 
 type DbTemplate = {
   id: string;
@@ -47,7 +47,7 @@ export type ApiTemplateAdmin = {
 
 @Injectable()
 export class TemplatesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly fileService: FileService) {}
 
   // Category definitions with metadata
   private readonly CATEGORIES: Array<{ id: string; name: string }> = [
@@ -378,78 +378,71 @@ export class TemplatesService {
     // Check if template exists
     const template = await this.prisma.template.findUnique({
       where: { slug },
+      include: { templateAssets: true },
     });
 
     if (!template) {
       throw new NotFoundException(`Template with slug '${slug}' not found`);
     }
 
-    // Validate file type (images only)
-    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-    if (!allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException(
-        `Invalid file type. Allowed types: ${allowedMimeTypes.join(', ')}`,
-      );
-    }
+    // Save file using FileService
+    const savedFile = await this.fileService.saveFile({
+      originalName: file.originalname,
+      buffer: file.buffer,
+      mimeType: file.mimetype,
+    });
 
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      throw new BadRequestException('File size must be less than 5MB');
-    }
+    // Convert AssetKind to database enum
+    const assetKind = this.mapToPrismaAssetKind(kind);
 
-    // Generate unique filename
-    const ext = path.extname(file.originalname);
-    const filename = `${slug}-${kind}-${Date.now()}${ext}`;
-    const uploadDir = path.join(process.cwd(), 'public', 'thumbnails');
-    const filePath = path.join(uploadDir, filename);
+    // Check if asset of this kind already exists for this template
+    const existingAsset = template.templateAssets.find(asset => asset.kind === kind);
 
-    // Ensure upload directory exists
-    await fs.mkdir(uploadDir, { recursive: true });
+    if (existingAsset) {
+      // Update existing asset
+      await this.prisma.templateAsset.update({
+        where: { id: existingAsset.id },
+        data: { fileId: savedFile.id },
+      });
 
-    // Delete old file if exists (for thumbnail kind)
-    if (kind === AssetKind.THUMBNAIL && template.thumbnailUrl) {
-      try {
-        // Extract filename from URL: http://localhost:8080/public/thumbnails/filename.jpg
-        const oldUrl = new URL(template.thumbnailUrl);
-        const oldFilename = path.basename(oldUrl.pathname);
-        const oldFilePath = path.join(uploadDir, oldFilename);
-        
-        // Delete old file
-        await fs.unlink(oldFilePath);
-        console.log(`Deleted old thumbnail: ${oldFilename}`);
-      } catch (error) {
-        // Ignore error if old file doesn't exist or can't be deleted
-        console.warn('Could not delete old thumbnail:', error);
-      }
-    }
-
-    // Save new file
-    await fs.writeFile(filePath, file.buffer);
-
-    // Generate URL (assuming server runs on port 8080)
-    const baseUrl = process.env.API_BASE_URL || 'http://localhost:8080';
-    const fileUrl = `${baseUrl}/public/thumbnails/${filename}`;
-
-    // Update template thumbnailUrl if kind is thumbnail
-    if (kind === AssetKind.THUMBNAIL) {
-      await this.prisma.template.update({
-        where: { slug },
-        data: { thumbnailUrl: fileUrl },
+      // Delete old file
+      await this.fileService.deleteFile(existingAsset.fileId);
+    } else {
+      // Create new asset
+      await this.prisma.templateAsset.create({
+        data: {
+          templateId: template.id,
+          fileId: savedFile.id,
+          kind: assetKind,
+        },
       });
     }
 
-    // Return asset response (for now we don't store assets in separate table)
-    // In future, implement template_assets table as per data model
+    // Update template thumbnailUrl if kind is thumbnail (for backward compatibility)
+    if (kind === AssetKind.THUMBNAIL) {
+      await this.prisma.template.update({
+        where: { slug },
+        data: { thumbnailUrl: savedFile.fileUrl },
+      });
+    }
+
+    // Return asset response
     const response: AssetUploadResponse = {
-      id: randomUUID(),
+      id: savedFile.id,
       template_id: template.id,
       kind: kind,
-      url: fileUrl,
+      url: savedFile.fileUrl,
       sort_order: 0,
-      created_at: new Date().toISOString(),
+      created_at: savedFile.createdAt.toISOString(),
     };
 
     return response;
+  }
+
+  /**
+   * Convert DTO AssetKind to Prisma AssetKind enum
+   */
+  private mapToPrismaAssetKind(kind: AssetKind): AssetKind {
+    return kind;
   }
 }
