@@ -187,9 +187,13 @@ struct CardGlassSmall: View {
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
+                            GeometryReader { geo in
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: geo.size.width, height: geo.size.height)
+                                    .clipped()
+                            }
                         case .failure(let error):
                             VStack {
                                 fallbackImage
@@ -257,7 +261,8 @@ struct CardGlassSmall: View {
             }
             .padding(12)
         }
-        .frame(height: 200)
+        .frame(maxWidth: .infinity)
+        .aspectRatio(3/4, contentMode: .fill)
         .glassCard()
         .contentShape(RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous))
         .accessibilityElement(children: .combine)

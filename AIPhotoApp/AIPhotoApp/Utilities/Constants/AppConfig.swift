@@ -19,9 +19,9 @@ enum AppConfig {
     // Support runtime override via:
     // - Environment variable: API_BASE_URL (set in Xcode Scheme → Run → Arguments → Environment)
     // - UserDefaults key: "API_BASE_URL" (for hot switching without rebuild)
-    private static let defaultBaseURLString = "http://localhost:8080"
+//    private static let defaultBaseURLString = "http://localhost:8080"
     // private static let defaultBaseURLString = "https://impavidly-feuilletonistic-dacia.ngrok-free.dev"
-    // private static let defaultBaseURLString = "https://bokphoto-api.e-tech.network"
+     private static let defaultBaseURLString = "https://bokphoto-api.e-tech.network"
     private static let selectedBaseURLString: String = {
         if let env = ProcessInfo.processInfo.environment["API_BASE_URL"], !env.isEmpty {
             return env
