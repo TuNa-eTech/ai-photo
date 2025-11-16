@@ -19,7 +19,6 @@ final class HomeViewModel {
         let slug: String
         let title: String
         let subtitle: String?
-        let tag: String?
         let isNew: Bool
         let isTrending: Bool
         let thumbnailURL: URL?           // Real image URL from backend
@@ -30,7 +29,6 @@ final class HomeViewModel {
              slug: String,
              title: String,
              subtitle: String? = nil,
-             tag: String? = nil,
              isNew: Bool = false,
              isTrending: Bool = false,
              thumbnailURL: URL? = nil,
@@ -40,7 +38,6 @@ final class HomeViewModel {
             self.slug = slug
             self.title = title
             self.subtitle = subtitle
-            self.tag = tag
             self.isNew = isNew
             self.isTrending = isTrending
             self.thumbnailURL = thumbnailURL
@@ -97,7 +94,6 @@ final class HomeViewModel {
                         slug: dto.id,
                         title: dto.name,
                         subtitle: subtitleText(for: dto),
-                        tag: tagText(for: dto),
                         isNew: dto.isNew,
                         isTrending: dto.isTrending,
                         thumbnailURL: dto.thumbnailURL,
@@ -132,8 +128,7 @@ final class HomeViewModel {
                         slug: dto.id,
                         title: dto.name,
                         subtitle: subtitleText(for: dto),
-                        tag: tagText(for: dto),
-                        isNew: dto.isNew,
+                                                isNew: dto.isNew,
                         isTrending: dto.isTrending,
                         thumbnailURL: dto.thumbnailURL,
                         thumbnailSymbol: "photo",  // Fallback icon
@@ -166,8 +161,7 @@ final class HomeViewModel {
                         slug: dto.id,
                         title: dto.name,
                         subtitle: subtitleText(for: dto),
-                        tag: tagText(for: dto),
-                        isNew: dto.isNew,
+                                                isNew: dto.isNew,
                         isTrending: dto.isTrending,
                         thumbnailURL: dto.thumbnailURL,
                         thumbnailSymbol: "photo",  // Fallback icon
@@ -206,17 +200,6 @@ final class HomeViewModel {
         return parts.isEmpty ? nil : parts.joined(separator: " • ")
     }
     
-    // Helper: Generate tag from template data
-    private func tagText(for dto: TemplateDTO) -> String? {
-        if dto.isNew {
-            return "New"
-        } else if dto.isTrending {
-            return "Trending"
-        } else if let count = dto.usageCount, count > 50 {
-            return "Popular"
-        }
-        return nil
-    }
 
     func toggleFavorite(_ item: TemplateItem) {
         if favorites.contains(item.id) {

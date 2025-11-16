@@ -101,7 +101,6 @@ struct HeroTemplateCard: View {
         slug: "preview",
         title: "Anime Style",
         subtitle: "New • High Quality",
-        tag: "Trending",
         thumbnailSymbol: "moon.stars.fill"
     )
     

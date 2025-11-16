@@ -10,6 +10,7 @@ import SwiftUI
 struct AllTemplatesView: View {
     @Environment(AuthViewModel.self) private var authModel
     @State private var viewModel = AllTemplatesViewModel()
+    @State private var selectedTemplate: TemplateDTO?
     
     private let gridCols: [GridItem] = [
         GridItem(.flexible(), spacing: 12, alignment: .top),
@@ -44,7 +45,6 @@ struct AllTemplatesView: View {
                                     ForEach(viewModel.templates) { item in
                                         CardGlassSmall(
                                             title: item.title,
-                                            tag: item.tag,
                                             thumbnailURL: item.thumbnailURL,
                                             thumbnailSymbol: item.thumbnailSymbol ?? "photo"
                                         )
@@ -56,7 +56,9 @@ struct AllTemplatesView: View {
                                         }
                                         .onTapGesture {
                                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                            // Navigate to template selection if needed
+                                            if let dto = item.dto {
+                                                selectedTemplate = dto
+                                            }
                                         }
                                         .contextMenu {
                                             Button(L10n.tr("l10n.templates.preview"), systemImage: "eye") {}
@@ -104,6 +106,9 @@ struct AllTemplatesView: View {
             .navigationTitle(L10n.tr("l10n.templates.all"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .tabBar)
+        }
+        .navigationDestination(item: $selectedTemplate) { template in
+            TemplateSelectionView(template: template)
         }
         .onAppear {
             if viewModel.templates.isEmpty {

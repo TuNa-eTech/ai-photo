@@ -34,14 +34,12 @@ struct HeroSection: View {
             slug: "preview-1",
             title: "Anime Style",
             subtitle: "New • High Quality",
-            tag: "Trending",
             thumbnailSymbol: "moon.stars.fill"
         ),
         HomeViewModel.TemplateItem(
             slug: "preview-2",
             title: "Cyberpunk",
             subtitle: "Neon • Futuristic",
-            tag: "New",
             thumbnailSymbol: "bolt.fill"
         )
     ]

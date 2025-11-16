@@ -45,13 +45,11 @@ struct NewSection: View {
         HomeViewModel.TemplateItem(
             slug: "1",
             title: "New Template 1",
-            tag: "New",
             thumbnailSymbol: "sparkles"
         ),
         HomeViewModel.TemplateItem(
             slug: "2",
             title: "New Template 2",
-            tag: "New",
             thumbnailSymbol: "star.fill"
         )
     ]

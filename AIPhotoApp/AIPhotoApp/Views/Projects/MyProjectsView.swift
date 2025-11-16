@@ -170,23 +170,27 @@ struct ProjectGridView: View {
             Button(action: onTap) {
                 VStack(alignment: .leading, spacing: 8) {
                     // Image
-                    if let image = image {
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(height: 180)
-                            .clipped()
-                            .clipShape(RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous))
-                    } else {
-                        RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
-                            .fill(GlassTokens.primary1.opacity(0.3))
-                            .frame(height: 180)
-                            .overlay(
-                                Image(systemName: "photo")
-                                    .font(.title)
-                                    .foregroundStyle(GlassTokens.textSecondary)
-                            )
+                    GeometryReader { geometry in
+                        ZStack {
+                            if let image = image {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: geometry.size.width, height: geometry.size.height)
+                                    .clipped()
+                            } else {
+                                RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                                    .fill(GlassTokens.primary1.opacity(0.3))
+                                    .frame(width: geometry.size.width, height: geometry.size.height)
+                                    .overlay(
+                                        Image(systemName: "photo")
+                                            .font(.title)
+                                            .foregroundStyle(GlassTokens.textSecondary)
+                                    )
+                            }
+                        }
                     }
+                    .frame(height: 180)
                     
                     // Info
                     VStack(alignment: .leading, spacing: 6) {

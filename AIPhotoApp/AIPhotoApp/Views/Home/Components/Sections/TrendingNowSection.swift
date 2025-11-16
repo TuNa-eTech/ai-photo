@@ -45,13 +45,11 @@ struct TrendingNowSection: View {
         HomeViewModel.TemplateItem(
             slug: "1",
             title: "Anime Style",
-            tag: "Trending",
             thumbnailSymbol: "moon.stars.fill"
         ),
         HomeViewModel.TemplateItem(
             slug: "2",
             title: "Cyberpunk",
-            tag: "New",
             thumbnailSymbol: "bolt.fill"
         )
     ]

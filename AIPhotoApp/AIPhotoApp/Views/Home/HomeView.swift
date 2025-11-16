@@ -122,21 +122,21 @@ struct HomeView: View {
                     home.errorMessage = nil
                     return
                 }
-                
+
                 home.fetchTrendingFromAPI(
                     bearerIDToken: token,
                     limit: 9, // Get 9 templates: up to 4 for hero carousel + 5 for trending now
                     tokenProvider: { try await model.fetchFreshIDToken() }
                 )
             }
-            
+
             // Load new templates for home screen (only if logged in)
             if home.newTemplates.isEmpty {
                 guard let token = model.loadToken() else {
                     // User not logged in - skip loading new templates
                     return
                 }
-                
+
                 home.fetchNewTemplatesFromAPI(
                     bearerIDToken: token,
                     limit: 6, // Get 6 new templates

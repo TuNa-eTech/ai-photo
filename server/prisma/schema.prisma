@@ -123,6 +123,7 @@ model Template {
   thumbnailUrl     String?            @map("thumbnail_url") // @deprecated - use TemplateAsset instead
   publishedAt      DateTime?          @map("published_at")
   usageCount       Int                @default(0) @map("usage_count")
+  isTrendingManual Boolean            @default(false)
   tags             String[]           @default([])
   createdAt        DateTime           @default(now()) @map("created_at")
   updatedAt        DateTime           @updatedAt @map("updated_at")

@@ -169,20 +169,17 @@ export class TemplatesService {
   }
 
   async listTrendingTemplates(query: QueryTemplatesDto): Promise<{ templates: ApiTemplate[] }> {
-    const { limit = 20, offset = 0 } = query;
+    const { limit = 20 } = query;
 
-    // Security: Only return published + public templates with high usage
-    const where: any = {
-      status: TemplateStatus.published,
-      visibility: 'public',
-      usageCount: { gte: 500 }, // Trending threshold
-    };
-
-    const rows = await this.prisma.template.findMany({
-      where,
-      orderBy: { usageCount: 'desc' }, // Sort by usage count descending
-      take: Math.min(limit, 50), // Cap at 50 for performance
-      skip: offset,
+    // 1. Lấy các template trending thủ công
+    const manualTrending = await this.prisma.template.findMany({
+      where: {
+        isTrendingManual: true,
+        status: TemplateStatus.published,
+        visibility: 'public',
+      },
+      orderBy: { usageCount: 'desc' },
+      take: limit,
       select: {
         id: true,
         name: true,
@@ -192,7 +189,30 @@ export class TemplatesService {
       },
     });
 
-    return { templates: rows.map((r) => this.mapToApi(r as DbTemplate)) };
+    const manualIds = manualTrending.map(t => t.id);
+
+    // 2. Lấy các template usageCount lớn nhất, loại trừ các template đã lấy ở trên
+    const autoTrending = await this.prisma.template.findMany({
+      where: {
+        id: { notIn: manualIds },
+        status: TemplateStatus.published,
+        visibility: 'public',
+      },
+      orderBy: { usageCount: 'desc' },
+      take: limit - manualTrending.length,
+      select: {
+        id: true,
+        name: true,
+        thumbnailUrl: true,
+        publishedAt: true,
+        usageCount: true,
+      },
+    });
+
+    // 3. Gộp hai danh sách
+    const trendingTemplates = [...manualTrending, ...autoTrending];
+
+    return { templates: trendingTemplates.map((r) => this.mapToApi(r as DbTemplate)) };
   }
 
   // ========== ADMIN METHODS ==========

@@ -89,6 +89,7 @@ export async function createTemplate(data: CreateTemplateRequest): Promise<Templ
     status: data.status,
     visibility: data.visibility,
     tags: data.tags,
+    isTrendingManual: data.isTrendingManual,
   }
   
   return apiClient.post<TemplateAdmin>('/v1/admin/templates', apiData)
@@ -113,6 +114,7 @@ export async function updateTemplate(
     status: data.status,
     visibility: data.visibility,
     tags: data.tags,
+    isTrendingManual: data.isTrendingManual,
   }
   
   return apiClient.put<TemplateAdmin>(`/v1/admin/templates/${slug}`, apiData)
@@ -205,4 +207,3 @@ export async function updateTemplateAsset(
 export async function deleteTemplateAsset(slug: string, assetId: string): Promise<void> {
   return apiClient.delete<void>(`/v1/admin/templates/${slug}/assets/${assetId}`)
 }
-

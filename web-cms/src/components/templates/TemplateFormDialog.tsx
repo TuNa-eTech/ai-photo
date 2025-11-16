@@ -92,6 +92,7 @@ export function TemplateFormDialog({
     status: 'draft',
     visibility: 'public',
     tags: [],
+    isTrendingManual: false,
   })
 
   const [tagsInput, setTagsInput] = useState<string>('')
@@ -130,6 +131,7 @@ export function TemplateFormDialog({
         status: template.status || 'draft',
         visibility: template.visibility || 'public',
         tags: template.tags || [],
+        isTrendingManual: template.isTrendingManual ?? false,
       })
       setTagsInput(template.tags?.join(', ') || '')
       setThumbnailPreview(template.thumbnail_url || null)
@@ -147,6 +149,7 @@ export function TemplateFormDialog({
         status: 'draft',
         visibility: 'public',
         tags: [],
+        isTrendingManual: false,
       })
       setTagsInput('')
       setThumbnailPreview(null)
@@ -260,6 +263,7 @@ export function TemplateFormDialog({
         status: formData.status,
         visibility: formData.visibility,
         tags: tags.length > 0 ? tags : undefined,
+        isTrendingManual: formData.isTrendingManual,
       }
       onSubmit(updateData, thumbnailFile || undefined)
     } else {
@@ -271,6 +275,7 @@ export function TemplateFormDialog({
         model_provider: formData.model_provider || undefined,
         model_name: formData.model_name || undefined,
         tags: tags.length > 0 ? tags : undefined,
+        isTrendingManual: formData.isTrendingManual,
       }
       onSubmit(createData, thumbnailFile || undefined)
     }
@@ -698,6 +703,27 @@ export function TemplateFormDialog({
                 </Box>
               </Stack>
 
+              {/* Trending Manual Checkbox */}
+              <Box>
+                <FormControl>
+                  <Stack direction="row" alignItems="center" spacing={2}>
+                    <Typography variant="subtitle2">Trending thủ công</Typography>
+                    <input
+                      type="checkbox"
+                      checked={!!formData.isTrendingManual}
+                      onChange={(e) =>
+                        setFormData({ ...formData, isTrendingManual: e.target.checked })
+                      }
+                      disabled={loading}
+                      style={{ width: 20, height: 20 }}
+                    />
+                    <Typography variant="body2" color="text.secondary">
+                      Đánh dấu template này luôn xuất hiện trong danh sách trending, bất kể usageCount.
+                    </Typography>
+                  </Stack>
+                </FormControl>
+              </Box>
+
               {formData.status === 'published' && !thumbnailPreview && (
                 <Alert severity="warning">
                   Publishing without a thumbnail may fail. Please upload a thumbnail image.
@@ -727,4 +753,3 @@ export function TemplateFormDialog({
     </Dialog>
   )
 }
-

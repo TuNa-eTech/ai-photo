@@ -88,7 +88,13 @@ export class ImagesService {
         // 4. Deduct 1 credit after successful processing
         await this.creditsService.deductCredits(firebaseUid, 1, dto.template_id);
 
-        // 5. Return mock result
+        // 5. Tăng usageCount cho template
+        await this.prisma.template.update({
+          where: { id: dto.template_id },
+          data: { usageCount: { increment: 1 } }
+        });
+
+        // 6. Return mock result
         return {
           processed_image_base64: `data:image/jpeg;base64,${mockImageBase64}`,
           metadata: {
@@ -143,7 +149,13 @@ export class ImagesService {
       // 4. Deduct 1 credit after successful processing
       await this.creditsService.deductCredits(firebaseUid, 1, dto.template_id);
 
-      // 5. Return result
+      // 5. Tăng usageCount cho template
+      await this.prisma.template.update({
+        where: { id: dto.template_id },
+        data: { usageCount: { increment: 1 } }
+      });
+
+      // 6. Return result
       return {
         processed_image_base64: `data:image/jpeg;base64,${result.processedImageBase64}`,
         metadata: {
@@ -162,4 +174,3 @@ export class ImagesService {
     }
   }
 }
-

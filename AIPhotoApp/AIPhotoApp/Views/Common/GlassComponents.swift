@@ -175,7 +175,6 @@ struct GlassFloatingButton: View {
 
 struct CardGlassSmall: View {
     let title: String
-    let tag: String?
     let thumbnailURL: URL?          // Real image URL from backend
     let thumbnailSymbol: String?    // Fallback SF Symbol
 
@@ -195,27 +194,41 @@ struct CardGlassSmall: View {
                                     .clipped()
                             }
                         case .failure(let error):
-                            VStack {
-                                fallbackImage
-                                #if DEBUG
-                                Text("Failed: \(error.localizedDescription)")
-                                    .font(.caption2)
-                                    .foregroundStyle(.red)
-                                    .padding(4)
-                                #endif
+                            GeometryReader { geo in
+                                ZStack {
+                                    fallbackImage
+                                        .frame(width: geo.size.width, height: geo.size.height)
+                                    #if DEBUG
+                                    VStack {
+                                        Spacer()
+                                        Text("Failed: \(error.localizedDescription)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.red)
+                                            .padding(4)
+                                            .background(Color.black.opacity(0.7), in: Capsule())
+                                    }
+                                    .padding(8)
+                                    #endif
+                                }
                             }
                         case .empty:
-                            ZStack {
-                                LinearGradient(
-                                    colors: [GlassTokens.primary1.opacity(0.3), GlassTokens.accent1.opacity(0.2)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                                ProgressView()
-                                    .tint(GlassTokens.textPrimary)
+                            GeometryReader { geo in
+                                ZStack {
+                                    LinearGradient(
+                                        colors: [GlassTokens.primary1.opacity(0.3), GlassTokens.accent1.opacity(0.2)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                    .frame(width: geo.size.width, height: geo.size.height)
+                                    ProgressView()
+                                        .tint(GlassTokens.textPrimary)
+                                }
                             }
                         @unknown default:
-                            fallbackImage
+                            GeometryReader { geo in
+                                fallbackImage
+                                    .frame(width: geo.size.width, height: geo.size.height)
+                            }
                         }
                     }
                     .onAppear {
@@ -224,14 +237,22 @@ struct CardGlassSmall: View {
                         // #endif
                     }
                 } else {
-                    ZStack {
-                        fallbackImage
-                        #if DEBUG
-                        Text("No URL")
-                            .font(.caption2)
-                            .foregroundStyle(.orange)
-                            .padding(4)
-                        #endif
+                    GeometryReader { geo in
+                        ZStack {
+                            fallbackImage
+                                .frame(width: geo.size.width, height: geo.size.height)
+                            #if DEBUG
+                            VStack {
+                                Spacer()
+                                Text("No URL")
+                                    .font(.caption2)
+                                    .foregroundStyle(.orange)
+                                    .padding(4)
+                                    .background(Color.black.opacity(0.7), in: Capsule())
+                            }
+                            .padding(8)
+                            #endif
+                        }
                     }
                 }
             }
@@ -250,9 +271,6 @@ struct CardGlassSmall: View {
 
             // Text overlay
             VStack(alignment: .leading, spacing: 6) {
-                if let tag {
-                    GlassChip(text: tag, systemImage: "flame")
-                }
                 Text(title)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
@@ -266,7 +284,7 @@ struct CardGlassSmall: View {
         .glassCard()
         .contentShape(RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("\(title)\(tag.map { ", \($0)" } ?? "")"))
+        .accessibilityLabel(Text(title))
     }
     
     private var fallbackImage: some View {
@@ -303,7 +321,7 @@ struct CardGlassLarge: View {
                     if let url = thumbnailURL {
                         AsyncImage(url: url) { phase in
                             switch phase {
-                            case .success(let image):
+                                    case .success(let image):
                                 image
                                     .resizable()
                                     .scaledToFill()
@@ -399,8 +417,8 @@ struct DebugOverlay: View {
             CardGlassLarge(title: "Anime Style", subtitle: "New • High Quality", badge: "New", thumbnailURL: nil, thumbnailSymbol: "moon.stars.fill")
                 .frame(width: 320)
             HStack {
-                CardGlassSmall(title: "Cartoon", tag: "Trending", thumbnailURL: nil, thumbnailSymbol: "paintbrush.pointed.fill")
-                CardGlassSmall(title: "Cyberpunk", tag: "New", thumbnailURL: nil, thumbnailSymbol: "bolt.fill")
+                CardGlassSmall(title: "Cartoon", thumbnailURL: nil, thumbnailSymbol: "paintbrush.pointed.fill")
+                CardGlassSmall(title: "Cyberpunk", thumbnailURL: nil, thumbnailSymbol: "bolt.fill")
             }
             .frame(height: 180)
             .padding(.horizontal)

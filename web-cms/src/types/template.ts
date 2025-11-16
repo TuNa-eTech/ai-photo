@@ -40,6 +40,7 @@ export interface TemplateAdmin {
   visibility: TemplateVisibility
   published_at?: string
   usage_count?: number
+  isTrendingManual?: boolean
   created_at: string
   updated_at: string
   tags?: string[]
@@ -76,6 +77,7 @@ export interface CreateTemplateRequest {
   status?: TemplateStatus
   visibility?: TemplateVisibility
   tags?: string[]
+  isTrendingManual?: boolean
 }
 
 /**
@@ -91,6 +93,7 @@ export interface UpdateTemplateRequest {
   status?: TemplateStatus
   visibility?: TemplateVisibility
   tags?: string[]
+  isTrendingManual?: boolean
 }
 
 /**
@@ -166,4 +169,3 @@ export interface UpdateAssetRequest {
 export interface TemplateAssetsList {
   assets: TemplateAsset[]
 }
-

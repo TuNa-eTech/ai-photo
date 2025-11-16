@@ -36,16 +36,16 @@ struct SearchView: View {
         NavigationStack {
             ZStack {
                 GlassBackgroundView()
-                
+
                 VStack(spacing: 0) {
                     // Category filters
                     categorySection
-                    
+
                     // Filter segment
                     filterSection
                         .padding(.horizontal, 20)
                         .padding(.vertical, 12)
-                    
+
                     // Templates grid or empty state
                     if home.isLoading {
                         loadingView
@@ -71,6 +71,9 @@ struct SearchView: View {
             )
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
+            .navigationDestination(item: $selectedTemplate) { template in
+                TemplateSelectionView(template: template)
+            }
             .onAppear {
                 // Load categories from API
                 if let token = model.loadToken() {
@@ -97,9 +100,6 @@ struct SearchView: View {
                 let categoryId = selectedCategory.id == "all" ? nil : selectedCategory.id
                 loadTemplates(query: searchText.isEmpty ? nil : searchText, category: categoryId, sort: sortForFilter(newValue))
             }
-        }
-        .navigationDestination(item: $selectedTemplate) { template in
-            TemplateSelectionView(template: template)
         }
     }
     
@@ -141,20 +141,20 @@ struct SearchView: View {
                 ForEach(filteredTemplates) { item in
                     CardGlassSmall(
                         title: item.title,
-                        tag: item.tag,
                         thumbnailURL: item.thumbnailURL,
                         thumbnailSymbol: item.thumbnailSymbol
                     )
-                    .overlay(alignment: .topTrailing) {
-                        if home.isFavorite(item) {
-                            GlassChip(text: L10n.tr("l10n.common.fav"), systemImage: "heart.fill")
-                                .padding(8)
-                        }
-                    }
                     .onTapGesture {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         if let dto = item.dto {
                             selectedTemplate = dto
+                        }
+                    }
+                    .contentShape(Rectangle())
+                    .overlay(alignment: .topTrailing) {
+                        if home.isFavorite(item) {
+                            GlassChip(text: L10n.tr("l10n.common.fav"), systemImage: "heart.fill")
+                                .padding(8)
                         }
                     }
                     .contextMenu {

@@ -17,7 +17,6 @@ struct TemplateCardView: View {
     var body: some View {
         CardGlassSmall(
             title: item.title,
-            tag: item.tag,
             thumbnailURL: item.thumbnailURL,
             thumbnailSymbol: item.thumbnailSymbol
         )
@@ -42,7 +41,6 @@ struct TemplateCardView: View {
     let template = HomeViewModel.TemplateItem(
         slug: "preview",
         title: "Anime Style",
-        tag: "Trending",
         thumbnailSymbol: "moon.stars.fill"
     )
     
