@@ -39,6 +39,7 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import ImageIcon from '@mui/icons-material/Image'
 import SettingsIcon from '@mui/icons-material/Settings'
 import type { TemplateAdmin, CreateTemplateRequest, UpdateTemplateRequest, TemplateStatus, TemplateVisibility } from '../../types'
+import { generateSlug } from '../../utils/slug'
 
 export interface TemplateFormDialogProps {
   open: boolean
@@ -82,7 +83,6 @@ export function TemplateFormDialog({
   const [activeTab, setActiveTab] = useState(0)
 
   const [formData, setFormData] = useState<CreateTemplateRequest>({
-    slug: '',
     name: '',
     description: '',
     prompt: '',
@@ -121,7 +121,6 @@ export function TemplateFormDialog({
   useEffect(() => {
     if (template) {
       setFormData({
-        slug: template.slug,
         name: template.name,
         description: template.description || '',
         prompt: template.prompt || '',
@@ -139,7 +138,6 @@ export function TemplateFormDialog({
       setActiveTab(0)
     } else {
       setFormData({
-        slug: '',
         name: '',
         description: '',
         prompt: '',
@@ -187,14 +185,6 @@ export function TemplateFormDialog({
       newErrors.name = 'Name is required'
     }
 
-    if (!isEdit && !formData.slug.trim()) {
-      newErrors.slug = 'Slug is required'
-    }
-
-    if (!isEdit && formData.slug && !/^[a-z0-9-]+$/.test(formData.slug)) {
-      newErrors.slug = 'Slug must contain only lowercase letters, numbers, and hyphens'
-    }
-
     if (formData.prompt && formData.prompt.length < 10) {
       newErrors.prompt = 'Prompt should be at least 10 characters for better results'
     }
@@ -235,6 +225,17 @@ export function TemplateFormDialog({
       return
     }
     setThumbnailPreview(isEdit ? template?.thumbnail_url || null : null)
+  }
+
+  // Handle name change and auto-generate slug for new templates
+  const handleNameChange = (name: string): void => {
+    // Auto-generate slug for new templates
+    if (!isEdit && name.trim()) {
+      const generatedSlug = generateSlug(name.trim())
+      setFormData(prev => ({ ...prev, name, slug: generatedSlug }))
+    } else {
+      setFormData(prev => ({ ...prev, name }))
+    }
   }
 
   const handleSubmit = (): void => {
@@ -342,7 +343,7 @@ export function TemplateFormDialog({
                 required
                 label="Template Name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => handleNameChange(e.target.value)}
                 error={!!errors.name}
                 helperText={errors.name || 'Display name for the template'}
                 disabled={loading}
@@ -352,16 +353,12 @@ export function TemplateFormDialog({
               {!isEdit && (
                 <TextField
                   fullWidth
-                  required
                   label="Slug"
-                  value={formData.slug}
+                  value={formData.slug || ''}
                   onChange={(e) =>
                     setFormData({ ...formData, slug: e.target.value.toLowerCase() })
                   }
-                  error={!!errors.slug}
-                  helperText={
-                    errors.slug || 'URL-friendly identifier (lowercase, hyphens only)'
-                  }
+                  helperText="Auto-generated from name (you can customize)"
                   disabled={loading}
                   placeholder="anime-style"
                 />

@@ -44,7 +44,8 @@ export async function processImage(
 ): Promise<ProcessImageResponse> {
   return apiClient.post<ProcessImageResponse>(
     '/v1/images/process',
-    request
+    request,
+    { timeout: 180000 } // 3 minutes timeout
   )
 }
 

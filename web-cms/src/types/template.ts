@@ -66,7 +66,7 @@ export interface TemplatesAdminList {
  * Create Template Request
  */
 export interface CreateTemplateRequest {
-  slug: string
+  slug?: string
   name: string
   description?: string
   prompt?: string

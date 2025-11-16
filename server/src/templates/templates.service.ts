@@ -7,6 +7,7 @@ import { UpdateTemplateDto } from './dto/update-template.dto';
 import { AssetKind, AssetUploadResponse } from './dto/upload-asset.dto';
 import { ApiCategory } from './dto/category.dto';
 import { Template, TemplateStatus, AssetKind as PrismaAssetKind } from '@prisma/client';
+import { generateSlug, generateUniqueSlug } from '../utils/slug';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -226,18 +227,32 @@ export class TemplatesService {
   }
 
   async createTemplate(dto: CreateTemplateDto): Promise<ApiTemplateAdmin> {
-    // Check if slug already exists
-    const existing = await this.prisma.template.findUnique({
-      where: { slug: dto.slug },
-    });
+    // Auto-generate slug if not provided
+    let slug = dto.slug;
+    if (!slug) {
+      slug = generateSlug(dto.name);
 
-    if (existing) {
-      throw new ConflictException(`Template with slug '${dto.slug}' already exists`);
+      // Get all existing slugs to ensure uniqueness
+      const existingTemplates = await this.prisma.template.findMany({
+        select: { slug: true },
+      });
+      const existingSlugs = existingTemplates.map(t => t.slug);
+
+      slug = generateUniqueSlug(slug, existingSlugs);
+    } else {
+      // If slug is provided, check if it already exists
+      const existing = await this.prisma.template.findUnique({
+        where: { slug },
+      });
+
+      if (existing) {
+        throw new ConflictException(`Template with slug '${slug}' already exists`);
+      }
     }
 
     const template = await this.prisma.template.create({
       data: {
-        slug: dto.slug,
+        slug,
         name: dto.name,
         description: dto.description,
         prompt: dto.prompt,

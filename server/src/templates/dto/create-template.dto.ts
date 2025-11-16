@@ -1,16 +1,19 @@
-import { IsString, IsOptional, IsEnum, IsArray, Matches } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsArray, Matches, ValidateIf } from 'class-validator';
 import { TemplateStatus, TemplateVisibility } from '@prisma/client';
+import { generateSlug, isValidSlug } from '../../utils/slug';
 
 /**
  * DTO for creating a new template
  * POST /v1/admin/templates
  */
 export class CreateTemplateDto {
+  @IsOptional()
   @IsString()
+  @ValidateIf((o) => o.slug !== undefined)
   @Matches(/^[a-z0-9-]+$/, {
     message: 'slug must contain only lowercase letters, numbers, and hyphens',
   })
-  slug: string;
+  slug?: string;
 
   @IsString()
   name: string;
