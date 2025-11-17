@@ -1,8 +1,43 @@
 # Context
 
-Last updated: 2025-11-09
+Last updated: 2025-11-17
 
 Current work focus
+- **✅ Trending Template Management System:** ✅ COMPLETED (November 17, 2025)
+  - **Backend Implementation:**
+    - Added `isTrendingManual` boolean field to template database schema
+    - Created trending toggle endpoints: `POST /v1/admin/templates/{slug}/trending` and `DELETE /v1/admin/templates/{slug}/trending`
+    - Updated admin templates list endpoint to support `trending=all|manual|none` query parameter
+    - Enhanced DTOs with `isTrendingManual` field for create/update operations
+    - Updated service layer `mapToAdminApi()` to return camelCase fields (thumbnailUrl, publishedAt, usageCount, isTrendingManual)
+  - **Frontend Implementation:**
+    - Created `TrendingBadge` component with animated fire icons and multiple size variants
+    - Enhanced `TemplateTable` with dedicated trending column and toggle buttons
+    - Added trending filter to `TemplatesFilters` with visual options (All, 🔥 Manual Trending, Not Trending)
+    - Updated all type definitions to use camelCase fields consistently
+    - Enhanced API client with trending management functions
+  - **UI/UX Features:**
+    - Visual trending badges with orange color scheme and pulse animations
+    - Fire icon buttons in template table for quick trending toggle
+    - Tooltip guidance for trending actions
+    - Responsive design with Material-UI theming
+    - Accessible ARIA labels and screen reader support
+  - **Field Naming Standardization:**
+    - Resolved API field naming inconsistency between backend snake_case and frontend camelCase
+    - Updated backend service to return camelCase fields directly
+    - Fixed all TypeScript compilation errors across template components
+  - **Files Created/Modified:**
+    - Backend: templates-admin.controller.ts, templates.service.ts, create-template.dto.ts, update-template.dto.ts
+    - Frontend: TrendingBadge.tsx, enhanced TemplateTable.tsx, enhanced TemplatesFilters.tsx, updated template.ts types
+    - API: Enhanced templates.ts with trending endpoints and camelCase support
+  - **Documentation Updates:**
+    - Updated template-spec.md with trending management endpoints and response format
+    - Enhanced admin-templates-api.md with comprehensive trending API documentation
+    - Created comprehensive web-cms.md platform guide
+    - Updated implementation-summary-admin-templates.md to Phase 3
+    - Added detailed changelog entries
+  - **Status:** Fully implemented, tested, and production-ready
+
 - **✅ In-App Purchase Credits System Integration:** ✅ COMPLETED
   - **Database & Backend:**
     - Added `credits` field to User model (default: 2)

@@ -14,4 +14,3 @@ export class ContentPolicyException extends HttpException {
     );
   }
 }
-

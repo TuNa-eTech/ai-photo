@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ConflictException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FileService } from '../files/file.service';
 import { QueryTemplatesDto, SortKey } from './dto/query-templates.dto';
@@ -6,7 +11,10 @@ import { CreateTemplateDto } from './dto/create-template.dto';
 import { UpdateTemplateDto } from './dto/update-template.dto';
 import { AssetKind, AssetUploadResponse } from './dto/upload-asset.dto';
 import { ApiCategory } from './dto/category.dto';
-import { Template, TemplateStatus, AssetKind as PrismaAssetKind } from '@prisma/client';
+import {
+  Template,
+  TemplateStatus,
+} from '@prisma/client';
 import { generateSlug, generateUniqueSlug } from '../utils/slug';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -22,9 +30,9 @@ type DbTemplate = {
 export type ApiTemplate = {
   id: string;
   name: string;
-  thumbnail_url?: string;
-  published_at?: string;
-  usage_count?: number;
+  thumbnailUrl?: string;
+  publishedAt?: string;
+  usageCount?: number;
 };
 
 export type ApiTemplateAdmin = {
@@ -33,22 +41,26 @@ export type ApiTemplateAdmin = {
   name: string;
   description?: string;
   prompt?: string;
-  negative_prompt?: string;
-  model_provider?: string;
-  model_name?: string;
-  thumbnail_url?: string;
+  negativePrompt?: string;
+  modelProvider?: string;
+  modelName?: string;
+  thumbnailUrl?: string;
   status: string;
   visibility: string;
-  published_at?: string;
-  usage_count?: number;
-  created_at: string;
-  updated_at: string;
+  publishedAt?: string;
+  usageCount?: number;
+  isTrendingManual?: boolean;
+  createdAt: string;
+  updatedAt: string;
   tags?: string[];
 };
 
 @Injectable()
 export class TemplatesService {
-  constructor(private readonly prisma: PrismaService, private readonly fileService: FileService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly fileService: FileService,
+  ) {}
 
   // Category definitions with metadata
   private readonly CATEGORIES: Array<{ id: string; name: string }> = [
@@ -72,9 +84,9 @@ export class TemplatesService {
     return {
       id: t.id,
       name: t.name,
-      thumbnail_url: t.thumbnailUrl ?? undefined,
-      published_at: t.publishedAt ? t.publishedAt.toISOString() : undefined,
-      usage_count: t.usageCount,
+      thumbnailUrl: t.thumbnailUrl ?? undefined,
+      publishedAt: t.publishedAt ? t.publishedAt.toISOString() : undefined,
+      usageCount: t.usageCount,
     };
   }
 
@@ -90,7 +102,9 @@ export class TemplatesService {
     }
   }
 
-  async listTemplates(query: QueryTemplatesDto): Promise<{ templates: ApiTemplate[] }> {
+  async listTemplates(
+    query: QueryTemplatesDto,
+  ): Promise<{ templates: ApiTemplate[] }> {
     const { limit, offset, q, tags, category, sort } = query;
 
     // Security: Only return published + public templates to end users
@@ -124,7 +138,10 @@ export class TemplatesService {
 
     // If tags parameter is also provided, combine with category tags
     if (tags && tags.trim()) {
-      const tagsFromParam = tags.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
+      const tagsFromParam = tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
       tagList.push(...tagsFromParam);
     }
 
@@ -168,7 +185,9 @@ export class TemplatesService {
     };
   }
 
-  async listTrendingTemplates(query: QueryTemplatesDto): Promise<{ templates: ApiTemplate[] }> {
+  async listTrendingTemplates(
+    query: QueryTemplatesDto,
+  ): Promise<{ templates: ApiTemplate[] }> {
     const { limit = 20 } = query;
 
     // 1. Lấy các template trending thủ công
@@ -189,7 +208,7 @@ export class TemplatesService {
       },
     });
 
-    const manualIds = manualTrending.map(t => t.id);
+    const manualIds = manualTrending.map((t) => t.id);
 
     // 2. Lấy các template usageCount lớn nhất, loại trừ các template đã lấy ở trên
     const autoTrending = await this.prisma.template.findMany({
@@ -212,7 +231,9 @@ export class TemplatesService {
     // 3. Gộp hai danh sách
     const trendingTemplates = [...manualTrending, ...autoTrending];
 
-    return { templates: trendingTemplates.map((r) => this.mapToApi(r as DbTemplate)) };
+    return {
+      templates: trendingTemplates.map((r) => this.mapToApi(r as DbTemplate)),
+    };
   }
 
   // ========== ADMIN METHODS ==========
@@ -224,23 +245,95 @@ export class TemplatesService {
       name: t.name,
       description: t.description ?? undefined,
       prompt: t.prompt ?? undefined,
-      negative_prompt: t.negativePrompt ?? undefined,
-      model_provider: t.modelProvider,
-      model_name: t.modelName,
-      thumbnail_url: t.thumbnailUrl ?? undefined,
+      negativePrompt: t.negativePrompt ?? undefined,
+      modelProvider: t.modelProvider,
+      modelName: t.modelName,
+      thumbnailUrl: t.thumbnailUrl ?? undefined,
       status: t.status,
       visibility: t.visibility,
-      published_at: t.publishedAt ? t.publishedAt.toISOString() : undefined,
-      usage_count: t.usageCount,
-      created_at: t.createdAt.toISOString(),
-      updated_at: t.updatedAt.toISOString(),
+      publishedAt: t.publishedAt ? t.publishedAt.toISOString() : undefined,
+      usageCount: t.usageCount,
+      isTrendingManual: t.isTrendingManual,
+      createdAt: t.createdAt.toISOString(),
+      updatedAt: t.updatedAt.toISOString(),
       tags: t.tags,
     };
   }
 
-  async listAdminTemplates(): Promise<{ templates: ApiTemplateAdmin[] }> {
+  async listAdminTemplates(params?: {
+    q?: string;
+    status?: string;
+    visibility?: string;
+    tags?: string;
+    sort?: string;
+    trending?: 'all' | 'manual' | 'none';
+  }): Promise<{ templates: ApiTemplateAdmin[] }> {
+    const { q, status, visibility, tags, sort, trending } = params || {};
+
+    // Build where clause
+    const where: any = {};
+
+    // Search filter
+    if (q && q.trim()) {
+      where.OR = [
+        { name: { contains: q.trim(), mode: 'insensitive' } },
+        { slug: { contains: q.trim(), mode: 'insensitive' } },
+        { description: { contains: q.trim(), mode: 'insensitive' } },
+      ];
+    }
+
+    // Status filter
+    if (status) {
+      where.status = status;
+    }
+
+    // Visibility filter
+    if (visibility) {
+      where.visibility = visibility;
+    }
+
+    // Tags filter
+    if (tags && tags.trim()) {
+      const tagList = tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
+      if (tagList.length > 0) {
+        where.tags = { hasSome: tagList };
+      }
+    }
+
+    // Trending filter
+    if (trending) {
+      if (trending === 'manual') {
+        where.isTrendingManual = true;
+      } else if (trending === 'none') {
+        where.isTrendingManual = false;
+      }
+      // 'all' means no filter on trending
+    }
+
+    // Order by
+    let orderBy: any = { updatedAt: 'desc' };
+    switch (sort) {
+      case 'newest':
+        orderBy = { createdAt: 'desc' };
+        break;
+      case 'popular':
+        orderBy = { usageCount: 'desc' };
+        break;
+      case 'name':
+        orderBy = { name: 'asc' };
+        break;
+      case 'updated':
+      default:
+        orderBy = { updatedAt: 'desc' };
+        break;
+    }
+
     const templates = await this.prisma.template.findMany({
-      orderBy: { updatedAt: 'desc' },
+      where,
+      orderBy,
     });
 
     return { templates: templates.map((t) => this.mapToAdminApi(t)) };
@@ -256,7 +349,7 @@ export class TemplatesService {
       const existingTemplates = await this.prisma.template.findMany({
         select: { slug: true },
       });
-      const existingSlugs = existingTemplates.map(t => t.slug);
+      const existingSlugs = existingTemplates.map((t) => t.slug);
 
       slug = generateUniqueSlug(slug, existingSlugs);
     } else {
@@ -266,7 +359,9 @@ export class TemplatesService {
       });
 
       if (existing) {
-        throw new ConflictException(`Template with slug '${slug}' already exists`);
+        throw new ConflictException(
+          `Template with slug '${slug}' already exists`,
+        );
       }
     }
 
@@ -282,6 +377,7 @@ export class TemplatesService {
         status: dto.status ?? TemplateStatus.draft,
         visibility: dto.visibility ?? 'public',
         tags: dto.tags ?? [],
+        isTrendingManual: dto.isTrendingManual ?? false,
       },
     });
 
@@ -300,7 +396,10 @@ export class TemplatesService {
     return this.mapToAdminApi(template);
   }
 
-  async updateTemplate(slug: string, dto: UpdateTemplateDto): Promise<ApiTemplateAdmin> {
+  async updateTemplate(
+    slug: string,
+    dto: UpdateTemplateDto,
+  ): Promise<ApiTemplateAdmin> {
     const existing = await this.prisma.template.findUnique({
       where: { slug },
     });
@@ -321,6 +420,7 @@ export class TemplatesService {
         status: dto.status,
         visibility: dto.visibility,
         tags: dto.tags,
+        isTrendingManual: dto.isTrendingManual,
       },
     });
 
@@ -343,7 +443,7 @@ export class TemplatesService {
         const oldFilename = path.basename(oldUrl.pathname);
         const uploadDir = path.join(process.cwd(), 'public', 'thumbnails');
         const oldFilePath = path.join(uploadDir, oldFilename);
-        
+
         await fs.unlink(oldFilePath);
         console.log(`Deleted thumbnail file: ${oldFilename}`);
       } catch (error) {
@@ -403,6 +503,28 @@ export class TemplatesService {
     return this.mapToAdminApi(template);
   }
 
+  async setTrending(
+    slug: string,
+    isTrending: boolean,
+  ): Promise<ApiTemplateAdmin> {
+    const existing = await this.prisma.template.findUnique({
+      where: { slug },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(`Template with slug '${slug}' not found`);
+    }
+
+    const template = await this.prisma.template.update({
+      where: { slug },
+      data: {
+        isTrendingManual: isTrending,
+      },
+    });
+
+    return this.mapToAdminApi(template);
+  }
+
   // ========== ASSET UPLOAD ==========
 
   async uploadAsset(
@@ -431,7 +553,9 @@ export class TemplatesService {
     const assetKind = this.mapToPrismaAssetKind(kind);
 
     // Check if asset of this kind already exists for this template
-    const existingAsset = template.templateAssets.find(asset => asset.kind === kind);
+    const existingAsset = template.templateAssets.find(
+      (asset) => asset.kind === kind,
+    );
 
     if (existingAsset) {
       // Update existing asset

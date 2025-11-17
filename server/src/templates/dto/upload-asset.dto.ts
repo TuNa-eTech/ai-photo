@@ -31,4 +31,3 @@ export interface AssetUploadResponse {
   sort_order: number;
   created_at: string;
 }
-

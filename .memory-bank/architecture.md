@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2025-11-09
+Last updated: 2025-11-17
 
 System overview
 - iOS app (SwiftUI) consumes public APIs for browsing templates and processing images.
@@ -9,7 +9,8 @@ System overview
   - Implements liquid glass beige minimalist UI design.
 - Web CMS (Vite + React + TS + Material-UI v7) for admins to manage templates and test image generation.
   - Professional UI with custom theme (Indigo + Teal), Inter font, responsive layout.
-  - Features: Dashboard, Templates List, Template Detail with Image Generator, Create/Edit forms.
+  - Features: Dashboard, Templates List, Template Detail with Image Generator, Create/Edit forms, Trending Management.
+  - **Trending System**: Manual trending control with visual badges, advanced filtering, and toggle functionality.
 - Backend (NestJS + Prisma) exposes:
   - Public endpoints (templates listing with security filters: published + public only).
   - Admin endpoints (templates CRUD, assets, publish/unpublish).
@@ -24,8 +25,8 @@ Key code paths (backend)
 - HTTP layer:
   - server/src/app.module.ts (root module configuration).
   - server/src/templates/templates.controller.ts (Public templates listing, trending, categories).
-  - server/src/templates/templates-admin.controller.ts (Admin templates CRUD).
-  - server/src/templates/templates.service.ts (business logic with security filters, category management, category-to-tags mapping).
+  - server/src/templates/templates-admin.controller.ts (Admin templates CRUD, trending management endpoints).
+  - server/src/templates/templates.service.ts (business logic with security filters, category management, category-to-tags mapping, trending status management, camelCase field transformation).
   - server/src/templates/dto/ (request/response DTOs with validation, category DTOs).
 - **Image Processing:**
   - server/src/gemini/gemini.module.ts (Gemini API integration module).

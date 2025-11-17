@@ -1,6 +1,6 @@
 # Tech
 
-Last updated: 2025-01-27
+Last updated: 2025-11-17
 
 Technologies
 - Backend: NestJS (Node.js), Prisma ORM (@prisma/client), PostgreSQL driver.
@@ -15,6 +15,8 @@ Technologies
     - Animations: Spring transitions, organic blob motion, haptic feedback
   - Web CMS: Vite 7 + React 19 + TypeScript 5.9 + Material-UI v7 + React Query v5 + React Router v7.
     - Custom theme: Indigo primary (#3f51b5) + Teal secondary (#009688), Inter font
+    - **Trending Components**: TrendingBadge component with animations, fire icons, and responsive design
+    - **Advanced Filtering**: Multi-criteria filtering with trending status support
 - Containerization: Docker Compose (Postgres, NestJS Server, optional Web CMS/Preview, pgAdmin).
 - Tooling: yarn, prisma CLI, curl, jq, yq (for scripting), psql via docker exec/run.
 

@@ -11,9 +11,9 @@
 export interface Template {
   id: string
   name: string
-  thumbnail_url?: string
-  published_at?: string
-  usage_count?: number
+  thumbnailUrl?: string
+  publishedAt?: string
+  usageCount?: number
 }
 
 /**
@@ -32,17 +32,17 @@ export interface TemplateAdmin {
   name: string
   description?: string
   prompt?: string
-  negative_prompt?: string
-  model_provider?: string
-  model_name?: string
-  thumbnail_url?: string
+  negativePrompt?: string
+  modelProvider?: string
+  modelName?: string
+  thumbnailUrl?: string
   status: TemplateStatus
   visibility: TemplateVisibility
-  published_at?: string
-  usage_count?: number
+  publishedAt?: string
+  usageCount?: number
   isTrendingManual?: boolean
-  created_at: string
-  updated_at: string
+  createdAt: string
+  updatedAt: string
   tags?: string[]
 }
 
@@ -71,9 +71,9 @@ export interface CreateTemplateRequest {
   name: string
   description?: string
   prompt?: string
-  negative_prompt?: string
-  model_provider?: string
-  model_name?: string
+  negativePrompt?: string
+  modelProvider?: string
+  modelName?: string
   status?: TemplateStatus
   visibility?: TemplateVisibility
   tags?: string[]
@@ -87,9 +87,9 @@ export interface UpdateTemplateRequest {
   name?: string
   description?: string
   prompt?: string
-  negative_prompt?: string
-  model_provider?: string
-  model_name?: string
+  negativePrompt?: string
+  modelProvider?: string
+  modelName?: string
   status?: TemplateStatus
   visibility?: TemplateVisibility
   tags?: string[]
@@ -118,6 +118,7 @@ export interface AdminTemplatesQueryParams {
   status?: TemplateStatus
   visibility?: TemplateVisibility
   sort?: AdminTemplateSortOption
+  trending?: 'all' | 'manual' | 'none'
 }
 
 /**
@@ -135,11 +136,11 @@ export type AdminTemplateSortOption = TemplateSortOption | 'updated'
  */
 export interface TemplateAsset {
   id: string
-  template_id: string
+  templateId: string
   kind: AssetKind
   url: string
-  sort_order: number
-  created_at: string
+  sortOrder: number
+  createdAt: string
 }
 
 /**
@@ -160,7 +161,7 @@ export interface UploadAssetRequest {
  */
 export interface UpdateAssetRequest {
   kind?: AssetKind
-  sort_order?: number
+  sortOrder?: number
 }
 
 /**

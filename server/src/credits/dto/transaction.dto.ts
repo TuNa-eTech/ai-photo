@@ -9,4 +9,3 @@ export class TransactionDto {
   status: 'pending' | 'completed' | 'failed' | 'refunded';
   created_at: Date;
 }
-

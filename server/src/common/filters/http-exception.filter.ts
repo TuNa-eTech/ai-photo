@@ -1,4 +1,11 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { Request, Response } from 'express';
 import { err } from '../dto/envelope.dto';
 
@@ -35,10 +42,14 @@ export class HttpEnvelopeExceptionFilter implements ExceptionFilter {
         }
       }
       // Map common statuses to codes
-      if (status === HttpStatus.UNAUTHORIZED && code === 'internal_error') code = 'unauthorized';
-      if (status === HttpStatus.FORBIDDEN && code === 'internal_error') code = 'forbidden';
-      if (status === HttpStatus.NOT_FOUND && code === 'internal_error') code = 'not_found';
-      if (status === HttpStatus.BAD_REQUEST && code === 'internal_error') code = 'bad_request';
+      if (status === HttpStatus.UNAUTHORIZED && code === 'internal_error')
+        code = 'unauthorized';
+      if (status === HttpStatus.FORBIDDEN && code === 'internal_error')
+        code = 'forbidden';
+      if (status === HttpStatus.NOT_FOUND && code === 'internal_error')
+        code = 'not_found';
+      if (status === HttpStatus.BAD_REQUEST && code === 'internal_error')
+        code = 'bad_request';
     }
 
     // Log error details
@@ -56,11 +67,16 @@ export class HttpEnvelopeExceptionFilter implements ExceptionFilter {
       // Log server errors with full stack trace
       this.logger.error(
         `${req.method} ${req.url} - ${status} ${code}: ${message}`,
-        exception instanceof Error ? exception.stack : JSON.stringify(exception),
+        exception instanceof Error
+          ? exception.stack
+          : JSON.stringify(exception),
       );
     } else if (status >= 400) {
       // Log client errors at warn level
-      this.logger.warn(`${req.method} ${req.url} - ${status} ${code}: ${message}`, JSON.stringify(details || {}));
+      this.logger.warn(
+        `${req.method} ${req.url} - ${status} ${code}: ${message}`,
+        JSON.stringify(details || {}),
+      );
     }
 
     res.status(status).json(err(code, message, details));

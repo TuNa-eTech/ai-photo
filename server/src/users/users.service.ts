@@ -12,7 +12,7 @@ export class UsersService {
 
   /**
    * Get user profile by Firebase UID
-   * 
+   *
    * @param firebaseUid - Firebase UID from verified token
    * @returns User data (snake_case)
    * @throws NotFoundException if user doesn't exist
@@ -44,12 +44,15 @@ export class UsersService {
    * Register or update user based on Firebase UID
    * - If user with firebaseUid exists: update name, email, avatarUrl
    * - If user doesn't exist: create new user with credits = 2 (default from schema)
-   * 
+   *
    * @param firebaseUid - Firebase UID from verified token
    * @param dto - User registration data (snake_case from client)
    * @returns User data (snake_case)
    */
-  async registerUser(firebaseUid: string, dto: RegisterUserDto): Promise<UserResponseDto> {
+  async registerUser(
+    firebaseUid: string,
+    dto: RegisterUserDto,
+  ): Promise<UserResponseDto> {
     const user = await this.prisma.user.upsert({
       where: { firebaseUid },
       update: {
@@ -78,4 +81,3 @@ export class UsersService {
     };
   }
 }
-

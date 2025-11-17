@@ -34,6 +34,14 @@ export function ok<T>(data: T): EnvelopeSuccess<T> {
   return { success: true, data, meta: makeMeta() };
 }
 
-export function err(code: string, message: string, details?: Record<string, any>): EnvelopeError {
-  return { success: false, error: { code, message, details }, meta: makeMeta() };
+export function err(
+  code: string,
+  message: string,
+  details?: Record<string, any>,
+): EnvelopeError {
+  return {
+    success: false,
+    error: { code, message, details },
+    meta: makeMeta(),
+  };
 }

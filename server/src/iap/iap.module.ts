@@ -10,4 +10,3 @@ import { IAPService } from './iap.service';
   exports: [IAPService],
 })
 export class IAPModule {}
-

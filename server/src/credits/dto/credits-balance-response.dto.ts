@@ -4,4 +4,3 @@
 export class CreditsBalanceResponseDto {
   credits: number;
 }
-

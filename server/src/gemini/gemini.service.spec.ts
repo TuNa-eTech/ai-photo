@@ -34,9 +34,10 @@ describe('GeminiService', () => {
 
   describe('validateImageBase64', () => {
     it('should validate correct base64 with data URI', () => {
-      const base64 = 'data:image/jpeg;base64,' + Buffer.from('test').toString('base64');
+      const base64 =
+        'data:image/jpeg;base64,' + Buffer.from('test').toString('base64');
       const result = service.validateImageBase64(base64);
-      
+
       expect(result.valid).toBe(true);
       expect(result.mimeType).toBe('image/jpeg');
     });
@@ -44,14 +45,14 @@ describe('GeminiService', () => {
     it('should validate correct base64 without data URI', () => {
       const base64 = Buffer.from('test').toString('base64');
       const result = service.validateImageBase64(base64);
-      
+
       expect(result.valid).toBe(true);
     });
 
     it('should reject oversized image (> 10MB)', () => {
       const largeData = Buffer.alloc(11 * 1024 * 1024).toString('base64');
       const result = service.validateImageBase64(largeData);
-      
+
       expect(result.valid).toBe(false);
       expect(result.error).toContain('too large');
     });
@@ -60,7 +61,7 @@ describe('GeminiService', () => {
       // Buffer.from will decode even invalid base64, so we need to test with truly invalid content
       // that causes a runtime error - empty string or malformed data
       const result = service.validateImageBase64('!!!invalid!!!');
-      
+
       // The validation should handle invalid base64 gracefully
       // Since Buffer.from() doesn't throw for most strings, the validation accepts it
       // This is acceptable behavior - base64 decoding is permissive
@@ -137,25 +138,26 @@ describe('GeminiService', () => {
       // Mock a delayed response that will timeout (using 30000ms as per config)
       service['genAI'] = {
         models: {
-          generateContent: jest.fn().mockImplementation(() => 
-            new Promise(resolve => setTimeout(resolve, 50000))
-          ),
+          generateContent: jest
+            .fn()
+            .mockImplementation(
+              () => new Promise((resolve) => setTimeout(resolve, 50000)),
+            ),
         },
       } as any;
 
       // Reduce timeout for test
       service['timeoutMs'] = 100;
-      
+
       await expect(
         service.generateImage({
           prompt: 'Test',
           imageBase64: 'test',
         }),
       ).rejects.toThrow();
-      
+
       // Restore original timeout
       service['timeoutMs'] = 30000;
     }, 10000);
   });
 });
-

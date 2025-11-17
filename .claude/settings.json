@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "memory-bank"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

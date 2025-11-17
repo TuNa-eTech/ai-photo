@@ -18,9 +18,9 @@ struct TemplateDTO: Codable, Sendable, Identifiable, Hashable {
     enum CodingKeys: String, CodingKey {
         case id
         case name
-        case thumbnailURL = "thumbnail_url"
-        case publishedAt = "published_at"
-        case usageCount = "usage_count"
+        case thumbnailURL = "thumbnailUrl"
+        case publishedAt = "publishedAt"
+        case usageCount = "usageCount"
     }
     
     // Custom decoder to handle URL decoding gracefully
@@ -32,7 +32,7 @@ struct TemplateDTO: Codable, Sendable, Identifiable, Hashable {
         publishedAt = try? container.decode(Date.self, forKey: .publishedAt)
         usageCount = try? container.decode(Int.self, forKey: .usageCount)
         
-        // Special handling for thumbnail_url: try to decode from string
+        // Special handling for thumbnailUrl: try to decode from string
         if let urlString = try? container.decode(String.self, forKey: .thumbnailURL),
            !urlString.isEmpty {
             thumbnailURL = URL(string: urlString)
@@ -77,6 +77,7 @@ extension TemplateDTO {
         return count >= 500
     }
 }
+
 
 // Matches components.schemas.TemplatesList { templates: [Template] }
 struct TemplatesListResponse: Codable, Sendable {

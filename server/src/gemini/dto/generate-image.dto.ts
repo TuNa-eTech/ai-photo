@@ -32,4 +32,3 @@ export class GenerateImageDto {
   @IsOptional()
   quality?: ImageQuality = ImageQuality.STANDARD;
 }
-

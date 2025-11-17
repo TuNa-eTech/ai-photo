@@ -45,7 +45,13 @@ describe('Users (e2e) with DevAuth', () => {
     app = moduleFixture.createNestApplication();
 
     // Replicate global pipes/interceptors/filters as in main.ts
-    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true, forbidUnknownValues: false }));
+    app.useGlobalPipes(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidUnknownValues: false,
+      }),
+    );
     app.useGlobalInterceptors(new EnvelopeInterceptor());
     app.useGlobalFilters(new HttpEnvelopeExceptionFilter());
 
@@ -149,7 +155,9 @@ describe('Users (e2e) with DevAuth', () => {
         avatarUrl: null,
       };
 
-      (prismaMock.user!.upsert as jest.Mock).mockResolvedValueOnce(userWithoutAvatar);
+      (prismaMock.user!.upsert as jest.Mock).mockResolvedValueOnce(
+        userWithoutAvatar,
+      );
 
       const res = await request(app.getHttpServer())
         .post('/v1/users/register')
@@ -341,7 +349,9 @@ describe('Users (e2e) with DevAuth', () => {
         avatarUrl: null,
       };
 
-      (prismaMock.user!.findUnique as jest.Mock).mockResolvedValueOnce(userWithoutAvatar);
+      (prismaMock.user!.findUnique as jest.Mock).mockResolvedValueOnce(
+        userWithoutAvatar,
+      );
 
       const res = await request(app.getHttpServer())
         .get('/v1/users/me')
@@ -355,4 +365,3 @@ describe('Users (e2e) with DevAuth', () => {
     });
   });
 });
-

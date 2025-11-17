@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Req, UseGuards, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Req,
+  UseGuards,
+  Query,
+  ParseIntPipe,
+  DefaultValuePipe,
+} from '@nestjs/common';
 import { BearerAuthGuard } from '../auth/bearer-auth.guard';
 import { CreditsService } from './credits.service';
 import {
@@ -42,7 +52,11 @@ export class CreditsController {
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
   ): Promise<TransactionHistoryResponseDto> {
     const firebaseUid = req.firebaseUid!;
-    return this.creditsService.getTransactionHistory(firebaseUid, limit, offset);
+    return this.creditsService.getTransactionHistory(
+      firebaseUid,
+      limit,
+      offset,
+    );
   }
 
   /**
@@ -89,4 +103,3 @@ export class CreditsController {
     };
   }
 }
-

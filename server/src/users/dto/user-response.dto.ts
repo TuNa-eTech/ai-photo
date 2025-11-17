@@ -10,4 +10,3 @@ export class UserResponseDto {
   created_at: Date;
   updated_at: Date;
 }
-

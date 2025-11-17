@@ -77,15 +77,14 @@ export async function getAdminTemplate(slug: string): Promise<TemplateAdmin> {
  * POST /v1/admin/templates
  */
 export async function createTemplate(data: CreateTemplateRequest): Promise<TemplateAdmin> {
-  // Transform snake_case to camelCase for API compatibility
   const apiData = {
     slug: data.slug,
     name: data.name,
     description: data.description,
     prompt: data.prompt,
-    negativePrompt: data.negative_prompt,
-    modelProvider: data.model_provider,
-    modelName: data.model_name,
+    negativePrompt: data.negativePrompt,
+    modelProvider: data.modelProvider,
+    modelName: data.modelName,
     status: data.status,
     visibility: data.visibility,
     tags: data.tags,
@@ -103,14 +102,13 @@ export async function updateTemplate(
   slug: string,
   data: UpdateTemplateRequest
 ): Promise<TemplateAdmin> {
-  // Transform snake_case to camelCase for API compatibility
   const apiData = {
     name: data.name,
     description: data.description,
     prompt: data.prompt,
-    negativePrompt: data.negative_prompt,
-    modelProvider: data.model_provider,
-    modelName: data.model_name,
+    negativePrompt: data.negativePrompt,
+    modelProvider: data.modelProvider,
+    modelName: data.modelName,
     status: data.status,
     visibility: data.visibility,
     tags: data.tags,
@@ -144,6 +142,22 @@ export async function publishTemplate(slug: string): Promise<TemplateAdmin> {
  */
 export async function unpublishTemplate(slug: string): Promise<TemplateAdmin> {
   return apiClient.post<TemplateAdmin>(`/v1/admin/templates/${slug}/unpublish`)
+}
+
+/**
+ * Mark template as trending (admin)
+ * POST /v1/admin/templates/{slug}/trending
+ */
+export async function setTemplateTrending(slug: string): Promise<TemplateAdmin> {
+  return apiClient.post<TemplateAdmin>(`/v1/admin/templates/${slug}/trending`)
+}
+
+/**
+ * Remove template from trending (admin)
+ * DELETE /v1/admin/templates/{slug}/trending
+ */
+export async function unsetTemplateTrending(slug: string): Promise<TemplateAdmin> {
+  return apiClient.delete<TemplateAdmin>(`/v1/admin/templates/${slug}/trending`)
 }
 
 // ============================================================================

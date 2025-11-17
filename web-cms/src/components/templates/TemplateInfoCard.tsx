@@ -74,7 +74,7 @@ export function TemplateInfoCard({ template, onEdit }: TemplateInfoCardProps): R
       </Box>
 
       {/* Thumbnail */}
-      {template.thumbnail_url && (
+      {template.thumbnailUrl && (
         <Box
           sx={{
             width: '100%',
@@ -88,7 +88,7 @@ export function TemplateInfoCard({ template, onEdit }: TemplateInfoCardProps): R
         >
           <Box
             component="img"
-            src={template.thumbnail_url}
+            src={template.thumbnailUrl}
             alt={template.name}
             sx={{
               width: '100%',
@@ -159,7 +159,7 @@ export function TemplateInfoCard({ template, onEdit }: TemplateInfoCardProps): R
                 Usage Count:
               </Typography>
               <Typography variant="body2" fontWeight={600}>
-                {template.usage_count?.toLocaleString() || '0'}
+                {template.usageCount?.toLocaleString() || '0'}
               </Typography>
             </Box>
             <Box display="flex" alignItems="center" gap={1}>
@@ -168,7 +168,7 @@ export function TemplateInfoCard({ template, onEdit }: TemplateInfoCardProps): R
                 Published:
               </Typography>
               <Typography variant="body2" fontWeight={600}>
-                {formatDate(template.published_at)}
+                {formatDate(template.publishedAt)}
               </Typography>
             </Box>
           </Stack>
@@ -203,14 +203,14 @@ export function TemplateInfoCard({ template, onEdit }: TemplateInfoCardProps): R
               )}
 
               {/* Negative Prompt */}
-              {template.negative_prompt && (
+              {template.negativePrompt && (
                 <Box>
                   <Typography variant="caption" fontWeight={600} color="text.secondary" gutterBottom display="block">
                     Negative Prompt
                   </Typography>
                   <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
                     <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                      {template.negative_prompt}
+                      {template.negativePrompt}
                     </Typography>
                   </Paper>
                 </Box>
@@ -224,12 +224,12 @@ export function TemplateInfoCard({ template, onEdit }: TemplateInfoCardProps): R
                 <Stack direction="row" spacing={1}>
                   <Chip
                     icon={<CodeIcon />}
-                    label={template.model_provider}
+                    label={template.modelProvider}
                     size="small"
                     variant="outlined"
                   />
                   <Chip
-                    label={template.model_name}
+                    label={template.modelName}
                     size="small"
                     variant="outlined"
                   />
@@ -269,7 +269,7 @@ export function TemplateInfoCard({ template, onEdit }: TemplateInfoCardProps): R
                   Created
                 </Typography>
                 <Typography variant="body2">
-                  {formatDate(template.created_at)}
+                  {formatDate(template.createdAt)}
                 </Typography>
               </Box>
               <Box>
@@ -277,7 +277,7 @@ export function TemplateInfoCard({ template, onEdit }: TemplateInfoCardProps): R
                   Last Updated
                 </Typography>
                 <Typography variant="body2">
-                  {formatDate(template.updated_at)}
+                  {formatDate(template.updatedAt)}
                 </Typography>
               </Box>
             </Stack>

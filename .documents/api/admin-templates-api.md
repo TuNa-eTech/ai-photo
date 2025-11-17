@@ -28,6 +28,16 @@ Full CRUD API for template management with file upload support.
 GET /v1/admin/templates
 ```
 
+**Query Parameters**:
+- `limit` (number, optional): Max items per page (default: 20)
+- `offset` (number, optional): Items to skip (default: 0)
+- `q` (string, optional): Search by name or slug
+- `tags` (string, optional): Filter by tags (comma-separated)
+- `status` (string, optional): Filter by status: draft | published | archived
+- `visibility` (string, optional): Filter by visibility: public | private
+- `sort` (string, optional): Sort by: updated | newest | popular | name (default: updated)
+- `trending` (string, optional): Filter by trending: all | manual | none (default: all)
+
 **Response**:
 ```json
 {
@@ -38,14 +48,15 @@ GET /v1/admin/templates
       "name": "Anime Portrait Style",
       "description": "Transform photos into anime-style portraits",
       "prompt": "Transform this photo into a beautiful anime-style portrait with vibrant colors...",
-      "negative_prompt": "realistic photo, 3D render, low quality...",
-      "model_provider": "gemini",
-      "model_name": "gemini-1.5-pro",
+      "negativePrompt": "realistic photo, 3D render, low quality...",
+      "modelProvider": "gemini",
+      "modelName": "gemini-1.5-pro",
       "status": "published",
       "visibility": "public",
       "thumbnailUrl": "http://localhost:8080/public/thumbnails/anime-portrait-thumbnail-1761451580086.jpg",
       "publishedAt": "2025-10-26T10:00:00.000Z",
       "usageCount": 1250,
+      "isTrendingManual": true,
       "tags": ["anime", "portrait", "art"],
       "createdAt": "2025-10-25T10:00:00.000Z",
       "updatedAt": "2025-10-26T10:00:00.000Z"
@@ -86,7 +97,8 @@ POST /v1/admin/templates
   "modelName": "gemini-1.5-pro",
   "status": "draft",
   "visibility": "public",
-  "tags": ["tag1", "tag2"]
+  "tags": ["tag1", "tag2"],
+  "isTrendingManual": false
 }
 ```
 
@@ -100,6 +112,7 @@ POST /v1/admin/templates
 - `status`: Optional, enum: draft | published | archived (default: draft)
 - `visibility`: Optional, enum: public | private (default: public)
 - `tags`: Optional, array of strings
+- `isTrendingManual`: Optional, boolean for manual trending (default: false)
 
 **Response**: Created template object
 
@@ -159,6 +172,34 @@ POST /v1/admin/templates/{slug}/unpublish
 ```
 
 **Response**: Updated template object with `status: "draft"`
+
+## Trending Management ⭐ NEW
+
+### Set Template as Trending
+
+```http
+POST /v1/admin/templates/{slug}/trending
+```
+
+**Response**: Updated template object with `isTrendingManual: true`
+
+**Errors**:
+- `404`: Template not found
+
+### Remove Template from Trending
+
+```http
+DELETE /v1/admin/templates/{slug}/trending
+```
+
+**Response**: Updated template object with `isTrendingManual: false`
+
+**Errors**:
+- `404`: Template not found
+
+**Note**: Trending system has two modes:
+- **Manual Trending**: Admin explicitly marks templates as trending via these endpoints
+- **Auto Trending**: System automatically highlights templates based on usage metrics (future feature)
 
 ### Upload Asset
 

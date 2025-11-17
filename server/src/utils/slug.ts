@@ -8,13 +8,15 @@
  * @returns URL-friendly slug
  */
 export function generateSlug(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    // Replace spaces and special characters with hyphens
-    .replace(/[^\w\s-]/g, '') // Remove non-word chars except spaces and hyphens
-    .replace(/[\s_-]+/g, '-') // Replace spaces, underscores, and multiple hyphens with single hyphen
-    .replace(/^-+|-+$/g, ''); // Remove leading and trailing hyphens
+  return (
+    text
+      .toLowerCase()
+      .trim()
+      // Replace spaces and special characters with hyphens
+      .replace(/[^\w\s-]/g, '') // Remove non-word chars except spaces and hyphens
+      .replace(/[\s_-]+/g, '-') // Replace spaces, underscores, and multiple hyphens with single hyphen
+      .replace(/^-+|-+$/g, '')
+  ); // Remove leading and trailing hyphens
 }
 
 /**
@@ -23,7 +25,10 @@ export function generateSlug(text: string): string {
  * @param existingSlugs Array of existing slugs to check against
  * @returns Unique slug
  */
-export function generateUniqueSlug(baseSlug: string, existingSlugs: string[]): string {
+export function generateUniqueSlug(
+  baseSlug: string,
+  existingSlugs: string[],
+): string {
   let slug = baseSlug;
   let counter = 1;
 

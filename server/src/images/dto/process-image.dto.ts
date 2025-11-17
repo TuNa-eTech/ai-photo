@@ -1,4 +1,13 @@
-import { IsString, IsOptional, IsObject, ValidateNested, IsInt, Min, Max, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsObject,
+  ValidateNested,
+  IsInt,
+  Min,
+  Max,
+  IsEnum,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum ImageQuality {
@@ -37,4 +46,3 @@ export class ProcessImageDto {
   @IsOptional()
   options?: ProcessImageOptions;
 }
-

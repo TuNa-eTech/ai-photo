@@ -7,6 +7,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2025-11-17 - Trending Template Management System ⭐
+
+#### Added - Web CMS Trending Features
+- **Trending Badge Component**: New `TrendingBadge` component with animated fire icons
+  - Multiple size options (small, medium, large) with responsive design
+  - Animated pulse effect for trending items using CSS keyframes
+  - Orange color scheme (#ff9800) with hover effects
+  - Accessible tooltips and ARIA labels for screen readers
+- **Template Table Enhancements**: Added dedicated trending column and controls
+  - Fire icon buttons in actions column for quick trending toggle
+  - Visual trending badge display in dedicated column
+  - Tooltip guidance ("Mark as trending" / "Remove from trending")
+  - Hover effects with color transitions
+- **Advanced Filtering**: Enhanced template filtering with trending options
+  - "All Templates" - Shows all templates regardless of trending status
+  - "🔥 Manual Trending" - Shows only manually marked trending templates
+  - "Not Trending" - Shows templates not marked as trending
+  - Filter works in combination with existing filters (status, visibility, tags)
+
+#### Added - Backend Trending API
+- **New Endpoints**: Manual trending control endpoints
+  - `POST /v1/admin/templates/{slug}/trending` - Mark template as trending
+  - `DELETE /v1/admin/templates/{slug}/trending` - Remove from trending
+  - `GET /v1/admin/templates?trending=manual|none|all` - Filter by trending status
+- **Enhanced DTOs**: Updated template creation/update DTOs
+  - `isTrendingManual?: boolean` field added to both create and update DTOs
+  - Proper validation and default value handling
+- **Service Layer**: Added `setTrending()` method for status management
+  - Updates database field `isTrendingManual`
+  - Returns updated template with transformed camelCase fields
+
+#### Fixed - API Response Field Naming 🐛
+- **Problem**: Backend returned snake_case fields while frontend expected camelCase
+- **Solution**: Updated backend service to return camelCase fields directly
+  - `thumbnail_url` → `thumbnailUrl`
+  - `published_at` → `publishedAt`
+  - `usage_count` → `usageCount`
+  - `negative_prompt` → `negativePrompt`
+  - `model_provider` → `modelProvider`
+  - `model_name` → `modelName`
+  - `created_at` → `createdAt`
+  - `updated_at` → `updatedAt`
+  - `is_trending_manual` → `isTrendingManual`
+- **Frontend Updates**: Updated all type definitions and components to use camelCase
+  - Updated `TemplateAdmin` interface in `web-cms/src/types/template.ts`
+  - Updated all template components to use camelCase properties
+  - Fixed TypeScript compilation errors across all template files
+
+#### Enhanced - Documentation Updates
+- **API Documentation**: Updated `.documents/api/admin-templates-api.md`
+  - Added trending management endpoints documentation
+  - Updated query parameters to include trending filter
+  - Updated response examples to show camelCase fields and trending data
+- **Platform Guide**: Created comprehensive `.documents/platform-guides/web-cms.md`
+  - Complete web-cms architecture and feature documentation
+  - Detailed trending system implementation guide
+  - Component documentation with examples and usage patterns
+- **Template Spec**: Updated `.documents/features/template-spec.md`
+  - Added trending management section with API endpoints
+  - Updated changelog to version 1.2 with trending features
+  - Documented camelCase response format
+- **Implementation Summary**: Updated `.documents/implementation-summary-admin-templates.md`
+  - Added trending system implementation details
+  - Updated to Phase 3 with comprehensive testing checklist
+  - Added changelog with version history
+
+#### Technical Implementation Details
+- **Component Architecture**: Reusable `TrendingBadge` component for consistency
+  - Props: `isTrendingManual`, `size`, `showIcon`, `tooltip`
+  - Animated state transitions with CSS transforms
+  - Material-UI theming integration
+- **State Management**: Client-side state with optimistic updates
+  - Immediate UI updates before API response
+  - Error handling with rollback on failure
+  - Consistent state across filter and table components
+- **API Integration**: Enhanced API client with trending support
+  - `setTemplateTrending()` and `unsetTemplateTrending()` functions
+  - Updated `getAdminTemplates()` with trending filter parameter
+  - Proper error handling and response transformation
+
 ### 2025-01-XX - Project Storage & Management
 
 #### Added - Project Delete Functionality ⭐

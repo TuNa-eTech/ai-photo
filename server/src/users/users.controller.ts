@@ -43,4 +43,3 @@ export class UsersController {
     return this.usersService.registerUser(firebaseUid, dto);
   }
 }
-

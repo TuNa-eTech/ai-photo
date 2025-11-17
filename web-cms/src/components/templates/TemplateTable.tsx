@@ -27,10 +27,13 @@ import PublishIcon from '@mui/icons-material/Publish'
 import UnpublishedIcon from '@mui/icons-material/Unpublished'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import LocalOfferIcon from '@mui/icons-material/LocalOffer'
+import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment'
+import LocalFireDepartmentOutlinedIcon from '@mui/icons-material/LocalFireDepartmentOutlined'
 import type { TemplateAdmin } from '../../types'
 import { formatDistanceToNow } from 'date-fns'
 import { LoadingState } from '../common/LoadingState'
 import { EmptyState } from '../common/EmptyState'
+import { TrendingBadge } from '../common/TrendingBadge'
 import StyleIcon from '@mui/icons-material/Style'
 
 export interface TemplateTableProps {
@@ -41,6 +44,7 @@ export interface TemplateTableProps {
   onPublish: (template: TemplateAdmin) => void
   onUnpublish: (template: TemplateAdmin) => void
   onView: (template: TemplateAdmin) => void
+  onSetTrending?: (template: TemplateAdmin, isTrending: boolean) => void
   onCreateNew?: () => void
 }
 
@@ -52,6 +56,7 @@ export function TemplateTable({
   onPublish,
   onUnpublish,
   onView,
+  onSetTrending,
   onCreateNew,
 }: TemplateTableProps): React.ReactElement {
   const formatDate = (date?: string): string => {
@@ -112,6 +117,7 @@ export function TemplateTable({
             <TableCell sx={{ width: 80 }}>Thumbnail</TableCell>
             <TableCell sx={{ minWidth: 200 }}>Template</TableCell>
             <TableCell sx={{ width: 120 }}>Status</TableCell>
+            <TableCell sx={{ width: 100 }}>Trending</TableCell>
             <TableCell sx={{ width: 120 }}>Visibility</TableCell>
             <TableCell sx={{ minWidth: 150 }}>Tags</TableCell>
             <TableCell sx={{ width: 140 }}>Published</TableCell>
@@ -136,11 +142,11 @@ export function TemplateTable({
               {/* Thumbnail */}
               <TableCell>
                 <Avatar
-                  src={template.thumbnail_url}
+                  src={template.thumbnailUrl}
                   alt={template.name}
                   variant="rounded"
-                  sx={{ 
-                    width: 56, 
+                  sx={{
+                    width: 56,
                     height: 56,
                     boxShadow: 1,
                   }}
@@ -156,10 +162,10 @@ export function TemplateTable({
                     {template.name}
                   </Typography>
                   {template.description && (
-                    <Typography 
-                      variant="caption" 
-                      color="text.secondary" 
-                      sx={{ 
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{
                         display: 'block',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -170,10 +176,10 @@ export function TemplateTable({
                       {template.description}
                     </Typography>
                   )}
-                  <Typography 
-                    variant="caption" 
+                  <Typography
+                    variant="caption"
                     color="text.disabled"
-                    sx={{ 
+                    sx={{
                       fontFamily: 'monospace',
                       fontSize: '0.7rem',
                       display: 'block',
@@ -191,10 +197,18 @@ export function TemplateTable({
                   label={template.status}
                   size="small"
                   color={getStatusColor(template.status)}
-                  sx={{ 
+                  sx={{
                     fontWeight: 500,
                     textTransform: 'capitalize',
                   }}
+                />
+              </TableCell>
+
+              {/* Trending */}
+              <TableCell>
+                <TrendingBadge
+                  isTrendingManual={template.isTrendingManual}
+                  size="small"
                 />
               </TableCell>
 
@@ -252,14 +266,14 @@ export function TemplateTable({
               {/* Published Date */}
               <TableCell>
                 <Typography variant="body2" color="text.secondary">
-                  {formatDate(template.published_at)}
+                  {formatDate(template.publishedAt)}
                 </Typography>
               </TableCell>
 
               {/* Usage Count */}
               <TableCell>
                 <Typography variant="body2" fontWeight={600}>
-                  {template.usage_count?.toLocaleString() || '0'}
+                  {template.usageCount?.toLocaleString() || '0'}
                 </Typography>
               </TableCell>
 
@@ -301,6 +315,32 @@ export function TemplateTable({
                       <EditIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
+
+                  {onSetTrending && (
+                    <Tooltip title={template.isTrendingManual ? "Remove from trending" : "Mark as trending"}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onSetTrending(template, !template.isTrendingManual)
+                        }}
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: template.isTrendingManual
+                              ? alpha('#9e9e9e', 0.1)
+                              : alpha('#ff9800', 0.1),
+                            color: template.isTrendingManual ? 'text.secondary' : 'warning.main',
+                          }
+                        }}
+                      >
+                        {template.isTrendingManual ? (
+                          <LocalFireDepartmentOutlinedIcon fontSize="small" />
+                        ) : (
+                          <LocalFireDepartmentIcon fontSize="small" />
+                        )}
+                      </IconButton>
+                    </Tooltip>
+                  )}
 
                   {template.status === 'published' ? (
                     <Tooltip title="Unpublish">

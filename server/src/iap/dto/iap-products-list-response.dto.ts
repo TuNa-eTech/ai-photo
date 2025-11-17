@@ -6,4 +6,3 @@ import { IAPProductResponseDto } from './iap-product-response.dto';
 export class IAPProductsListResponseDto {
   products: IAPProductResponseDto[];
 }
-

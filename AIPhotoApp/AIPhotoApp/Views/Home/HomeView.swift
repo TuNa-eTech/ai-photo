@@ -18,23 +18,26 @@ struct HomeView: View {
     @State private var showAllTemplates: Bool = false
     @State private var selectedTemplate: TemplateDTO?
 
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 GlassBackgroundView()
-                
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 0) {
-                        // Hero Section: Carousel of 2 trending templates
-                        HeroSection(
-                            heroTemplates: home.heroTemplates,
-                            isLoading: home.isLoading,
-                            onTemplateTap: { template in
-                                selectedTemplate = template
-                            }
-                        )
-                        
-                        // Trending Now Section: Horizontal scroll
+
+                ScrollViewReader { proxy in
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 0) {
+                            // Hero Section: Fixed at top with pull-to-refresh
+                            HeroSection(
+                                heroTemplates: home.heroTemplates,
+                                isLoading: home.isLoading,
+                                onTemplateTap: { template in
+                                    selectedTemplate = template
+                                }
+                            )
+                            .ignoresSafeArea(edges: .top)
+
+                            // Trending Now Section: Horizontal scroll
                         TrendingNowSection(
                             templates: home.trendingNowTemplates,
                             isLoading: home.isLoading,
@@ -73,6 +76,10 @@ struct HomeView: View {
                         .padding(.top, 24)
                         .padding(.bottom, 24)
                     }
+                    }
+                }
+                .refreshable {
+                    performRefresh()
                 }
                 .ignoresSafeArea(edges: .top)
                 .overlay(alignment: .top) {
@@ -137,11 +144,11 @@ struct HomeView: View {
                     return
                 }
 
-                home.fetchNewTemplatesFromAPI(
-                    bearerIDToken: token,
-                    limit: 6, // Get 6 new templates
-                    tokenProvider: { try await model.fetchFreshIDToken() }
-                )
+            home.fetchNewTemplatesFromAPI(
+                bearerIDToken: token,
+                limit: 6, // Get 6 new templates
+                tokenProvider: { try await model.fetchFreshIDToken() }
+            )
             }
         }
         .fullScreenCover(isPresented: $showProfile) {
@@ -149,6 +156,31 @@ struct HomeView: View {
         }
         .fullScreenCover(isPresented: $showSearch) {
             SearchView()
+        }
+    }
+
+    // MARK: - Private Methods
+
+    private func performRefresh() {
+        guard let token = model.loadToken() else { return }
+
+        Task {
+            await MainActor.run {
+                home.fetchTrendingFromAPI(
+                    bearerIDToken: token,
+                    limit: 9,
+                    tokenProvider: { try await model.fetchFreshIDToken() }
+                )
+
+                home.fetchNewTemplatesFromAPI(
+                    bearerIDToken: token,
+                    limit: 6,
+                    tokenProvider: { try await model.fetchFreshIDToken() }
+                )
+            }
+
+            // Small delay to show refresh indicator
+            try await Task.sleep(nanoseconds: 500_000_000) // 0.5 second
         }
     }
 }

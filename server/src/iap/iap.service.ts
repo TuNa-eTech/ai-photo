@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as jwt from 'jsonwebtoken';
 import { TransactionType, TransactionStatus } from '@prisma/client';
@@ -36,36 +41,47 @@ export class IAPService {
       // JSON format: {"transaction_id": "...", "original_transaction_id": "...", "product_id": "...", ...}
       // JWT format: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..." (for iOS 15-17)
       let payload: any;
-      
+
       if (transactionData.trim().startsWith('{')) {
         try {
           payload = JSON.parse(transactionData);
-          
+
           // Validate it's a JSON object with transaction info
-          if (typeof payload === 'object' && payload !== null && (payload.transaction_id || payload.transactionId)) {
+          if (
+            typeof payload === 'object' &&
+            payload !== null &&
+            (payload.transaction_id || payload.transactionId)
+          ) {
             this.logger.log('Parsed transaction data as JSON');
-            
-            const transactionId = payload.transaction_id || payload.transactionId;
-            const originalTransactionId = payload.original_transaction_id || payload.originalTransactionId;
+
+            const transactionId =
+              payload.transaction_id || payload.transactionId;
+            const originalTransactionId =
+              payload.original_transaction_id || payload.originalTransactionId;
             const productId = payload.product_id || payload.productId;
-            
+
             if (!transactionId || !originalTransactionId || !productId) {
-              throw new BadRequestException('Invalid transaction data: Missing required fields in JSON (transaction_id, original_transaction_id, product_id)');
+              throw new BadRequestException(
+                'Invalid transaction data: Missing required fields in JSON (transaction_id, original_transaction_id, product_id)',
+              );
             }
-            
+
             const normalizedPayload: StoreKit2TransactionPayload = {
               transactionId: String(transactionId),
               originalTransactionId: String(originalTransactionId),
               productId: String(productId),
-              purchaseDate: payload.purchase_date || payload.purchaseDate || Date.now(),
+              purchaseDate:
+                payload.purchase_date || payload.purchaseDate || Date.now(),
               expiresDate: payload.expires_date || payload.expiresDate,
               quantity: payload.quantity || 1,
               type: payload.type || 'Consumable',
               environment: payload.environment || 'Production',
               ...payload,
             };
-            
-            this.logger.log(`Verified transaction (JSON): ${transactionId}, product: ${productId}`);
+
+            this.logger.log(
+              `Verified transaction (JSON): ${transactionId}, product: ${productId}`,
+            );
             return normalizedPayload;
           }
         } catch (jsonError) {
@@ -74,14 +90,18 @@ export class IAPService {
         }
       } else {
         // Doesn't look like JSON (doesn't start with {), try as JWT
-        this.logger.log('Transaction data doesn\'t look like JSON, trying as JWT');
+        this.logger.log(
+          "Transaction data doesn't look like JSON, trying as JWT",
+        );
       }
-      
+
       // Try to decode as JWT (for iOS 15-17 with jwsRepresentation)
       const decoded = jwt.decode(transactionData, { complete: true });
 
       if (!decoded) {
-        throw new BadRequestException('Invalid transaction data: Unable to decode as JWT or JSON');
+        throw new BadRequestException(
+          'Invalid transaction data: Unable to decode as JWT or JSON',
+        );
       }
 
       // Extract payload - could be nested in 'payload' property or at root
@@ -89,13 +109,19 @@ export class IAPService {
 
       // Validate required fields (StoreKit 2 uses different field names)
       // Check for both possible field names
-      const transactionId = payload.transactionId || payload.jti || payload.transaction_id;
-      const originalTransactionId = payload.originalTransactionId || payload.original_transaction_id;
+      const transactionId =
+        payload.transactionId || payload.jti || payload.transaction_id;
+      const originalTransactionId =
+        payload.originalTransactionId || payload.original_transaction_id;
       const productId = payload.productId || payload.product_id;
 
       if (!transactionId || !originalTransactionId || !productId) {
-        this.logger.error(`Missing required fields. Payload keys: ${Object.keys(payload).join(', ')}`);
-        throw new BadRequestException('Invalid transaction data: Missing required fields (transactionId, originalTransactionId, productId)');
+        this.logger.error(
+          `Missing required fields. Payload keys: ${Object.keys(payload).join(', ')}`,
+        );
+        throw new BadRequestException(
+          'Invalid transaction data: Missing required fields (transactionId, originalTransactionId, productId)',
+        );
       }
 
       // Normalize payload to our interface
@@ -103,7 +129,8 @@ export class IAPService {
         transactionId,
         originalTransactionId,
         productId,
-        purchaseDate: payload.purchaseDate || payload.purchase_date || Date.now(),
+        purchaseDate:
+          payload.purchaseDate || payload.purchase_date || Date.now(),
         expiresDate: payload.expiresDate || payload.expires_date,
         quantity: payload.quantity || 1,
         type: payload.type || 'Consumable',
@@ -111,15 +138,21 @@ export class IAPService {
         ...payload, // Include all other fields
       };
 
-      this.logger.log(`Verified transaction (JWT): ${transactionId}, product: ${productId}`);
+      this.logger.log(
+        `Verified transaction (JWT): ${transactionId}, product: ${productId}`,
+      );
 
       return normalizedPayload;
     } catch (error) {
-      this.logger.error(`Failed to verify transaction: ${error instanceof Error ? error.message : error}`);
+      this.logger.error(
+        `Failed to verify transaction: ${error instanceof Error ? error.message : error}`,
+      );
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new BadRequestException('Invalid transaction data: Unable to parse as JWT or JSON');
+      throw new BadRequestException(
+        'Invalid transaction data: Unable to parse as JWT or JSON',
+      );
     }
   }
 
@@ -130,7 +163,11 @@ export class IAPService {
     firebaseUid: string,
     transactionData: string,
     productId: string,
-  ): Promise<{ transactionId: string; creditsAdded: number; newBalance: number }> {
+  ): Promise<{
+    transactionId: string;
+    creditsAdded: number;
+    newBalance: number;
+  }> {
     // 1. Verify transaction JWT
     const transactionPayload = this.verifyTransaction(transactionData);
 
@@ -193,33 +230,36 @@ export class IAPService {
     }
 
     // 6. Add credits (use transaction to ensure atomicity)
-    const [updatedUser, transaction] = await this.prisma.$transaction(async (tx) => {
-      // Update user credits
-      const updated = await tx.user.update({
-        where: { firebaseUid },
-        data: {
-          credits: {
-            increment: product.credits,
+    const [updatedUser, transaction] = await this.prisma.$transaction(
+      async (tx) => {
+        // Update user credits
+        const updated = await tx.user.update({
+          where: { firebaseUid },
+          data: {
+            credits: {
+              increment: product.credits,
+            },
           },
-        },
-      });
+        });
 
-      // Create transaction record
-      const createdTransaction = await tx.transaction.create({
-        data: {
-          userId: user.id,
-          type: TransactionType.purchase,
-          amount: product.credits, // Positive for purchase
-          productId: productId,
-          appleTransactionId: transactionPayload.transactionId,
-          appleOriginalTransactionId: transactionPayload.originalTransactionId,
-          transactionData: transactionData,
-          status: TransactionStatus.completed,
-        },
-      });
+        // Create transaction record
+        const createdTransaction = await tx.transaction.create({
+          data: {
+            userId: user.id,
+            type: TransactionType.purchase,
+            amount: product.credits, // Positive for purchase
+            productId: productId,
+            appleTransactionId: transactionPayload.transactionId,
+            appleOriginalTransactionId:
+              transactionPayload.originalTransactionId,
+            transactionData: transactionData,
+            status: TransactionStatus.completed,
+          },
+        });
 
-      return [updated, createdTransaction];
-    });
+        return [updated, createdTransaction];
+      },
+    );
 
     this.logger.log(
       `Purchase processed: ${transactionPayload.transactionId}, added ${product.credits} credits to user ${firebaseUid}`,
@@ -260,7 +300,9 @@ export class IAPService {
   /**
    * Get product by product ID
    */
-  async getProductByProductId(productId: string): Promise<IAPProductResponseDto | null> {
+  async getProductByProductId(
+    productId: string,
+  ): Promise<IAPProductResponseDto | null> {
     const product = await this.prisma.iAPProduct.findUnique({
       where: { productId },
     });
@@ -281,4 +323,3 @@ export class IAPService {
     };
   }
 }
-

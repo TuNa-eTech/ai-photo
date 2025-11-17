@@ -192,7 +192,7 @@ describe('UsersService', () => {
       expect(result).toHaveProperty('avatar_url');
       expect(result).toHaveProperty('created_at');
       expect(result).toHaveProperty('updated_at');
-      
+
       // Check that response does not have camelCase
       expect(result).not.toHaveProperty('avatarUrl');
       expect(result).not.toHaveProperty('createdAt');
@@ -253,7 +253,7 @@ describe('UsersService', () => {
       expect(result).toHaveProperty('avatar_url');
       expect(result).toHaveProperty('created_at');
       expect(result).toHaveProperty('updated_at');
-      
+
       // Check that response does not have camelCase
       expect(result).not.toHaveProperty('avatarUrl');
       expect(result).not.toHaveProperty('createdAt');
@@ -274,4 +274,3 @@ describe('UsersService', () => {
     });
   });
 });
-

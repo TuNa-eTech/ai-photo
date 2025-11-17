@@ -17,4 +17,3 @@ export interface ProcessImageResponse {
   processed_image_base64: string;
   metadata: ProcessImageMetadata;
 }
-

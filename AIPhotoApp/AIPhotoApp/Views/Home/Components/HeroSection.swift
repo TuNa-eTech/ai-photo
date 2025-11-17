@@ -11,7 +11,7 @@ struct HeroSection: View {
     let heroTemplates: [HomeViewModel.TemplateItem]
     let isLoading: Bool
     let onTemplateTap: (TemplateDTO) -> Void
-    
+
     var body: some View {
         Group {
             if !heroTemplates.isEmpty {

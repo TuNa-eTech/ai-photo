@@ -31,7 +31,9 @@ export class QueryTemplatesDto {
 
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => (typeof value === 'string' ? value.toLowerCase() : undefined))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.toLowerCase() : undefined,
+  )
   category?: string;
 
   @IsIn(['newest', 'popular', 'name'])

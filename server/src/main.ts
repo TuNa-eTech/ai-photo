@@ -8,9 +8,10 @@ import { HttpEnvelopeExceptionFilter } from './common/filters/http-exception.fil
 
 async function bootstrap() {
   // Configure logger level based on environment
-  const logLevels: Array<'log' | 'error' | 'warn' | 'debug' | 'verbose'> = process.env.NODE_ENV === 'production'
-    ? ['error', 'warn', 'log']
-    : ['error', 'warn', 'log', 'debug', 'verbose'];
+  const logLevels: Array<'log' | 'error' | 'warn' | 'debug' | 'verbose'> =
+    process.env.NODE_ENV === 'production'
+      ? ['error', 'warn', 'log']
+      : ['error', 'warn', 'log', 'debug', 'verbose'];
 
   const app = await NestFactory.create(AppModule, {
     logger: logLevels,
@@ -22,7 +23,13 @@ async function bootstrap() {
   app.use(json({ limit: '20mb' }));
 
   // Global validation
-  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true, forbidUnknownValues: false }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidUnknownValues: false,
+    }),
+  );
 
   // Global interceptors (logging first, then envelope)
   app.useGlobalInterceptors(new LoggingInterceptor());
@@ -30,7 +37,10 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpEnvelopeExceptionFilter());
 
   // CORS configuration from env
-  const corsOrigins = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+  const corsOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   app.enableCors({
     origin: corsOrigins.length > 0 ? corsOrigins : true,
     credentials: true,
@@ -43,7 +53,11 @@ async function bootstrap() {
 
   logger.log(`🚀 Server is running on http://localhost:${port}`);
   logger.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-  logger.log(`🔐 CORS Origins: ${corsOrigins.length > 0 ? corsOrigins.join(', ') : 'All origins'}`);
-  logger.log(`🔑 DevAuth: ${process.env.DEV_AUTH_ENABLED === '1' ? 'ENABLED ⚠️' : 'DISABLED (Firebase Auth)'}`);
+  logger.log(
+    `🔐 CORS Origins: ${corsOrigins.length > 0 ? corsOrigins.join(', ') : 'All origins'}`,
+  );
+  logger.log(
+    `🔑 DevAuth: ${process.env.DEV_AUTH_ENABLED === '1' ? 'ENABLED ⚠️' : 'DISABLED (Firebase Auth)'}`,
+  );
 }
 bootstrap();

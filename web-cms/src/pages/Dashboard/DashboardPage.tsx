@@ -40,7 +40,7 @@ export function DashboardPage(): React.ReactElement {
   const templates = templatesData?.templates || []
   const publishedCount = templates.filter(t => t.status === 'published').length
   const draftCount = templates.filter(t => t.status === 'draft').length
-  const totalUsage = templates.reduce((sum, t) => sum + (t.usage_count || 0), 0)
+  const totalUsage = templates.reduce((sum, t) => sum + (t.usageCount || 0), 0)
 
   const recentTemplates = templates.slice(0, 5)
 
@@ -131,7 +131,7 @@ export function DashboardPage(): React.ReactElement {
                 >
                   <ListItemAvatar>
                     <Avatar
-                      src={template.thumbnail_url}
+                      src={template.thumbnailUrl}
                       variant="rounded"
                       sx={{ width: 48, height: 48 }}
                     >
@@ -153,13 +153,13 @@ export function DashboardPage(): React.ReactElement {
                           sx={{ height: 20, fontSize: '0.7rem' }}
                         />
                         <Typography variant="caption" color="text.secondary">
-                          Updated {formatDistanceToNow(new Date(template.updated_at), { addSuffix: true })}
+                          Updated {formatDistanceToNow(new Date(template.updatedAt), { addSuffix: true })}
                         </Typography>
                       </Box>
                     }
                   />
                   <Typography variant="body2" color="text.secondary">
-                    {template.usage_count?.toLocaleString() || '0'} uses
+                    {template.usageCount?.toLocaleString() || '0'} uses
                   </Typography>
                 </ListItem>
                 {index < recentTemplates.length - 1 && <Divider />}

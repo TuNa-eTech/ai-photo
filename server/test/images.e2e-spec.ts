@@ -22,7 +22,13 @@ describe('Images (e2e)', () => {
     app = moduleFixture.createNestApplication();
 
     // Replicate global pipes/interceptors/filters as in main.ts
-    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true, forbidUnknownValues: false }));
+    app.useGlobalPipes(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidUnknownValues: false,
+      }),
+    );
     app.useGlobalInterceptors(new EnvelopeInterceptor());
     app.useGlobalFilters(new HttpEnvelopeExceptionFilter());
 
@@ -38,7 +44,8 @@ describe('Images (e2e)', () => {
 
   const createValidImageBase64 = (): string => {
     // Create a small 1x1 pixel JPEG in base64
-    const jpegBase64 = '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/wCf/AP/Z';
+    const jpegBase64 =
+      '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/wCf/AP/Z';
     return `data:image/jpeg;base64,${jpegBase64}`;
   };
 
@@ -96,7 +103,7 @@ describe('Images (e2e)', () => {
     // 2. Valid template with prompt in database
     // 3. Valid image base64
     // This is an integration test that should run with real API
-    
+
     // TODO: Add integration test with real Gemini API
     // it('should process image successfully with valid request', async () => {
     //   const response = await request(app.getHttpServer())
@@ -107,11 +114,10 @@ describe('Images (e2e)', () => {
     //       image_base64: createValidImageBase64(),
     //     })
     //     .expect(200);
-    //   
+    //
     //   expect(response.body.success).toBe(true);
     //   expect(response.body.data.processed_image_base64).toBeDefined();
     //   expect(response.body.data.metadata).toBeDefined();
     // });
   });
 });
-

@@ -7,11 +7,13 @@
 
 import Foundation
 import Observation
+import SwiftUI
 
 @Observable
 final class HomeViewModel {
     // MARK: - Dependencies
     private let repository: TemplatesRepositoryProtocol
+    private let cacheManager = ImageCacheManager.shared
     
     // MARK: - Types
     struct TemplateItem: Identifiable, Hashable {
@@ -105,6 +107,9 @@ final class HomeViewModel {
                     // Trending templates directly from API (no client-side filtering needed)
                     self.trendingTemplates = items
                     self.isLoading = false
+
+                    // Prefetch images for better UX
+                    self.prefetchTrendingImages()
                 }
             } catch {
                 await MainActor.run {
@@ -171,6 +176,9 @@ final class HomeViewModel {
                 await MainActor.run {
                     self.newTemplates = items
                     self.isLoading = false
+
+                    // Prefetch new templates images
+                    self.prefetchNewTemplatesImages()
                 }
             } catch {
                 await MainActor.run {
@@ -211,5 +219,83 @@ final class HomeViewModel {
 
     func isFavorite(_ item: TemplateItem) -> Bool {
         favorites.contains(item.id)
+    }
+
+    // MARK: - Image Prefetching
+
+    /// Prefetch images for visible templates to improve UX
+    func prefetchImages(for templates: [TemplateItem], priority: PrefetchPriority = .normal) {
+        let urls = templates.compactMap { $0.thumbnailURL }
+        let prefetchPolicy: CachePolicy = .template
+
+        Task {
+            switch priority {
+            case .high:
+                // High priority: prefetch immediately
+                await cacheManager.prefetchImages(for: urls, cachePolicy: prefetchPolicy)
+
+            case .normal:
+                // Normal priority: prefetch after a short delay
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                await cacheManager.prefetchImages(for: urls, cachePolicy: prefetchPolicy)
+
+            case .low:
+                // Low priority: prefetch after a longer delay
+                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                await cacheManager.prefetchImages(for: urls, cachePolicy: prefetchPolicy)
+            }
+        }
+    }
+
+    /// Prefetch trending templates images when they're loaded
+    private func prefetchTrendingImages() {
+        // Prefetch first few trending templates immediately
+        let priorityTemplates = Array(trendingTemplates.prefix(6))
+        prefetchImages(for: priorityTemplates, priority: .high)
+
+        // Prefetch remaining trending templates after a delay
+        let remainingTemplates = Array(trendingTemplates.dropFirst(6))
+        if !remainingTemplates.isEmpty {
+            prefetchImages(for: remainingTemplates, priority: .normal)
+        }
+    }
+
+    /// Prefetch new templates images
+    private func prefetchNewTemplatesImages() {
+        prefetchImages(for: newTemplates, priority: .normal)
+    }
+
+    /// Prefetch images for templates that will likely be shown
+    func prefetchLikelyVisibleTemplates() {
+        // Prefetch hero templates (most likely to be seen first)
+        let heroUrls = heroTemplates.compactMap { $0.thumbnailURL }
+        Task {
+            await cacheManager.prefetchImages(for: heroUrls, cachePolicy: .template)
+        }
+
+        // Prefetch other trending templates with normal priority
+        prefetchTrendingImages()
+
+        // Prefetch new templates
+        prefetchNewTemplatesImages()
+    }
+
+    /// Clear image cache (useful for testing or manual refresh)
+    func clearImageCache() {
+        cacheManager.clearCache(type: .all)
+    }
+
+    /// Get cache statistics for debugging
+    func getCacheStatistics() -> CacheStatistics {
+        cacheManager.getCacheStatistics()
+    }
+}
+
+// MARK: - Prefetch Priority
+extension HomeViewModel {
+    enum PrefetchPriority {
+        case high      // Immediate prefetch
+        case normal    // Short delay
+        case low       // Longer delay
     }
 }

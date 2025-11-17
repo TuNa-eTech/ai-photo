@@ -16,4 +16,3 @@ export interface ValidationResult {
   mimeType?: string;
   error?: string;
 }
-

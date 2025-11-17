@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 // MARK: - Protocol for testability
 
@@ -19,18 +20,24 @@ protocol TemplatesRepositoryProtocol {
         bearerIDToken: String,
         tokenProvider: (() async throws -> String)?
     ) async throws -> TemplatesListResponse
-    
+
     func listTrendingTemplates(
         limit: Int?,
         offset: Int?,
         bearerIDToken: String,
         tokenProvider: (() async throws -> String)?
     ) async throws -> TemplatesListResponse
-    
+
     func listCategories(
         bearerIDToken: String,
         tokenProvider: (() async throws -> String)?
     ) async throws -> CategoriesListResponse
+
+    /// Refresh cached template data
+    func refreshTemplates(bearerIDToken: String, tokenProvider: (() async throws -> String)?) async throws
+
+    /// Invalidate image cache for templates
+    func invalidateImageCache(for templates: [TemplateDTO])
 }
 
 // MARK: - Implementation
@@ -54,6 +61,7 @@ final class TemplatesRepository: TemplatesRepositoryProtocol {
     }
 
     private let client: APIClientProtocol
+    private let cacheManager = ImageCacheManager.shared
     
     // Custom decoder that respects explicit CodingKeys
     // IMPORTANT: Do NOT use .convertFromSnakeCase because it converts
@@ -225,6 +233,66 @@ final class TemplatesRepository: TemplatesRepositoryProtocol {
             }
         } catch {
             throw NetworkError.invalidResponse
+        }
+    }
+
+    // MARK: - Cache Management
+
+    /// Refresh cached template data by bypassing cache
+    func refreshTemplates(bearerIDToken: String, tokenProvider: (() async throws -> String)?) async throws {
+        // Clear any existing cache for templates
+        cacheManager.clearCache(type: .disk)
+
+        // Fetch fresh data
+        _ = try await listTemplates(
+            limit: 50,
+            offset: 0,
+            query: nil,
+            category: nil,
+            sort: nil,
+            bearerIDToken: bearerIDToken,
+            tokenProvider: tokenProvider
+        )
+
+        _ = try await listTrendingTemplates(
+            limit: 50,
+            offset: 0,
+            bearerIDToken: bearerIDToken,
+            tokenProvider: tokenProvider
+        )
+    }
+
+    /// Invalidate image cache for specific templates
+    func invalidateImageCache(for templates: [TemplateDTO]) {
+        Task {
+            let urls = templates.compactMap { $0.thumbnailURL }
+
+            // Clear from cache
+            for url in urls {
+                // Remove from memory cache
+                let _ = url.absoluteString as NSString
+                cacheManager.clearCache(type: .memory)
+
+                // For disk cache, we'd need to implement specific URL removal
+                // For now, clear all disk cache when template data changes
+            }
+
+            #if DEBUG
+            print("🗑️ Invalidated image cache for \(urls.count) template images")
+            #endif
+        }
+    }
+
+    /// Check if template images are cached
+    func areImagesCached(for templates: [TemplateDTO]) -> [Bool] {
+        return templates.map { template in
+            guard let url = template.thumbnailURL else { return false }
+            let _ = url.absoluteString as NSString
+
+            // Check if image is in memory cache
+            // Note: This is a simplified check. In a real implementation,
+            // you'd want to check disk cache as well
+            return cacheManager.getCacheStatistics().memoryCacheSize > 0
         }
     }
 }

@@ -9,4 +9,3 @@ export class RewardRequestDto {
   @IsString()
   source?: string; // Optional, e.g., "rewarded_ad" for tracking
 }
-

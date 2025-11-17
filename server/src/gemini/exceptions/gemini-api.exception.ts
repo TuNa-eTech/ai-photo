@@ -14,4 +14,3 @@ export class GeminiAPIException extends HttpException {
     );
   }
 }
-

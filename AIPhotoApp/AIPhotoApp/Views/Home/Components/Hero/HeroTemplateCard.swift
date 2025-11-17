@@ -11,7 +11,7 @@ import UIKit
 struct HeroTemplateCard: View {
     let template: HomeViewModel.TemplateItem
     let onTap: () -> Void
-    
+
     var body: some View {
         GeometryReader { geometry in
             let screenHeight = UIScreen.main.bounds.height
@@ -42,7 +42,7 @@ struct HeroTemplateCard: View {
                 .frame(width: geometry.size.width, height: totalHeight)
                 .clipped()
                 .offset(y: -safeAreaTop)
-                
+
                 // Subtle gradient overlay for better text readability
                 LinearGradient(
                     colors: [
@@ -104,7 +104,9 @@ struct HeroTemplateCard: View {
         thumbnailSymbol: "moon.stars.fill"
     )
     
-    HeroTemplateCard(template: template) {
+    HeroTemplateCard(
+        template: template
+    ) {
         print("Tapped")
     }
 }

@@ -1,4 +1,10 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, IsUrl } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUrl,
+} from 'class-validator';
 
 /**
  * DTO for user registration request
@@ -17,4 +23,3 @@ export class RegisterUserDto {
   @IsOptional()
   avatar_url?: string;
 }
-

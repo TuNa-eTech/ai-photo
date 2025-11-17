@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -30,12 +31,12 @@ export class TemplatesAdminController {
   constructor(private readonly templatesService: TemplatesService) {}
 
   /**
-   * List all templates (admin view with full details)
+   * List all templates (admin view with full details and filters)
    * GET /v1/admin/templates
    */
   @Get()
-  async list() {
-    return this.templatesService.listAdminTemplates();
+  async list(@Query() query: any) {
+    return this.templatesService.listAdminTemplates(query);
   }
 
   /**
@@ -62,7 +63,10 @@ export class TemplatesAdminController {
    * PUT /v1/admin/templates/{slug}
    */
   @Put(':slug')
-  async update(@Param('slug') slug: string, @Body() updateDto: UpdateTemplateDto) {
+  async update(
+    @Param('slug') slug: string,
+    @Body() updateDto: UpdateTemplateDto,
+  ) {
     return this.templatesService.updateTemplate(slug, updateDto);
   }
 
@@ -79,7 +83,7 @@ export class TemplatesAdminController {
   /**
    * Publish template
    * POST /v1/admin/templates/{slug}/publish
-   * 
+   *
    * Guard: Requires thumbnail_url to be present, otherwise returns 422
    */
   @Post(':slug/publish')
@@ -97,10 +101,28 @@ export class TemplatesAdminController {
   }
 
   /**
+   * Mark template as trending
+   * POST /v1/admin/templates/{slug}/trending
+   */
+  @Post(':slug/trending')
+  async setTrending(@Param('slug') slug: string) {
+    return this.templatesService.setTrending(slug, true);
+  }
+
+  /**
+   * Remove template from trending
+   * DELETE /v1/admin/templates/{slug}/trending
+   */
+  @Delete(':slug/trending')
+  async unsetTrending(@Param('slug') slug: string) {
+    return this.templatesService.setTrending(slug, false);
+  }
+
+  /**
    * Upload template asset (thumbnail, preview, cover)
    * POST /v1/admin/templates/{slug}/assets
    * Content-Type: multipart/form-data
-   * 
+   *
    * Form fields:
    * - kind: 'thumbnail' | 'preview' | 'cover'
    * - file: image file (jpeg, png, webp, gif)
@@ -131,4 +153,3 @@ export class TemplatesAdminController {
     return this.templatesService.uploadAsset(slug, kind as AssetKind, file);
   }
 }
-

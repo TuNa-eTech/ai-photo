@@ -28,18 +28,22 @@ import {
   AccordionDetails,
   Chip,
   Stack,
-  Paper,
   Divider,
+  Paper,
 } from '@mui/material'
-import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import DeleteIcon from '@mui/icons-material/Delete'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import ImageIcon from '@mui/icons-material/Image'
 import SettingsIcon from '@mui/icons-material/Settings'
+import EnhancedImageUpload from './EnhancedImageUpload'
+import { TrendingBadge } from '../common/TrendingBadge'
 import type { TemplateAdmin, CreateTemplateRequest, UpdateTemplateRequest, TemplateStatus, TemplateVisibility } from '../../types'
 import { generateSlug } from '../../utils/slug'
+import { validateImageFile } from '../../utils/imageHelper'
+import { Checkbox, AlertTitle } from '@mui/material'
+import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment'
 
 export interface TemplateFormDialogProps {
   open: boolean
@@ -86,9 +90,9 @@ export function TemplateFormDialog({
     name: '',
     description: '',
     prompt: '',
-    negative_prompt: '',
-    model_provider: 'gemini',
-    model_name: 'gemini-1.5-pro',
+    negativePrompt: '',
+    modelProvider: 'gemini',
+    modelName: 'gemini-1.5-pro',
     status: 'draft',
     visibility: 'public',
     tags: [],
@@ -125,16 +129,16 @@ export function TemplateFormDialog({
         name: template.name,
         description: template.description || '',
         prompt: template.prompt || '',
-        negative_prompt: template.negative_prompt || '',
-        model_provider: template.model_provider || 'gemini',
-        model_name: template.model_name || 'gemini-1.5-pro',
+        negativePrompt: template.negativePrompt || '',
+        modelProvider: template.modelProvider || 'gemini',
+        modelName: template.modelName || 'gemini-1.5-pro',
         status: template.status || 'draft',
         visibility: template.visibility || 'public',
         tags: template.tags || [],
         isTrendingManual: template.isTrendingManual ?? false,
       })
       setTagsInput(template.tags?.join(', ') || '')
-      setThumbnailPreview(template.thumbnail_url || null)
+      setThumbnailPreview(template.thumbnailUrl || null)
       setThumbnailFile(null)
       setSelectedCategory('') // Reset category on edit (we don't store it)
       setActiveTab(0)
@@ -143,9 +147,9 @@ export function TemplateFormDialog({
         name: '',
         description: '',
         prompt: '',
-        negative_prompt: '',
-        model_provider: 'gemini',
-        model_name: 'gemini-1.5-pro',
+        negativePrompt: '',
+        modelProvider: 'gemini',
+        modelName: 'gemini-1.5-pro',
         status: 'draft',
         visibility: 'public',
         tags: [],
@@ -196,16 +200,30 @@ export function TemplateFormDialog({
     return Object.keys(newErrors).length === 0
   }
 
-  const handleThumbnailChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    const file = event.target.files?.[0]
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        setErrors({ ...errors, thumbnail: 'Please select an image file' })
-        return
-      }
+  const handleThumbnailSelect = (file: File | string) => {
+    if (typeof file === 'string') {
+      // Handle base64 string (cropped image)
+      const newErrors = { ...errors }
+      delete newErrors.thumbnail
+      setErrors(newErrors)
+      setThumbnailPreview(file)
 
-      if (file.size > 5 * 1024 * 1024) {
-        setErrors({ ...errors, thumbnail: 'Image must be smaller than 5MB' })
+      // Convert base64 to File for upload
+      fetch(file)
+        .then(res => res.blob())
+        .then(blob => {
+          const imageFile = new File([blob], 'cropped-thumbnail.jpg', { type: 'image/jpeg' })
+          setThumbnailFile(imageFile)
+        })
+        .catch(err => {
+          console.error('Error converting base64 to file:', err)
+          setErrors({ ...errors, thumbnail: 'Failed to process cropped image' })
+        })
+    } else {
+      // Handle File object
+      const validation = validateImageFile(file, 5 * 1024 * 1024)
+      if (!validation.valid) {
+        setErrors({ ...errors, thumbnail: validation.error! })
         return
       }
 
@@ -215,7 +233,7 @@ export function TemplateFormDialog({
         setThumbnailPreview(reader.result as string)
       }
       reader.readAsDataURL(file)
-      
+
       const newErrors = { ...errors }
       delete newErrors.thumbnail
       setErrors(newErrors)
@@ -224,10 +242,10 @@ export function TemplateFormDialog({
 
   const handleThumbnailRemove = (): void => {
     setThumbnailFile(null)
-    if (isEdit && template?.thumbnail_url && !thumbnailFile) {
+    if (isEdit && template?.thumbnailUrl && !thumbnailFile) {
       return
     }
-    setThumbnailPreview(isEdit ? template?.thumbnail_url || null : null)
+    setThumbnailPreview(isEdit ? template?.thumbnailUrl || null : null)
   }
 
   // Handle name change and auto-generate slug for new templates
@@ -257,9 +275,9 @@ export function TemplateFormDialog({
         name: formData.name,
         description: formData.description || undefined,
         prompt: formData.prompt || undefined,
-        negative_prompt: formData.negative_prompt || undefined,
-        model_provider: formData.model_provider || undefined,
-        model_name: formData.model_name || undefined,
+        negativePrompt: formData.negativePrompt || undefined,
+        modelProvider: formData.modelProvider || undefined,
+        modelName: formData.modelName || undefined,
         status: formData.status,
         visibility: formData.visibility,
         tags: tags.length > 0 ? tags : undefined,
@@ -271,9 +289,9 @@ export function TemplateFormDialog({
         ...formData,
         description: formData.description || undefined,
         prompt: formData.prompt || undefined,
-        negative_prompt: formData.negative_prompt || undefined,
-        model_provider: formData.model_provider || undefined,
-        model_name: formData.model_name || undefined,
+        negativePrompt: formData.negativePrompt || undefined,
+        modelProvider: formData.modelProvider || undefined,
+        modelName: formData.modelName || undefined,
         tags: tags.length > 0 ? tags : undefined,
         isTrendingManual: formData.isTrendingManual,
       }
@@ -288,7 +306,7 @@ export function TemplateFormDialog({
   }
 
   const promptLength = formData.prompt?.length || 0
-  const negativePromptLength = formData.negative_prompt?.length || 0
+  const negativePromptLength = formData.negativePrompt?.length || 0
 
   return (
     <Dialog 
@@ -477,8 +495,8 @@ export function TemplateFormDialog({
                   fullWidth
                   multiline
                   rows={4}
-                  value={formData.negative_prompt}
-                  onChange={(e) => setFormData({ ...formData, negative_prompt: e.target.value })}
+                  value={formData.negativePrompt}
+                  onChange={(e) => setFormData({ ...formData, negativePrompt: e.target.value })}
                   helperText="What to avoid in generated images"
                   disabled={loading}
                   placeholder="blurry, low quality, distorted, deformed, bad anatomy, extra limbs, watermark, signature, text, logo..."
@@ -502,10 +520,10 @@ export function TemplateFormDialog({
                       <FormControl fullWidth size="small">
                         <InputLabel>Model Provider</InputLabel>
                         <Select
-                          value={formData.model_provider}
+                          value={formData.modelProvider}
                           label="Model Provider"
                           onChange={(e) =>
-                            setFormData({ ...formData, model_provider: e.target.value })
+                            setFormData({ ...formData, modelProvider: e.target.value })
                           }
                           disabled={loading}
                         >
@@ -521,8 +539,8 @@ export function TemplateFormDialog({
                         fullWidth
                         size="small"
                         label="Model Name"
-                        value={formData.model_name}
-                        onChange={(e) => setFormData({ ...formData, model_name: e.target.value })}
+                        value={formData.modelName}
+                        onChange={(e) => setFormData({ ...formData, modelName: e.target.value })}
                         helperText="Specific model version"
                         disabled={loading}
                         placeholder="gemini-1.5-pro"
@@ -557,13 +575,13 @@ export function TemplateFormDialog({
                 <Typography variant="subtitle2" gutterBottom>
                   Thumbnail Image
                 </Typography>
-                
+
                 {thumbnailPreview ? (
                   <Box>
-                    <Paper 
-                      variant="outlined" 
-                      sx={{ 
-                        p: 2, 
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 2,
                         display: 'inline-block',
                         borderRadius: 2,
                       }}
@@ -585,20 +603,6 @@ export function TemplateFormDialog({
                     <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
                       <Button
                         variant="outlined"
-                        component="label"
-                        startIcon={<CloudUploadIcon />}
-                        disabled={loading}
-                      >
-                        Change Image
-                        <input
-                          type="file"
-                          hidden
-                          accept="image/*"
-                          onChange={handleThumbnailChange}
-                        />
-                      </Button>
-                      <Button
-                        variant="outlined"
                         color="error"
                         startIcon={<DeleteIcon />}
                         onClick={handleThumbnailRemove}
@@ -608,24 +612,18 @@ export function TemplateFormDialog({
                       </Button>
                     </Stack>
                   </Box>
-                ) : (
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={<CloudUploadIcon />}
-                    disabled={loading}
-                    sx={{ mt: 1 }}
-                  >
-                    Upload Thumbnail
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*"
-                      onChange={handleThumbnailChange}
-                    />
-                  </Button>
-                )}
-                
+                ) : null}
+
+                <EnhancedImageUpload
+                  onImageSelect={handleThumbnailSelect}
+                  currentImage={thumbnailPreview || undefined}
+                  label={thumbnailPreview ? "Thay đổi hình ảnh" : "Tải lên hình ảnh thumbnail"}
+                  helperText="Kéo và thả, nhấp để chọn, hoặc Ctrl+V để dán ảnh. Hỗ trợ cắt ảnh để phù hợp."
+                  maxSizeMB={5}
+                  disabled={loading}
+                  enableCrop={true}
+                />
+
                 {errors.thumbnail && (
                   <Typography variant="caption" color="error" display="block" sx={{ mt: 1 }}>
                     {errors.thumbnail}
@@ -703,26 +701,81 @@ export function TemplateFormDialog({
                 </Box>
               </Stack>
 
-              {/* Trending Manual Checkbox */}
-              <Box>
-                <FormControl>
-                  <Stack direction="row" alignItems="center" spacing={2}>
-                    <Typography variant="subtitle2">Trending thủ công</Typography>
-                    <input
-                      type="checkbox"
+              {/* Trending Section */}
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  backgroundColor: formData.isTrendingManual ? 'orange.50' : 'grey.50',
+                  borderColor: formData.isTrendingManual ? 'orange.200' : 'grey.200',
+                  transition: 'all 0.2s ease-in-out',
+                }}
+              >
+                <Stack spacing={2}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <LocalFireDepartmentIcon
+                      sx={{
+                        color: formData.isTrendingManual ? 'orange.600' : 'grey.400',
+                        fontSize: 24,
+                      }}
+                    />
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      📊 Trending Settings
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                    <Checkbox
                       checked={!!formData.isTrendingManual}
                       onChange={(e) =>
                         setFormData({ ...formData, isTrendingManual: e.target.checked })
                       }
                       disabled={loading}
-                      style={{ width: 20, height: 20 }}
+                      sx={{
+                        color: 'orange.600',
+                        '&.Mui-checked': {
+                          color: 'orange.600',
+                        },
+                        mt: 0.5,
+                      }}
                     />
-                    <Typography variant="body2" color="text.secondary">
-                      Đánh dấu template này luôn xuất hiện trong danh sách trending, bất kể usageCount.
-                    </Typography>
-                  </Stack>
-                </FormControl>
-              </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body2" fontWeight={500} gutterBottom>
+                        Mark as Trending (Manually Featured)
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                        This template will always appear in the trending list, regardless of usage count.
+                        It will be prominently displayed to users as a recommended template.
+                      </Typography>
+
+                      {/* Preview */}
+                      <Box sx={{ mt: 2 }}>
+                        <Typography variant="caption" color="text.secondary" gutterBottom>
+                          Preview in template list:
+                        </Typography>
+                        <Box sx={{ mt: 1, p: 1, backgroundColor: 'white', borderRadius: 1, border: 1, borderColor: 'divider' }}>
+                          <Stack direction="row" alignItems="center" gap={1}>
+                            <Typography variant="body2" fontWeight={600}>
+                              {formData.name || 'Template Name'}
+                            </Typography>
+                            <TrendingBadge
+                              isTrendingManual={formData.isTrendingManual}
+                              size="small"
+                            />
+                          </Stack>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  {formData.isTrendingManual && (
+                    <Alert severity="info" sx={{ mt: 1 }}>
+                      <AlertTitle>Trending Active</AlertTitle>
+                      This template will be featured in the trending section and prioritized in user recommendations.
+                    </Alert>
+                  )}
+                </Stack>
+              </Paper>
 
               {formData.status === 'published' && !thumbnailPreview && (
                 <Alert severity="warning">

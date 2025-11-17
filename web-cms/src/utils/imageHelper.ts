@@ -33,24 +33,25 @@ export interface ValidationResult {
   error?: string
 }
 
-export function validateImageFile(file: File): ValidationResult {
+export function validateImageFile(file: File, maxSize?: number): ValidationResult {
   // Check file type
   if (!file.type.startsWith('image/')) {
-    return { valid: false, error: 'Please select a valid image file (JPEG or PNG)' }
+    return { valid: false, error: 'Please select a valid image file (JPEG, PNG, WebP, or GIF)' }
   }
-  
+
   // Check for specific image types
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png']
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
   if (!allowedTypes.includes(file.type)) {
-    return { valid: false, error: 'Only JPEG and PNG images are supported' }
+    return { valid: false, error: 'Only JPEG, PNG, WebP, and GIF images are supported' }
   }
-  
-  // Check file size (max 10MB)
-  const maxSize = 10 * 1024 * 1024 // 10MB
-  if (file.size > maxSize) {
-    return { valid: false, error: `File size must be less than 10MB (current: ${(file.size / 1024 / 1024).toFixed(2)}MB)` }
+
+  // Check file size (use provided maxSize or default 10MB)
+  const maxFileSize = maxSize || 10 * 1024 * 1024
+  if (file.size > maxFileSize) {
+    const maxSizeMB = maxFileSize / 1024 / 1024
+    return { valid: false, error: `File size must be less than ${maxSizeMB}MB (current: ${(file.size / 1024 / 1024).toFixed(2)}MB)` }
   }
-  
+
   return { valid: true }
 }
 

@@ -1,4 +1,12 @@
-import { IsString, IsOptional, IsEnum, IsArray, Matches, ValidateIf } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsArray,
+  IsBoolean,
+  Matches,
+  ValidateIf,
+} from 'class-validator';
 import { TemplateStatus, TemplateVisibility } from '@prisma/client';
 import { generateSlug, isValidSlug } from '../../utils/slug';
 
@@ -50,5 +58,8 @@ export class CreateTemplateDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
-}
 
+  @IsOptional()
+  @IsBoolean()
+  isTrendingManual?: boolean;
+}

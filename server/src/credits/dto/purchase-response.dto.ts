@@ -6,4 +6,3 @@ export class PurchaseResponseDto {
   credits_added: number;
   new_balance: number;
 }
-

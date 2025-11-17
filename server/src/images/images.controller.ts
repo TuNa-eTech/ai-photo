@@ -17,4 +17,3 @@ export class ImagesController {
     return await this.imagesService.processImage(dto, firebaseUid);
   }
 }
-

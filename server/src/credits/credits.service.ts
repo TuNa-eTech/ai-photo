@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionType, TransactionStatus } from '@prisma/client';
 import {
@@ -16,7 +21,9 @@ export class CreditsService {
   /**
    * Get credits balance for a user
    */
-  async getCreditsBalance(firebaseUid: string): Promise<CreditsBalanceResponseDto> {
+  async getCreditsBalance(
+    firebaseUid: string,
+  ): Promise<CreditsBalanceResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { firebaseUid },
       select: { credits: true },
@@ -37,7 +44,10 @@ export class CreditsService {
   /**
    * Check if user has enough credits
    */
-  async checkCreditsAvailability(firebaseUid: string, amount: number): Promise<boolean> {
+  async checkCreditsAvailability(
+    firebaseUid: string,
+    amount: number,
+  ): Promise<boolean> {
     const user = await this.prisma.user.findUnique({
       where: { firebaseUid },
       select: { credits: true },
@@ -103,7 +113,9 @@ export class CreditsService {
       });
     });
 
-    this.logger.log(`Deducted ${amount} credits from user ${firebaseUid}. New balance: ${user.credits - amount}`);
+    this.logger.log(
+      `Deducted ${amount} credits from user ${firebaseUid}. New balance: ${user.credits - amount}`,
+    );
   }
 
   /**
@@ -155,7 +167,9 @@ export class CreditsService {
         },
       });
 
-      this.logger.log(`Added ${amount} credits to user ${firebaseUid}. New balance: ${updatedUser.credits}`);
+      this.logger.log(
+        `Added ${amount} credits to user ${firebaseUid}. New balance: ${updatedUser.credits}`,
+      );
     });
   }
 
@@ -163,7 +177,10 @@ export class CreditsService {
    * Add reward credit from rewarded ads
    * Adds 1 credit with TransactionType.bonus
    */
-  async addRewardCredit(firebaseUid: string, source?: string): Promise<{ credits_added: number; new_balance: number }> {
+  async addRewardCredit(
+    firebaseUid: string,
+    source?: string,
+  ): Promise<{ credits_added: number; new_balance: number }> {
     const user = await this.prisma.user.findUnique({
       where: { firebaseUid },
     });
@@ -200,7 +217,9 @@ export class CreditsService {
         },
       });
 
-      this.logger.log(`Added ${amount} reward credit to user ${firebaseUid}. New balance: ${updatedUser.credits}`);
+      this.logger.log(
+        `Added ${amount} reward credit to user ${firebaseUid}. New balance: ${updatedUser.credits}`,
+      );
 
       return {
         credits_added: amount,
@@ -270,4 +289,3 @@ export class CreditsService {
     };
   }
 }
-

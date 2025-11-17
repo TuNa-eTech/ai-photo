@@ -13,4 +13,3 @@ export type ApiCategory = {
 export type CategoriesListResponse = {
   categories: ApiCategory[];
 };
-

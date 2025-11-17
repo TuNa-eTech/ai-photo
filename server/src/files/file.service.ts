@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { File, Prisma, StorageType } from '@prisma/client';
 import sharp from 'sharp';
@@ -31,10 +35,22 @@ export class FileService {
    * Save uploaded file and create database record
    */
   async saveFile(data: CreateFileData): Promise<File> {
-    const { originalName, buffer, mimeType, storageType = StorageType.local, bucket } = data;
+    const {
+      originalName,
+      buffer,
+      mimeType,
+      storageType = StorageType.local,
+      bucket,
+    } = data;
 
     // Validate file type
-    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    const allowedMimeTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+    ];
     if (!allowedMimeTypes.includes(mimeType)) {
       throw new BadRequestException(`File type ${mimeType} not allowed`);
     }
@@ -63,7 +79,10 @@ export class FileService {
 
       // Estimate quality based on file size and dimensions (rough estimation)
       if (format === 'jpeg' || format === 'webp') {
-        quality = Math.min(95, Math.max(70, (buffer.length / (width! * height!)) * 100));
+        quality = Math.min(
+          95,
+          Math.max(70, (buffer.length / (width * height)) * 100),
+        );
       }
     } catch (error) {
       console.error('Error getting image metadata:', error);
@@ -82,7 +101,11 @@ export class FileService {
     }
 
     // Determine file path and URL based on storage type
-    const { filePath, fileUrl } = this.getFilePaths(filename, storageType, bucket);
+    const { filePath, fileUrl } = this.getFilePaths(
+      filename,
+      storageType,
+      bucket,
+    );
 
     // Save file to local storage (for now, only local storage is implemented)
     if (storageType === StorageType.local) {
@@ -159,7 +182,11 @@ export class FileService {
   /**
    * Generate thumbnail for an image
    */
-  async generateThumbnail(fileId: string, width: number = 300, height: number = 300): Promise<File> {
+  async generateThumbnail(
+    fileId: string,
+    width: number = 300,
+    height: number = 300,
+  ): Promise<File> {
     const originalFile = await this.getFile(fileId);
     if (!originalFile) {
       throw new NotFoundException(`File with ID ${fileId} not found`);
@@ -183,7 +210,11 @@ export class FileService {
     const thumbnailFilename = `thumb-${originalFile.filename.replace(/\.[^/.]+$/, '.webp')}`;
 
     // Get paths for thumbnail
-    const { filePath, fileUrl } = this.getFilePaths(thumbnailFilename, originalFile.storageType, originalFile.bucket || undefined);
+    const { filePath, fileUrl } = this.getFilePaths(
+      thumbnailFilename,
+      originalFile.storageType,
+      originalFile.bucket || undefined,
+    );
 
     // Save thumbnail to local storage
     if (originalFile.storageType === StorageType.local) {
@@ -214,7 +245,11 @@ export class FileService {
   /**
    * Get file paths based on storage type
    */
-  private getFilePaths(filename: string, storageType: StorageType, bucket?: string): { filePath: string; fileUrl: string } {
+  private getFilePaths(
+    filename: string,
+    storageType: StorageType,
+    bucket?: string,
+  ): { filePath: string; fileUrl: string } {
     const baseUrl = process.env.API_BASE_URL || 'http://localhost:8080';
 
     if (storageType === StorageType.local) {
@@ -230,7 +265,10 @@ export class FileService {
   /**
    * Save file to local disk
    */
-  private async saveToLocalDisk(filePath: string, buffer: Buffer): Promise<void> {
+  private async saveToLocalDisk(
+    filePath: string,
+    buffer: Buffer,
+  ): Promise<void> {
     // Ensure directory exists
     const dir = filePath.substring(0, filePath.lastIndexOf('/'));
     await fs.mkdir(dir, { recursive: true });

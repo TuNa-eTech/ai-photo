@@ -15,4 +15,3 @@ export class IAPController {
     return this.iapService.getProducts();
   }
 }
-

@@ -53,7 +53,13 @@ describe('Templates (e2e) with DevAuth', () => {
     app = moduleFixture.createNestApplication();
 
     // Replicate global pipes/interceptors/filters as in main.ts
-    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true, forbidUnknownValues: false }));
+    app.useGlobalPipes(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidUnknownValues: false,
+      }),
+    );
     app.useGlobalInterceptors(new EnvelopeInterceptor());
     app.useGlobalFilters(new HttpEnvelopeExceptionFilter());
 
@@ -65,7 +71,9 @@ describe('Templates (e2e) with DevAuth', () => {
   });
 
   it('GET /v1/templates should return 401 when Authorization header is missing', async () => {
-    const res = await request(app.getHttpServer()).get('/v1/templates').expect(401);
+    const res = await request(app.getHttpServer())
+      .get('/v1/templates')
+      .expect(401);
 
     // Envelope error assertion
     expect(res.body).toBeDefined();
@@ -212,7 +220,7 @@ describe('Templates (e2e) with DevAuth', () => {
         .expect(200);
 
       const template = res.body.data.templates[0];
-      
+
       // API should use snake_case
       expect(template).toHaveProperty('id');
       expect(template).toHaveProperty('name');
@@ -243,7 +251,7 @@ describe('Templates (e2e) with DevAuth', () => {
         .expect(200);
 
       const template = res.body.data.templates[0];
-      
+
       expect(template.id).toBe('test');
       expect(template.name).toBe('Test Template');
       expect(template.usage_count).toBe(0);

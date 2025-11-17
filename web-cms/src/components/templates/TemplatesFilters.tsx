@@ -62,8 +62,15 @@ export function TemplatesFilters({
     onChange({ ...filters, tags: event.target.value || undefined })
   }
 
+  const handleTrendingChange = (event: SelectChangeEvent<string>): void => {
+    onChange({
+      ...filters,
+      trending: event.target.value ? (event.target.value as 'all' | 'manual' | 'none') : undefined,
+    })
+  }
+
   const hasActiveFilters =
-    filters.q || filters.status || filters.visibility || filters.tags || filters.sort
+    filters.q || filters.status || filters.visibility || filters.tags || filters.sort || filters.trending
 
   return (
     <Paper sx={{ p: 2, mb: 3 }}>
@@ -143,6 +150,22 @@ export function TemplatesFilters({
             value={filters.tags || ''}
             onChange={handleTagsChange}
           />
+        </Box>
+
+        {/* Trending Filter */}
+        <Box sx={{ flex: '1 1 180px', minWidth: 150 }}>
+          <FormControl fullWidth size="small">
+            <InputLabel>Trending</InputLabel>
+            <Select
+              value={filters.trending || ''}
+              onChange={handleTrendingChange}
+              label="Trending"
+            >
+              <MenuItem value="">All Templates</MenuItem>
+              <MenuItem value="manual">🔥 Manual Trending</MenuItem>
+              <MenuItem value="none">Not Trending</MenuItem>
+            </Select>
+          </FormControl>
         </Box>
 
         {/* Reset Button */}

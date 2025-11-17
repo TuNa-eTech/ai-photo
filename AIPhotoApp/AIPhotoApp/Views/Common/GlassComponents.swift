@@ -180,20 +180,35 @@ struct CardGlassSmall: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            // Thumbnail: AsyncImage with fallback (NO BLUR for clarity)
+            // Thumbnail: CachedAsyncImage with fallback (NO BLUR for clarity)
             Group {
                 if let url = thumbnailURL {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            GeometryReader { geo in
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: geo.size.width, height: geo.size.height)
-                                    .clipped()
+                    CachedAsyncImage(
+                        url: url,
+                        cachePolicy: .template
+                    ) { image in
+                        GeometryReader { geo in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: geo.size.width, height: geo.size.height)
+                                .clipped()
+                        }
+                    } placeholder: {
+                        GeometryReader { geo in
+                            ZStack {
+                                LinearGradient(
+                                    colors: [GlassTokens.primary1.opacity(0.3), GlassTokens.accent1.opacity(0.2)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                                .frame(width: geo.size.width, height: geo.size.height)
+                                ProgressView()
+                                    .tint(GlassTokens.textPrimary)
                             }
-                        case .failure(let error):
+                        }
+                    } errorView: { error in
+                        AnyView(
                             GeometryReader { geo in
                                 ZStack {
                                     fallbackImage
@@ -211,30 +226,7 @@ struct CardGlassSmall: View {
                                     #endif
                                 }
                             }
-                        case .empty:
-                            GeometryReader { geo in
-                                ZStack {
-                                    LinearGradient(
-                                        colors: [GlassTokens.primary1.opacity(0.3), GlassTokens.accent1.opacity(0.2)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                    .frame(width: geo.size.width, height: geo.size.height)
-                                    ProgressView()
-                                        .tint(GlassTokens.textPrimary)
-                                }
-                            }
-                        @unknown default:
-                            GeometryReader { geo in
-                                fallbackImage
-                                    .frame(width: geo.size.width, height: geo.size.height)
-                            }
-                        }
-                    }
-                    .onAppear {
-                        // #if DEBUG
-                        // print("🖼️ Loading image: \(url.absoluteString)")
-                        // #endif
+                        )
                     }
                 } else {
                     GeometryReader { geo in
@@ -316,28 +308,23 @@ struct CardGlassLarge: View {
         GeometryReader { geo in
             let minX = geo.frame(in: .global).minX
             ZStack(alignment: .bottomLeading) {
-                // Background with subtle parallax and beige tint: AsyncImage
+                // Background with subtle parallax and beige tint: CachedAsyncImage
                 Group {
                     if let url = thumbnailURL {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                                    case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                                    .offset(x: -minX / 20) // parallax effect
-                            case .failure:
-                                fallbackImage
-                                    .offset(x: -minX / 20)
-                            case .empty:
-                                ZStack {
-                                    Color.gray.opacity(0.2)
-                                    ProgressView()
-                                }
-                            @unknown default:
-                                fallbackImage
-                                    .offset(x: -minX / 20)
+                        CachedAsyncImage(
+                            url: url,
+                            cachePolicy: .template
+                        ) { image in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .offset(x: -minX / 20) // parallax effect
+                        } placeholder: {
+                            ZStack {
+                                Color.gray.opacity(0.2)
+                                ProgressView()
                             }
+                            .offset(x: -minX / 20)
                         }
                     } else {
                         fallbackImage

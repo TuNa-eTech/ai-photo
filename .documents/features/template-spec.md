@@ -46,12 +46,12 @@ Tài liệu hợp nhất mọi thông tin liên quan đến “Template” để
 - Trường trong `Template`:
   - `id` (chuỗi ổn định cho client)
   - `name` (bắt buộc)
-  - `thumbnail_url` (optional)
-  - `published_at` (optional)
-  - `usage_count` (optional)
+  - `thumbnailUrl` (optional)
+  - `publishedAt` (optional)
+  - `usageCount` (optional)
 - Sorting:
-  - `newest`: theo `published_at` DESC
-  - `popular`: theo `usage_count` DESC
+  - `newest`: theo `publishedAt` DESC
+  - `popular`: theo `usageCount` DESC
   - `name`: theo `name` ASC
 - Filter:
   - `q`: match tên/slug (ILIKE)
@@ -110,7 +110,7 @@ Ví dụ Response:
 
 ### List/Create
 - GET `/v1/admin/templates`
-  - Query: `limit, offset, q, tags, status(draft|published|archived), visibility(public|private), sort(updated|newest|popular|name)`
+  - Query: `limit, offset, q, tags, status(draft|published|archived), visibility(public|private), sort(updated|newest|popular|name), trending(all|manual|none)`
   - Response: `EnvelopeAdminTemplatesList { templates: TemplateAdmin[] }`
 - POST `/v1/admin/templates`
   - Body: `TemplateAdminCreate`
@@ -130,8 +130,21 @@ Ví dụ Response:
 - POST `/v1/admin/templates/{slug}/unpublish`
 - Guard: Publish yêu cầu phải có `thumbnail_url` hợp lệ (thiếu ⇒ `422 validation_error`).
 
+### Trending Management
+- POST `/v1/admin/templates/{slug}/trending`
+  - Đánh dấu template là trending thủ công
+  - Response: `EnvelopeTemplateAdmin` với `isTrendingManual: true`
+- DELETE `/v1/admin/templates/{slug}/trending`
+  - Gỡ bỏ template khỏi danh sách trending thủ công
+  - Response: `EnvelopeTemplateAdmin` với `isTrendingManual: false`
+- Query parameter `trending` trong `/v1/admin/templates`:
+  - `trending=manual`: Lọc các template được đánh dấu trending thủ công
+  - `trending=none`: Lọc các template không trending
+  - `trending=all` (default): Tất cả templates, không lọc theo trending
+
 `TemplateAdmin` (rút gọn theo Swagger):
-- Trường chính: `id`, `slug`, `name`, `description?`, `thumbnail_url?`, `status`, `visibility`, `published_at?`, `usage_count?`, `updated_at?`, `tags?[]`
+- Trường chính: `id`, `slug`, `name`, `description?`, `prompt?`, `negativePrompt?`, `modelProvider?`, `modelName?`, `thumbnail_url?`, `status`, `visibility`, `published_at?`, `usage_count?`, `updated_at?`, `tags?[]`, `isTrendingManual?`
+- **Response Format**: API trả về camelCase fields (`thumbnailUrl`, `publishedAt`, `usageCount`, `isTrendingManual`, `createdAt`, `updatedAt`)
 
 
 ## 6) API Admin — Template Assets
@@ -171,7 +184,7 @@ Quy tắc:
 - Auth:
   - Bearer (Firebase ID Token) cho mọi call; client tự refresh-and-retry once khi `401`.
 - Publish Guard:
-  - Không publish nếu template chưa có `thumbnail_url` ⇒ `422`.
+  - Không publish nếu template chưa có `thumbnailUrl` ⇒ `422`.
 - Sorting/Filtering:
   - Như phần API công khai & admin.
 - Storage:
@@ -304,7 +317,7 @@ Content-Type: image/png
 POST /v1/admin/templates/watercolor-a/publish HTTP/1.1
 Authorization: Bearer <ID_TOKEN>
 ```
-- Guard: thiếu `thumbnail_url` ⇒ `422 validation_error` (envelope error).
+- Guard: thiếu `thumbnailUrl` ⇒ `422 validation_error` (envelope error).
 
 
 ## 11) Kiểm thử & Chất lượng
@@ -356,6 +369,13 @@ Authorization: Bearer <ID_TOKEN>
 
 ## 15) Changelog
 
+- 1.2 (2025-11-17): Added trending template management:
+  - Added manual trending system with `isTrendingManual` field
+  - New endpoints: POST/DELETE `/v1/admin/templates/{slug}/trending`
+  - Added trending filter in admin templates list with `trending=all|manual|none` query parameter
+  - Frontend components: TrendingBadge with orange color for manual trending, trending column in TemplateTable
+  - Updated API response format to use camelCase fields (`thumbnailUrl`, `publishedAt`, `usageCount`, etc.)
+  - Visual indicators: Fire icons, animated badges, hover effects in Web CMS
 - 1.1 (2025-01-27): Added category management:
   - Added `GET /v1/templates/categories` endpoint for fetching predefined categories
   - Added `category` query parameter to `GET /v1/templates` for server-side filtering

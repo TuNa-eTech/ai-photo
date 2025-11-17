@@ -80,7 +80,12 @@ describe('TemplatesService', () => {
       });
 
       it('should filter by status=published even with search query', async () => {
-        const query = { limit: 20, offset: 0, q: 'anime', sort: 'newest' as const };
+        const query = {
+          limit: 20,
+          offset: 0,
+          q: 'anime',
+          sort: 'newest' as const,
+        };
 
         await service.listTemplates(query);
 
@@ -100,7 +105,12 @@ describe('TemplatesService', () => {
       });
 
       it('should filter by status=published even with tags', async () => {
-        const query = { limit: 20, offset: 0, tags: 'anime,portrait', sort: 'newest' as const };
+        const query = {
+          limit: 20,
+          offset: 0,
+          tags: 'anime,portrait',
+          sort: 'newest' as const,
+        };
 
         await service.listTemplates(query);
 
@@ -122,7 +132,12 @@ describe('TemplatesService', () => {
 
     describe('Search Filter', () => {
       it('should search by name and id when q is provided', async () => {
-        const query = { limit: 20, offset: 0, q: 'anime', sort: 'newest' as const };
+        const query = {
+          limit: 20,
+          offset: 0,
+          q: 'anime',
+          sort: 'newest' as const,
+        };
 
         await service.listTemplates(query);
 
@@ -143,7 +158,12 @@ describe('TemplatesService', () => {
       });
 
       it('should trim whitespace from search query', async () => {
-        const query = { limit: 20, offset: 0, q: '  anime  ', sort: 'newest' as const };
+        const query = {
+          limit: 20,
+          offset: 0,
+          q: '  anime  ',
+          sort: 'newest' as const,
+        };
 
         await service.listTemplates(query);
 
@@ -179,7 +199,12 @@ describe('TemplatesService', () => {
       });
 
       it('should not add search filter when q is whitespace only', async () => {
-        const query = { limit: 20, offset: 0, q: '   ', sort: 'newest' as const };
+        const query = {
+          limit: 20,
+          offset: 0,
+          q: '   ',
+          sort: 'newest' as const,
+        };
 
         await service.listTemplates(query);
 
@@ -196,7 +221,12 @@ describe('TemplatesService', () => {
 
     describe('Tags Filter', () => {
       it('should filter by tags when provided', async () => {
-        const query = { limit: 20, offset: 0, tags: 'anime,portrait', sort: 'newest' as const };
+        const query = {
+          limit: 20,
+          offset: 0,
+          tags: 'anime,portrait',
+          sort: 'newest' as const,
+        };
 
         await service.listTemplates(query);
 
@@ -214,7 +244,12 @@ describe('TemplatesService', () => {
       });
 
       it('should trim whitespace from tags', async () => {
-        const query = { limit: 20, offset: 0, tags: ' anime , portrait , cyberpunk ', sort: 'newest' as const };
+        const query = {
+          limit: 20,
+          offset: 0,
+          tags: ' anime , portrait , cyberpunk ',
+          sort: 'newest' as const,
+        };
 
         await service.listTemplates(query);
 
@@ -232,7 +267,12 @@ describe('TemplatesService', () => {
       });
 
       it('should filter empty tags', async () => {
-        const query = { limit: 20, offset: 0, tags: 'anime,,portrait,', sort: 'newest' as const };
+        const query = {
+          limit: 20,
+          offset: 0,
+          tags: 'anime,,portrait,',
+          sort: 'newest' as const,
+        };
 
         await service.listTemplates(query);
 
@@ -250,7 +290,12 @@ describe('TemplatesService', () => {
       });
 
       it('should not add tags filter when tags is empty string', async () => {
-        const query = { limit: 20, offset: 0, tags: '', sort: 'newest' as const };
+        const query = {
+          limit: 20,
+          offset: 0,
+          tags: '',
+          sort: 'newest' as const,
+        };
 
         await service.listTemplates(query);
 
@@ -265,7 +310,13 @@ describe('TemplatesService', () => {
       });
 
       it('should combine search and tags filter', async () => {
-        const query = { limit: 20, offset: 0, q: 'anime', tags: 'portrait', sort: 'newest' as const };
+        const query = {
+          limit: 20,
+          offset: 0,
+          q: 'anime',
+          tags: 'portrait',
+          sort: 'newest' as const,
+        };
 
         await service.listTemplates(query);
 
@@ -424,13 +475,16 @@ describe('TemplatesService', () => {
       });
 
       it('should handle database errors gracefully', async () => {
-        mockPrismaService.template.findMany.mockRejectedValue(new Error('Database connection failed'));
+        mockPrismaService.template.findMany.mockRejectedValue(
+          new Error('Database connection failed'),
+        );
 
         const query = { limit: 20, offset: 0, sort: 'newest' as const };
 
-        await expect(service.listTemplates(query)).rejects.toThrow('Database connection failed');
+        await expect(service.listTemplates(query)).rejects.toThrow(
+          'Database connection failed',
+        );
       });
     });
   });
 });
-

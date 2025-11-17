@@ -339,7 +339,7 @@ export function TemplatesListPage(): React.ReactElement {
         open={!!publishingTemplate}
         title="Publish Template"
         message={`Are you sure you want to publish "${publishingTemplate?.name}"? ${
-          !publishingTemplate?.thumbnail_url
+          !publishingTemplate?.thumbnailUrl
             ? 'Warning: This template does not have a thumbnail. Publishing may fail.'
             : ''
         }`}

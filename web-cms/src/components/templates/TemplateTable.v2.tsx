@@ -136,7 +136,7 @@ export function TemplateTable({
               {/* Thumbnail */}
               <TableCell>
                 <Avatar
-                  src={template.thumbnail_url}
+                  src={template.thumbnailUrl}
                   alt={template.name}
                   variant="rounded"
                   sx={{ 
@@ -252,14 +252,14 @@ export function TemplateTable({
               {/* Published Date */}
               <TableCell>
                 <Typography variant="body2" color="text.secondary">
-                  {formatDate(template.published_at)}
+                  {formatDate(template.publishedAt)}
                 </Typography>
               </TableCell>
 
               {/* Usage Count */}
               <TableCell>
                 <Typography variant="body2" fontWeight={600}>
-                  {template.usage_count?.toLocaleString() || '0'}
+                  {template.usageCount?.toLocaleString() || '0'}
                 </Typography>
               </TableCell>
 

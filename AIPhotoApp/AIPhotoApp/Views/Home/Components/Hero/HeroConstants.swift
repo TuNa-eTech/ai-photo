@@ -8,6 +8,7 @@
 import Foundation
 
 enum HeroConstants {
+    // Layout
     static let heightMultiplier: CGFloat = 0.5
 }
 

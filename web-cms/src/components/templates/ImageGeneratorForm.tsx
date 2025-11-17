@@ -15,12 +15,12 @@ import {
   Tab,
   Alert,
   CircularProgress,
-  Stack,
 } from '@mui/material'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import LinkIcon from '@mui/icons-material/Link'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import DeleteIcon from '@mui/icons-material/Delete'
+import EnhancedImageUpload from './EnhancedImageUpload'
 import { fileToBase64, validateImageFile, validateImageUrl, getFileSizeString } from '../../utils/imageHelper'
 
 export interface ImageGeneratorFormProps {
@@ -48,28 +48,43 @@ export function ImageGeneratorForm({
     setImageUrl('')
   }
 
-  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const handleFileSelect = useCallback((file: File | string): void => {
+    if (typeof file === 'string') {
+      // Handle base64 string (cropped image)
+      setPreviewUrl(file)
+      setError('')
 
-    // Validate file
-    const validation = validateImageFile(file)
-    if (!validation.valid) {
-      setError(validation.error!)
-      setSelectedFile(null)
-      setPreviewUrl('')
-      return
+      // Convert base64 to File
+      fetch(file)
+        .then(res => res.blob())
+        .then(blob => {
+          const imageFile = new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' })
+          setSelectedFile(imageFile)
+        })
+        .catch(err => {
+          console.error('Error converting base64 to file:', err)
+          setError('Failed to process cropped image')
+        })
+    } else {
+      // Handle File object
+      const validation = validateImageFile(file)
+      if (!validation.valid) {
+        setError(validation.error!)
+        setSelectedFile(null)
+        setPreviewUrl('')
+        return
+      }
+
+      setSelectedFile(file)
+      setError('')
+
+      // Create preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string)
+      }
+      reader.readAsDataURL(file)
     }
-
-    setSelectedFile(file)
-    setError('')
-
-    // Create preview
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setPreviewUrl(reader.result as string)
-    }
-    reader.readAsDataURL(file)
   }, [])
 
   const handleUrlChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -96,6 +111,7 @@ export function ImageGeneratorForm({
     setError('')
   }
 
+  
   const handleGenerate = async (): Promise<void> => {
     setError('')
 
@@ -164,31 +180,44 @@ export function ImageGeneratorForm({
 
       {/* Upload Mode */}
       {inputMode === 'upload' && (
-        <Stack spacing={2}>
-          <Button
-            variant="outlined"
-            component="label"
-            startIcon={<CloudUploadIcon />}
-            size="large"
-            fullWidth
-            disabled={loading}
-            sx={{ py: 2 }}
-          >
-            {selectedFile ? 'Change Image' : 'Choose Image'}
-            <input
-              type="file"
-              hidden
-              accept="image/*"
-              onChange={handleFileChange}
-            />
-          </Button>
+        <Box>
+          {previewUrl && (
+            <Box mb={2}>
+              <Typography variant="subtitle2" gutterBottom>
+                Preview
+              </Typography>
+              <Box
+                component="img"
+                src={previewUrl}
+                alt="Preview"
+                sx={{
+                  width: '100%',
+                  maxHeight: 200,
+                  objectFit: 'contain',
+                  borderRadius: 1,
+                  border: 1,
+                  borderColor: 'divider',
+                }}
+              />
+            </Box>
+          )}
 
-          {selectedFile && (
-            <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
+          <EnhancedImageUpload
+            onImageSelect={handleFileSelect}
+            currentImage={previewUrl || undefined}
+            label={previewUrl ? "Thay đổi hình ảnh" : "Tải lên hình ảnh"}
+            helperText="Kéo và thả, nhấp để chọn, hoặc Ctrl+V để dán ảnh. Hỗ trợ cắt ảnh để phù hợp."
+            maxSizeMB={10}
+            disabled={loading}
+            enableCrop={true}
+          />
+
+          {selectedFile && !previewUrl.includes('base64') && (
+            <Alert severity="info" sx={{ mt: 2, fontSize: '0.875rem' }}>
               Selected: <strong>{selectedFile.name}</strong> ({getFileSizeString(selectedFile.size)})
             </Alert>
           )}
-        </Stack>
+        </Box>
       )}
 
       {/* URL Mode */}
@@ -211,8 +240,8 @@ export function ImageGeneratorForm({
         </Alert>
       )}
 
-      {/* Preview */}
-      {previewUrl && (
+      {/* Preview for URL Mode */}
+      {inputMode === 'url' && previewUrl && (
         <Box mt={3}>
           <Typography variant="subtitle2" gutterBottom>
             Preview

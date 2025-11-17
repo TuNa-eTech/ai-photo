@@ -1,4 +1,10 @@
-import { CallHandler, ExecutionContext, Injectable, Logger, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  Logger,
+  NestInterceptor,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
@@ -15,7 +21,8 @@ export class LoggingInterceptor implements NestInterceptor {
     const res = context.switchToHttp().getResponse();
     const { method, url, body, headers } = req;
     const userAgent = headers['user-agent'] || 'Unknown';
-    const ip = headers['x-forwarded-for'] || req.connection.remoteAddress || 'Unknown';
+    const ip =
+      headers['x-forwarded-for'] || req.connection.remoteAddress || 'Unknown';
 
     const now = Date.now();
 
@@ -33,12 +40,16 @@ export class LoggingInterceptor implements NestInterceptor {
         next: (data) => {
           const responseTime = Date.now() - now;
           const statusCode = res.statusCode;
-          this.logger.log(`← ${method} ${url} - ${statusCode} - ${responseTime}ms`);
+          this.logger.log(
+            `← ${method} ${url} - ${statusCode} - ${responseTime}ms`,
+          );
         },
         error: (error) => {
           const responseTime = Date.now() - now;
           const statusCode = error.status || 500;
-          this.logger.error(`← ${method} ${url} - ${statusCode} - ${responseTime}ms - ERROR: ${error.message}`);
+          this.logger.error(
+            `← ${method} ${url} - ${statusCode} - ${responseTime}ms - ERROR: ${error.message}`,
+          );
         },
       }),
     );
@@ -50,7 +61,14 @@ export class LoggingInterceptor implements NestInterceptor {
   private sanitizeBody(body: any): any {
     if (!body || typeof body !== 'object') return body;
 
-    const sensitiveFields = ['password', 'token', 'secret', 'apiKey', 'private_key', 'privateKey'];
+    const sensitiveFields = [
+      'password',
+      'token',
+      'secret',
+      'apiKey',
+      'private_key',
+      'privateKey',
+    ];
     const sanitized = { ...body };
 
     for (const field of sensitiveFields) {
@@ -62,4 +80,3 @@ export class LoggingInterceptor implements NestInterceptor {
     return sanitized;
   }
 }
-

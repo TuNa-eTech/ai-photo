@@ -17,4 +17,3 @@ import { CreditsModule } from '../credits/credits.module';
   providers: [ImagesService],
 })
 export class ImagesModule {}
-

@@ -4,11 +4,8 @@ import { GeminiService } from './gemini.service';
 import geminiConfig from '../config/gemini.config';
 
 @Module({
-  imports: [
-    ConfigModule.forFeature(geminiConfig),
-  ],
+  imports: [ConfigModule.forFeature(geminiConfig)],
   providers: [GeminiService],
   exports: [GeminiService],
 })
 export class GeminiModule {}
-
