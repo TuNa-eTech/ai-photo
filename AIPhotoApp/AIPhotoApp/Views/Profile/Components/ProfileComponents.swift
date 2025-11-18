@@ -98,11 +98,11 @@ struct ProfileHeroCard: View {
                 .padding(.vertical, 16)
                 .padding(.horizontal, 20)
                 .background(
-                    RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                    RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous)
                         .fill(.ultraThinMaterial.opacity(0.5))
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                    RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous)
                         .stroke(
                             LinearGradient(
                                 colors: [
@@ -317,10 +317,10 @@ struct DangerButton: View {
             .padding(.vertical, 14)
             .background(
                 .ultraThinMaterial.opacity(0.7),
-                in: RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                in: RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous)
                     .stroke(Color.red.opacity(0.3), lineWidth: 0.8)
             )
             .contentShape(Rectangle())

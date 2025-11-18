@@ -252,10 +252,10 @@ struct TemplateSelectionView: View {
                     .padding(.vertical, 20)
                     .background(
                         .ultraThinMaterial.opacity(0.7),
-                        in: RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                        in: RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous)
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                        RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous)
                             .stroke(
                                 LinearGradient(
                                     colors: [

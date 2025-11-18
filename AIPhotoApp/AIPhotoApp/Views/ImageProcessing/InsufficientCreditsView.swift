@@ -218,7 +218,7 @@ struct InsufficientCreditsView: View {
              .padding(32)
              .background(
                  .ultraThinMaterial,
-                 in: RoundedRectangle(cornerRadius: GlassTokens.radiusCard)
+                 in: RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius)
              )
          }
      }
@@ -301,10 +301,10 @@ private struct OptionCard: View {
             .frame(maxWidth: .infinity)
             .background(
                 .ultraThinMaterial.opacity(0.88),
-                in: RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                in: RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous)
                     .stroke(
                         LinearGradient(
                             colors: [GlassTokens.borderColor.opacity(0.25), GlassTokens.borderColor.opacity(0.2)],

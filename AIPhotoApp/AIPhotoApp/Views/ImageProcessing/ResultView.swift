@@ -72,10 +72,10 @@ struct ResultView: View {
                                 )
                         } else {
                             ZStack {
-                                RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                                RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous)
                                     .fill(.ultraThinMaterial.opacity(0.85))
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                                        RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous)
                                             .stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8)
                                     )
                                 ProgressView("Loading image…")
@@ -152,9 +152,9 @@ struct ResultView: View {
                         }
                     }
                     .padding(16)
-                    .background(.ultraThinMaterial.opacity(0.92), in: RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous))
+                    .background(.ultraThinMaterial.opacity(0.92), in: RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                        RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous)
                             .stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8)
                     )
                     .shadow(

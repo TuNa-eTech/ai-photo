@@ -179,7 +179,7 @@ struct ProjectGridView: View {
                                     .frame(width: geometry.size.width, height: geometry.size.height)
                                     .clipped()
                             } else {
-                                RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                                RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous)
                                     .fill(GlassTokens.primary1.opacity(0.3))
                                     .frame(width: geometry.size.width, height: geometry.size.height)
                                     .overlay(

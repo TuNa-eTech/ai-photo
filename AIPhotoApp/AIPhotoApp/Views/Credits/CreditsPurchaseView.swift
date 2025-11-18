@@ -452,11 +452,11 @@ struct ProductCard: View {
             }
             .padding(20)
             .background(
-                RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous)
                     .fill(.ultraThinMaterial.opacity(isSelected ? 0.92 : 0.88))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous)
+                RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous)
                     .stroke(
                         isSelected
                             ? LinearGradient(

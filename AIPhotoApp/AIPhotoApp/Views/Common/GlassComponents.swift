@@ -24,10 +24,32 @@ enum GlassTokens {
     // Border Color (Subtle beige-brown)
     static let borderColor = Color(red: 0.6, green: 0.55, blue: 0.48)          // Muted brown for borders
 
-    // Spacing
+    // Spacing System (4pt base)
     static let spaceBase: CGFloat = 4
-    static let radiusCard: CGFloat = 22    // Slightly rounder for softer look
-    static let blurCard: CGFloat = 15      // Reduced for minimalist clarity
+    static let spaceXS: CGFloat = spaceBase * 1        // 4pt
+    static let spaceSM: CGFloat = spaceBase * 2        // 8pt
+    static let spaceMD: CGFloat = spaceBase * 3        // 12pt
+    static let spaceLG: CGFloat = spaceBase * 4        // 16pt
+    static let spaceXL: CGFloat = spaceBase * 6        // 24pt
+    static let spaceXXL: CGFloat = spaceBase * 8       // 32pt
+
+    // Component Dimensions
+    static let processingAnimationSize: CGFloat = 180  // Reduced from 240
+    static let processingIconSize: CGFloat = 64        // Scaled down proportionally
+    static let cardPaddingHorizontal: CGFloat = 20
+    static let cardPaddingVertical: CGFloat = 16
+    static let sectionSpacing: CGFloat = spaceLG        // 16pt between sections
+
+    // Layout Constraints
+    static let minCardWidth: CGFloat = 320
+    static let maxCardWidth: CGFloat = 400
+    static let cardCornerRadius: CGFloat = 22    // Slightly rounder for softer look
+    static let blurCard: CGFloat = 15            // Reduced for minimalist clarity
+
+    // Animation
+    static let animationQuick: CGFloat = 0.25
+    static let animationStandard: CGFloat = 0.3
+    static let animationSlow: CGFloat = 0.5
 
     // Shadow (Lighter for minimalist aesthetic)
     static let shadowColor = Color.black.opacity(0.15)
@@ -89,7 +111,7 @@ struct GlassBackgroundView: View {
 // MARK: - Card Modifier
 
 struct GlassCardModifier: ViewModifier {
-    var cornerRadius: CGFloat = GlassTokens.radiusCard
+    var cornerRadius: CGFloat = GlassTokens.cardCornerRadius
 
     func body(content: Content) -> some View {
         content
@@ -108,7 +130,7 @@ struct GlassCardModifier: ViewModifier {
 }
 
 extension View {
-    func glassCard(cornerRadius: CGFloat = GlassTokens.radiusCard) -> some View {
+    func glassCard(cornerRadius: CGFloat = GlassTokens.cardCornerRadius) -> some View {
         modifier(GlassCardModifier(cornerRadius: cornerRadius))
     }
 }
@@ -274,7 +296,7 @@ struct CardGlassSmall: View {
         .frame(maxWidth: .infinity)
         .aspectRatio(3/4, contentMode: .fill)
         .glassCard()
-        .contentShape(RoundedRectangle(cornerRadius: GlassTokens.radiusCard, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(title))
     }
