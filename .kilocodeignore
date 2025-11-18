@@ -1,5 +1,13 @@
 ./.gemini/
 ./.cursor/
+./.claude/
 ./.clinerules/
+
+
 GEMINI.md
 node_modules/
+dist/
+./.reports/
+build/
+AIPhotoApp.xcodeproj/
+*.lock

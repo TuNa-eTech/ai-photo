@@ -23,15 +23,24 @@ struct TemplateDTO: Codable, Sendable, Identifiable, Hashable {
         case usageCount = "usageCount"
     }
     
+    // Memberwise initializer for preview and testing
+    init(id: String, name: String, thumbnailURL: URL? = nil, publishedAt: Date? = nil, usageCount: Int? = nil) {
+        self.id = id
+        self.name = name
+        self.thumbnailURL = thumbnailURL
+        self.publishedAt = publishedAt
+        self.usageCount = usageCount
+    }
+
     // Custom decoder to handle URL decoding gracefully
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        
+
         id = try container.decode(String.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         publishedAt = try? container.decode(Date.self, forKey: .publishedAt)
         usageCount = try? container.decode(Int.self, forKey: .usageCount)
-        
+
         // Special handling for thumbnailUrl: try to decode from string
         if let urlString = try? container.decode(String.self, forKey: .thumbnailURL),
            !urlString.isEmpty {

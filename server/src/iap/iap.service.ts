@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as jwt from 'jsonwebtoken';
 import { TransactionType, TransactionStatus } from '@prisma/client';
 import { IAPProductResponseDto, IAPProductsListResponseDto } from './dto';
+import { CreateIAPProductDto, UpdateIAPProductDto } from './dto';
 
 /**
  * JWT payload structure from StoreKit 2 transaction
@@ -320,6 +321,287 @@ export class IAPService {
       price: product.price ? Number(product.price) : undefined,
       currency: product.currency || undefined,
       display_order: product.displayOrder,
+    };
+  }
+
+  // ============================================================================
+  // ADMIN METHODS
+  // ============================================================================
+
+  /**
+   * List all IAP products (admin view with full details and filters)
+   */
+  async listAdminProducts(query: any): Promise<{
+    products: any[];
+    meta: {
+      total: number;
+      limit: number;
+      offset: number;
+    };
+  }> {
+    const {
+      limit = 50,
+      offset = 0,
+      search,
+      isActive,
+      sortBy = 'displayOrder',
+      sortOrder = 'asc',
+    } = query;
+
+    const where: any = {};
+
+    // Filter by active status if specified
+    if (isActive !== undefined) {
+      where.isActive = isActive === 'true' || isActive === true;
+    }
+
+    // Search functionality
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { productId: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Count total products matching filters
+    const total = await this.prisma.iAPProduct.count({ where });
+
+    // Fetch products with pagination and sorting
+    const products = await this.prisma.iAPProduct.findMany({
+      where,
+      orderBy: { [sortBy]: sortOrder },
+      take: parseInt(limit),
+      skip: parseInt(offset),
+    });
+
+    const productDtos = products.map((p) => ({
+      id: p.id,
+      product_id: p.productId,
+      name: p.name,
+      description: p.description,
+      credits: p.credits,
+      price: p.price ? Number(p.price) : null,
+      currency: p.currency,
+      display_order: p.displayOrder,
+      is_active: p.isActive,
+      created_at: p.createdAt.toISOString(),
+      updated_at: p.updatedAt.toISOString(),
+    }));
+
+    return {
+      products: productDtos,
+      meta: {
+        total,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+      },
+    };
+  }
+
+  /**
+   * Get IAP product by ID (admin view)
+   */
+  async getProductById(productId: string): Promise<any> {
+    const product = await this.prisma.iAPProduct.findUnique({
+      where: { productId },
+    });
+
+    if (!product) {
+      throw new NotFoundException({
+        code: 'product_not_found',
+        message: 'IAP product not found',
+      });
+    }
+
+    return {
+      id: product.id,
+      product_id: product.productId,
+      name: product.name,
+      description: product.description,
+      credits: product.credits,
+      price: product.price ? Number(product.price) : null,
+      currency: product.currency,
+      display_order: product.displayOrder,
+      is_active: product.isActive,
+      created_at: product.createdAt.toISOString(),
+      updated_at: product.updatedAt.toISOString(),
+    };
+  }
+
+  /**
+   * Create new IAP product
+   */
+  async createProduct(createDto: CreateIAPProductDto): Promise<any> {
+    // Get the actual product ID (handles both productId and product_id)
+    const productId = createDto.getActualProductId();
+
+    if (!productId) {
+      throw new BadRequestException({
+        code: 'product_id_required',
+        message: 'Product ID is required (either productId or product_id)',
+      });
+    }
+
+    // Check if product ID already exists
+    const existingProduct = await this.prisma.iAPProduct.findUnique({
+      where: { productId },
+    });
+
+    if (existingProduct) {
+      throw new BadRequestException({
+        code: 'product_id_exists',
+        message: 'Product ID already exists',
+      });
+    }
+
+    const product = await this.prisma.iAPProduct.create({
+      data: {
+        productId,
+        name: createDto.name,
+        description: createDto.description,
+        credits: createDto.credits,
+        price: createDto.price,
+        currency: createDto.currency,
+        isActive: createDto.isActive ?? true,
+        displayOrder: createDto.displayOrder ?? 0,
+      },
+    });
+
+    this.logger.log(`Created IAP product: ${product.productId}`);
+
+    return {
+      id: product.id,
+      product_id: product.productId,
+      name: product.name,
+      description: product.description,
+      credits: product.credits,
+      price: product.price ? Number(product.price) : null,
+      currency: product.currency,
+      display_order: product.displayOrder,
+      is_active: product.isActive,
+      created_at: product.createdAt.toISOString(),
+      updated_at: product.updatedAt.toISOString(),
+    };
+  }
+
+  /**
+   * Update existing IAP product
+   */
+  async updateProduct(productId: string, updateDto: UpdateIAPProductDto): Promise<any> {
+    const existingProduct = await this.prisma.iAPProduct.findUnique({
+      where: { productId },
+    });
+
+    if (!existingProduct) {
+      throw new NotFoundException({
+        code: 'product_not_found',
+        message: 'IAP product not found',
+      });
+    }
+
+    const product = await this.prisma.iAPProduct.update({
+      where: { productId },
+      data: {
+        ...(updateDto.name && { name: updateDto.name }),
+        ...(updateDto.description !== undefined && { description: updateDto.description }),
+        ...(updateDto.credits && { credits: updateDto.credits }),
+        ...(updateDto.price !== undefined && { price: updateDto.price }),
+        ...(updateDto.currency !== undefined && { currency: updateDto.currency }),
+        ...(updateDto.isActive !== undefined && { isActive: updateDto.isActive }),
+        ...(updateDto.displayOrder !== undefined && { displayOrder: updateDto.displayOrder }),
+      },
+    });
+
+    this.logger.log(`Updated IAP product: ${product.productId}`);
+
+    return {
+      id: product.id,
+      product_id: product.productId,
+      name: product.name,
+      description: product.description,
+      credits: product.credits,
+      price: product.price ? Number(product.price) : null,
+      currency: product.currency,
+      display_order: product.displayOrder,
+      is_active: product.isActive,
+      created_at: product.createdAt.toISOString(),
+      updated_at: product.updatedAt.toISOString(),
+    };
+  }
+
+  /**
+   * Delete IAP product (soft delete by setting isActive to false)
+   */
+  async deleteProduct(productId: string): Promise<void> {
+    const existingProduct = await this.prisma.iAPProduct.findUnique({
+      where: { productId },
+    });
+
+    if (!existingProduct) {
+      throw new NotFoundException({
+        code: 'product_not_found',
+        message: 'IAP product not found',
+      });
+    }
+
+    await this.prisma.iAPProduct.update({
+      where: { productId },
+      data: { isActive: false },
+    });
+
+    this.logger.log(`Deleted IAP product: ${productId}`);
+  }
+
+  /**
+   * Activate IAP product
+   */
+  async activateProduct(productId: string): Promise<any> {
+    const product = await this.prisma.iAPProduct.update({
+      where: { productId },
+      data: { isActive: true },
+    });
+
+    this.logger.log(`Activated IAP product: ${productId}`);
+
+    return {
+      id: product.id,
+      product_id: product.productId,
+      name: product.name,
+      description: product.description,
+      credits: product.credits,
+      price: product.price ? Number(product.price) : null,
+      currency: product.currency,
+      display_order: product.displayOrder,
+      is_active: product.isActive,
+      created_at: product.createdAt.toISOString(),
+      updated_at: product.updatedAt.toISOString(),
+    };
+  }
+
+  /**
+   * Deactivate IAP product
+   */
+  async deactivateProduct(productId: string): Promise<any> {
+    const product = await this.prisma.iAPProduct.update({
+      where: { productId },
+      data: { isActive: false },
+    });
+
+    this.logger.log(`Deactivated IAP product: ${productId}`);
+
+    return {
+      id: product.id,
+      product_id: product.productId,
+      name: product.name,
+      description: product.description,
+      credits: product.credits,
+      price: product.price ? Number(product.price) : null,
+      currency: product.currency,
+      display_order: product.displayOrder,
+      is_active: product.isActive,
+      created_at: product.createdAt.toISOString(),
+      updated_at: product.updatedAt.toISOString(),
     };
   }
 }

@@ -6,33 +6,32 @@
 //
 
 import SwiftUI
-#if canImport(UIKit)
 import UIKit
 
 struct ImageProcessingView: View {
-     let template: TemplateDTO
-     let image: UIImage
-     
-     @Environment(AuthViewModel.self) private var authViewModel
-     @State private var viewModel: ImageProcessingViewModel?
-     @State private var creditsViewModel = CreditsViewModel()
-     @State private var navigateToInsufficientCredits = false
-     @State private var hasReturnedWithInsufficientCredits = false
-     @State private var shouldSkipInitialProcess = false
-     @State private var creditsBeforeInsufficientError = 0
-     @Environment(\.dismiss) private var dismiss
-     
-     // ResultView navigation
-     @State private var showResultView = false
-     @State private var resultProject: Project?
+    let template: TemplateDTO
+    let image: UIImage
+    
+    @Environment(AuthViewModel.self) private var authViewModel
+    @State private var viewModel: ImageProcessingViewModel?
+    @State private var creditsViewModel = CreditsViewModel()
+    @State private var navigateToInsufficientCredits = false
+    @State private var hasReturnedWithInsufficientCredits = false
+    @State private var shouldSkipInitialProcess = false
+    @State private var creditsBeforeInsufficientError = 0
+    @Environment(\.dismiss) private var dismiss
+    
+    // ResultView navigation
+    @State private var showResultView = false
+    @State private var resultProject: Project?
     
     var body: some View {
-         Group {
+        Group {
              if let viewModel = viewModel {
-                 NavigationStack {
-                     ZStack {
-                         GlassBackgroundView()
-                         
+                NavigationStack {
+                    ZStack {
+                        GlassBackgroundView()
+                        
                          VStack(spacing: 24) {
                              // Credits header
                              creditsHeader
@@ -42,16 +41,16 @@ struct ImageProcessingView: View {
                              
                              // Status text
                              statusText(viewModel: viewModel)
-                             
+                            
                              // Progress bar
                              progressBar(viewModel: viewModel)
-                             
+                            
                              // Action buttons
                              actionButtons(viewModel: viewModel)
-                         }
+                        }
                          .padding(24)
                          .glassCard()
-                     }
+                    }
                      
                      // Navigate to ResultView on successful completion
                      .navigationDestination(isPresented: $showResultView) {
@@ -155,13 +154,13 @@ struct ImageProcessingView: View {
                 Text(L10n.tr("l10n.credits.title"))
                     .font(.caption)
                     .foregroundStyle(GlassTokens.textSecondary)
-                
-                Text("\(creditsViewModel.creditsBalance)")
+            
+            Text("\(creditsViewModel.creditsBalance)")
                     .font(.headline.bold())
-                    .foregroundStyle(GlassTokens.textPrimary)
-                    .contentTransition(.numericText())
-                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: creditsViewModel.creditsBalance)
-            }
+                .foregroundStyle(GlassTokens.textPrimary)
+                .contentTransition(.numericText())
+                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: creditsViewModel.creditsBalance)
+        }
             
             Spacer()
         }
@@ -198,17 +197,17 @@ struct ImageProcessingView: View {
             Image(systemName: imageProcessingIcon(viewModel: viewModel))
                 .font(.system(size: 80, weight: .medium))
                 .foregroundStyle(
-                    LinearGradient(
-                        colors: [
+            LinearGradient(
+                colors: [
                             GlassTokens.textPrimary,
                             GlassTokens.textSecondary
-                        ],
+                ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
                 .symbolEffect(.pulse, options: .repeating.speed(1.5))
-        }
+                }
     }
     
     private func imageProcessingIcon(viewModel: ImageProcessingViewModel) -> String {
@@ -302,9 +301,9 @@ struct ImageProcessingView: View {
                 if case .insufficientCredits = error {
                     Button(L10n.tr("l10n.credits.get")) {
                         navigateToInsufficientCredits = true
-                    }
-                    .buttonStyle(GlassCTAButtonStyle())
-                    .controlSize(.large)
+            }
+            .buttonStyle(GlassCTAButtonStyle())
+            .controlSize(.large)
                 } else {
                     // Show "Retry" button for other errors
                     Button(L10n.tr("l10n.common.retryVerb")) {
@@ -337,4 +336,37 @@ extension ImageProcessingViewModel.ProcessingState {
         }
     }
 }
-#endif
+
+// MARK: - Preview
+
+#Preview("Image Processing - Processing") {
+    NavigationStack {
+        // Preview context chỉ để dựng UI, không cần decode JSON phức tạp.
+        // Dùng memberwise init của TemplateDTO cho rõ ràng.
+        let thumbnail = URL(string: "https://picsum.photos/400/600")
+        let publishedAt = Calendar.current.date(
+            byAdding: DateComponents(day: -3),
+            to: Date()
+        )
+        let usageCount = 128
+        
+        let template = TemplateDTO(
+            id: "template-id",
+            name: "Magic Portrait",
+            thumbnailURL: thumbnail,
+            publishedAt: publishedAt,
+            usageCount: usageCount
+        )
+        
+        let uiImage = UIImage(systemName: "person.crop.square")?
+            .withTintColor(.black, renderingMode: .alwaysOriginal) ?? UIImage()
+
+        // Mock dependencies for preview
+        let mockAuthService = AuthService()
+        let mockUserRepository = UserRepository(client: APIClient())
+        let authViewModel = AuthViewModel(authService: mockAuthService, userRepository: mockUserRepository)
+
+        ImageProcessingView(template: template, image: uiImage)
+            .environment(authViewModel)
+    }
+}
