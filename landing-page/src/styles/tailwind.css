@@ -3,9 +3,21 @@
 @tailwind utilities;
 
 @layer base {
-  :root { color-scheme: light dark; }
-  html { -webkit-text-size-adjust: 100%; }
-  body { @apply bg-brand-base text-brand-primary; }
-  h1,h2,h3,h4 { @apply font-display; }
-  a { @apply underline-offset-2; }
+  body {
+    @apply bg-dark text-white font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-glass-bg backdrop-blur-md border border-glass-border;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-accent-gradient;
+  }
+
+  .glow {
+    @apply shadow-glow;
+  }
 }

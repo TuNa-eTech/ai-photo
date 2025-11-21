@@ -1,27 +1,27 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: 'class',
-  content: ['./index.html', './src/**/*.{js,jsx}'],
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
   theme: {
-    container: {
-      center: true,
-      padding: { DEFAULT: '1rem', md: '2rem' }
-    },
     extend: {
       colors: {
-        brand: {
-          primary: '#4A3F35',
-          base: '#F5E6D3',
-          surface: '#F4E4C1',
-          accent: '#E8D5D0',
-          emphasis: '#7C3AED'
-        }
+        dark: "#0a0a0a",
+        "glass-border": "rgba(255, 255, 255, 0.1)",
+        "glass-bg": "rgba(255, 255, 255, 0.05)",
+      },
+      backgroundImage: {
+        "accent-gradient": "linear-gradient(135deg, #a855f7 0%, #3b82f6 50%, #ec4899 100%)",
+        "glass-gradient": "linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)",
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        display: ['Sora', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
+        sans: ['Inter', 'sans-serif'],
+      },
+      boxShadow: {
+        'glow': '0 0 20px rgba(168, 85, 247, 0.5)',
       }
-    }
+    },
   },
-  plugins: []
-};
+  plugins: [],
+}
