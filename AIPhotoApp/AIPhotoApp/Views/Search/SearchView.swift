@@ -10,41 +10,34 @@ import SwiftUI
 
 struct SearchView: View {
     @Environment(AuthViewModel.self) private var model
+    @Environment(NavigationViewModel.self) private var navModel
     @State private var home = HomeViewModel()
     @State private var categoryManager = CategoryManager()
-    
+
     @State private var searchText: String = ""
-    @State private var selectedCategory: TemplateCategory = .all
-    @State private var selectedFilter: FilterType = .all
+    @State private var selectedCategory: TemplateCategory = CategoryManager.allCategory
     @State private var selectedTemplate: TemplateDTO?
     @State private var debounceTask: Task<Void, Never>?
-    
-    enum FilterType: String, CaseIterable, Identifiable {
-        case all = "All"
-        case trending = "Trending"
-        case new = "New"
-        
-        var id: String { rawValue }
+
+    private var allFilterItems: [TemplateCategory] {
+        // [All, Trending] + Categories
+        return [CategoryManager.allCategory, CategoryManager.trendingCategory]
+            + categoryManager.categories
     }
-    
+
     private let gridCols: [GridItem] = [
         GridItem(.flexible(), spacing: 16, alignment: .top),
-        GridItem(.flexible(), spacing: 16, alignment: .top)
+        GridItem(.flexible(), spacing: 16, alignment: .top),
     ]
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
                 GlassBackgroundView()
 
                 VStack(spacing: 0) {
-                    // Category filters
-                    categorySection
-
-                    // Filter segment
-                    filterSection
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
+                    // Unified Filter Section (All, Trending, Categories)
+                    filterListSection
 
                     // Templates grid or empty state
                     if home.isLoading {
@@ -75,10 +68,16 @@ struct SearchView: View {
                 TemplateSelectionView(template: template)
             }
             .onAppear {
-                // Load categories from API
-                if let token = model.loadToken() {
+                // If there's a pending category from navigation, apply it
+                if let pending = navModel.pendingSearchCategory {
+                    selectedCategory = pending
+                    navModel.pendingSearchCategory = nil
+                }
+
+                // Load categories if needed
+                Task {
                     categoryManager.loadCategories(
-                        bearerIDToken: token,
+                        bearerIDToken: model.loadToken() ?? "",
                         tokenProvider: { try await model.fetchFreshIDToken() }
                     )
                 }
@@ -87,32 +86,32 @@ struct SearchView: View {
                     loadTemplates(query: nil, category: nil, sort: nil)
                 }
             }
+            .onChange(of: navModel.pendingSearchCategory) { _, newValue in
+                if let category = newValue {
+                    selectedCategory = category
+                    navModel.pendingSearchCategory = nil
+                }
+            }
             .onChange(of: searchText) { oldValue, newValue in
                 performSearch(query: newValue)
             }
             .onChange(of: selectedCategory) { oldValue, newValue in
-                // Reload templates when category changes
-                let categoryId = newValue.id == "all" ? nil : newValue.id
-                loadTemplates(query: searchText.isEmpty ? nil : searchText, category: categoryId, sort: sortForFilter(selectedFilter))
-            }
-            .onChange(of: selectedFilter) { oldValue, newValue in
-                // Reload templates when filter type changes
-                let categoryId = selectedCategory.id == "all" ? nil : selectedCategory.id
-                loadTemplates(query: searchText.isEmpty ? nil : searchText, category: categoryId, sort: sortForFilter(newValue))
+                // Reload templates when selection changes
+                updateTemplates(for: newValue)
             }
         }
     }
-    
-    private var categorySection: some View {
+
+    private var filterListSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
-                ForEach(categoryManager.allCategories) { category in
+                ForEach(allFilterItems) { item in
                     CategoryChipButton(
-                        category: category,
-                        isSelected: selectedCategory.id == category.id
+                        category: item,
+                        isSelected: selectedCategory.id == item.id
                     ) {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedCategory = category
+                            selectedCategory = item
                         }
                     }
                 }
@@ -124,17 +123,7 @@ struct SearchView: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(L10n.tr("l10n.search.categoryFilters")))
     }
-    
-    private var filterSection: some View {
-        Picker(L10n.tr("l10n.search.filter"), selection: $selectedFilter) {
-            ForEach(FilterType.allCases) { filter in
-                Text(filter.rawValue).tag(filter)
-            }
-        }
-        .pickerStyle(.segmented)
-        .accessibilityLabel(Text(L10n.tr("l10n.search.templateFilters")))
-    }
-    
+
     private var templatesGrid: some View {
         ScrollView(showsIndicators: false) {
             LazyVGrid(columns: gridCols, spacing: 16) {
@@ -159,8 +148,12 @@ struct SearchView: View {
                     }
                     .contextMenu {
                         Button(L10n.tr("l10n.templates.preview"), systemImage: "eye") {}
-                        Button(home.isFavorite(item) ? L10n.tr("l10n.templates.removeFavorite") : L10n.tr("l10n.templates.addFavorite"),
-                               systemImage: home.isFavorite(item) ? "heart.slash" : "heart") {
+                        Button(
+                            home.isFavorite(item)
+                                ? L10n.tr("l10n.templates.removeFavorite")
+                                : L10n.tr("l10n.templates.addFavorite"),
+                            systemImage: home.isFavorite(item) ? "heart.slash" : "heart"
+                        ) {
                             home.toggleFavorite(item)
                         }
                     }
@@ -171,7 +164,7 @@ struct SearchView: View {
             .padding(.bottom, 24)
         }
     }
-    
+
     private var loadingView: some View {
         VStack(spacing: 16) {
             ProgressView()
@@ -184,17 +177,19 @@ struct SearchView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.top, 60)
     }
-    
+
     private var emptyStateView: some View {
         VStack(spacing: 20) {
             Image(systemName: searchText.isEmpty ? "magnifyingglass" : "tray")
                 .font(.system(size: 64, weight: .light))
                 .foregroundStyle(GlassTokens.textSecondary.opacity(0.6))
-            
-            Text(searchText.isEmpty ? L10n.tr("l10n.search.start") : L10n.tr("l10n.search.noResults"))
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(GlassTokens.textPrimary)
-            
+
+            Text(
+                searchText.isEmpty ? L10n.tr("l10n.search.start") : L10n.tr("l10n.search.noResults")
+            )
+            .font(.title3.weight(.semibold))
+            .foregroundStyle(GlassTokens.textPrimary)
+
             if !searchText.isEmpty {
                 Text(L10n.tr("l10n.search.tryDifferent"))
                     .font(.subheadline)
@@ -212,48 +207,57 @@ struct SearchView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.top, 60)
     }
-    
+
     // MARK: - Computed
-    
+
     // No client-side filtering needed - API handles all filtering
     private var filteredTemplates: [HomeViewModel.TemplateItem] {
         return home.allTemplates
     }
-    
-    // Helper: Map filter type to API sort parameter
-    private func sortForFilter(_ filter: FilterType) -> String {
-        switch filter {
-        case .trending:
-            return "popular"
-        case .new:
-            return "newest"
-        case .all:
-            return "newest" // Default to newest
-        }
-    }
-    
+
     // MARK: - Actions
-    
+
     private func performSearch(query: String) {
         // Cancel previous debounce task
         debounceTask?.cancel()
-        
-        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         // Debounce search: wait 0.5 seconds before performing search
         debounceTask = Task {
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-            
+            try? await Task.sleep(nanoseconds: 500_000_000)  // 0.5 seconds
+
             // Check if task was cancelled
             guard !Task.isCancelled else { return }
-            
+
             await MainActor.run {
-                let categoryId = selectedCategory.id == "all" ? nil : selectedCategory.id
-                loadTemplates(query: trimmedQuery.isEmpty ? nil : trimmedQuery, category: categoryId, sort: sortForFilter(selectedFilter))
+                updateTemplates(for: selectedCategory)
             }
         }
     }
-    
+
+    private func updateTemplates(for item: TemplateCategory) {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let finalQuery = query.isEmpty ? nil : query
+
+        var categoryId: String? = nil
+        var sort: String = "newest"
+
+        if item.id == "all" {
+            // All -> No category, sort by newest
+            categoryId = nil
+            sort = "newest"
+        } else if item.id == "trending" {
+            // Trending -> No category, sort by popular
+            categoryId = nil
+            sort = "popular"
+        } else {
+            // Specific Category -> Category ID, sort by newest
+            categoryId = item.id
+            sort = "newest"
+        }
+
+        loadTemplates(query: finalQuery, category: categoryId, sort: sort)
+    }
+
     private func loadTemplates(query: String?, category: String?, sort: String?) {
         guard let token = model.loadToken() else {
             // User not logged in - clear templates and show empty state
@@ -262,11 +266,9 @@ struct SearchView: View {
             home.errorMessage = nil
             return
         }
-        
+
         home.fetchAllTemplatesFromAPI(
             bearerIDToken: token,
-            limit: nil, // Load all for search
-            offset: nil,
             query: query,
             category: category,
             sort: sort,
@@ -281,12 +283,12 @@ private struct CategoryChipButton: View {
     let category: TemplateCategory
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: {
             #if canImport(UIKit)
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.impactOccurred()
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
             #endif
             action()
         }) {
@@ -294,7 +296,7 @@ private struct CategoryChipButton: View {
                 Image(systemName: category.icon)
                     .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
                     .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
-                
+
                 Text(category.name)
                     .font(.system(size: 15, weight: isSelected ? .semibold : .regular))
                     .foregroundStyle(isSelected ? Color.primary : Color.secondary)
@@ -307,7 +309,8 @@ private struct CategoryChipButton: View {
                     .overlay {
                         Capsule()
                             .strokeBorder(
-                                isSelected ? Color.accentColor.opacity(0.3) : Color.secondary.opacity(0.2),
+                                isSelected
+                                    ? Color.accentColor.opacity(0.3) : Color.secondary.opacity(0.2),
                                 lineWidth: isSelected ? 1.5 : 1
                             )
                     }
@@ -326,4 +329,3 @@ private struct CategoryChipButton: View {
     return SearchView()
         .environment(authViewModel)
 }
-

@@ -6,24 +6,25 @@
 //
 
 import SwiftUI
+
 #if canImport(UIKit)
-import UIKit
+    import UIKit
 #endif
 
 struct MyProjectsView: View {
+    @Environment(NavigationViewModel.self) private var navModel
     @State private var viewModel = ProjectsViewModel()
     @State private var selectedProject: Project?
-    @State private var showAllTemplates: Bool = false
     @State private var projectToDelete: Project?
     @State private var showDeleteConfirmation: Bool = false
     @State private var deleteError: String?
     @State private var showDeleteError: Bool = false
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
                 GlassBackgroundView()
-                
+
                 if viewModel.projects.isEmpty && !viewModel.isLoading {
                     emptyStateView
                 } else {
@@ -51,20 +52,19 @@ struct MyProjectsView: View {
                     )
                 }
             }
-            .navigationDestination(isPresented: $showAllTemplates) {
-                AllTemplatesView()
-            }
         }
     }
-    
+
     // MARK: - Views
-    
+
     private var projectsGrid: some View {
         ScrollView(showsIndicators: false) {
-            LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 16),
-                GridItem(.flexible(), spacing: 16)
-            ], spacing: 16) {
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 16),
+                    GridItem(.flexible(), spacing: 16),
+                ], spacing: 16
+            ) {
                 ForEach(viewModel.projects) { project in
                     ProjectGridView(
                         project: project,
@@ -113,7 +113,7 @@ struct MyProjectsView: View {
             }
         }
     }
-    
+
     private func deleteProject(_ project: Project) {
         do {
             try viewModel.deleteProject(project)
@@ -126,25 +126,25 @@ struct MyProjectsView: View {
             print("❌ Failed to delete project: \(error)")
         }
     }
-    
+
     private var emptyStateView: some View {
         VStack(spacing: 24) {
             Image(systemName: "photo.stack")
                 .font(.system(size: 64, weight: .light))
                 .foregroundStyle(GlassTokens.textSecondary.opacity(0.6))
-            
+
             Text(L10n.tr("l10n.projects.noneTitle"))
                 .font(.title2.weight(.bold))
                 .foregroundStyle(GlassTokens.textPrimary)
-            
+
             Text(L10n.tr("l10n.projects.noneSubtitle"))
                 .font(.subheadline)
                 .foregroundStyle(GlassTokens.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
-            
+
             Button {
-                showAllTemplates = true
+                navModel.navigateToSearch(category: CategoryManager.allCategory)
             } label: {
                 Label(L10n.tr("l10n.projects.explore"), systemImage: "sparkles")
                     .font(.headline)
@@ -153,7 +153,7 @@ struct MyProjectsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
 }
 
 // MARK: - Project Grid View
@@ -163,7 +163,7 @@ struct ProjectGridView: View {
     let image: UIImage?
     let onDelete: () -> Void
     let onTap: () -> Void
-    
+
     var body: some View {
         ZStack(alignment: .topTrailing) {
             // Card content (tap to view details)
@@ -179,31 +179,33 @@ struct ProjectGridView: View {
                                     .frame(width: geometry.size.width, height: geometry.size.height)
                                     .clipped()
                             } else {
-                                RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius, style: .continuous)
-                                    .fill(GlassTokens.primary1.opacity(0.3))
-                                    .frame(width: geometry.size.width, height: geometry.size.height)
-                                    .overlay(
-                                        Image(systemName: "photo")
-                                            .font(.title)
-                                            .foregroundStyle(GlassTokens.textSecondary)
-                                    )
+                                RoundedRectangle(
+                                    cornerRadius: GlassTokens.cardCornerRadius, style: .continuous
+                                )
+                                .fill(GlassTokens.primary1.opacity(0.3))
+                                .frame(width: geometry.size.width, height: geometry.size.height)
+                                .overlay(
+                                    Image(systemName: "photo")
+                                        .font(.title)
+                                        .foregroundStyle(GlassTokens.textSecondary)
+                                )
                             }
                         }
                     }
                     .frame(height: 180)
-                    
+
                     // Info
                     VStack(alignment: .leading, spacing: 6) {
                         Text(project.templateName)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(GlassTokens.textPrimary)
                             .lineLimit(2)
-                        
+
                         Text(project.createdAt, style: .date)
                             .font(.caption)
                             .foregroundStyle(GlassTokens.textSecondary)
                     }
-                    
+
                     // Status badge
                     HStack {
                         Spacer()
@@ -214,7 +216,7 @@ struct ProjectGridView: View {
                 .glassCard()
             }
             .buttonStyle(.plain)
-            
+
             // Delete button (top-right corner, above card content)
             Button(action: {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -227,14 +229,14 @@ struct ProjectGridView: View {
                     .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
             }
             .padding(8)
-            .zIndex(1) // Ensure delete button is on top
+            .zIndex(1)  // Ensure delete button is on top
         }
     }
-    
+
     private var statusBadge: some View {
         GlassChip(text: project.status.rawValue)
     }
-    
+
     private var statusColor: Color {
         switch project.status {
         case .completed:

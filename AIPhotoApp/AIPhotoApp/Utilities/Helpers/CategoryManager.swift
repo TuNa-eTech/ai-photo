@@ -19,35 +19,39 @@ final class CategoryManager {
         "vintage": "camera.fill",
         "abstract": "wand.and.stars",
     ]
-    
+
     // MARK: - State
     var categories: [TemplateCategory] = []
     var isLoading: Bool = false
     var errorMessage: String?
-    
+
     // MARK: - All Category (special case, always available)
     static let allCategory = TemplateCategory(
         id: "all",
         name: "Tất cả",
         icon: "square.grid.2x2"
     )
-    
+
+    static let trendingCategory = TemplateCategory(
+        id: "trending",
+        name: "Thịnh hành",  // Trending
+        icon: "chart.line.uptrend.xyaxis"
+    )
+
     // MARK: - Computed
     var allCategories: [TemplateCategory] {
         [Self.allCategory] + categories
     }
-    
+
     // MARK: - Dependencies
     private let repository: TemplatesRepositoryProtocol
-    
+
     init(repository: TemplatesRepositoryProtocol = TemplatesRepository()) {
         self.repository = repository
-        // Initialize with fallback categories if API hasn't loaded yet
-        self.categories = Self.fallbackCategories
     }
-    
+
     // MARK: - Actions
-    
+
     func loadCategories(bearerIDToken: String, tokenProvider: (() async throws -> String)? = nil) {
         isLoading = true
         errorMessage = nil
@@ -66,58 +70,28 @@ final class CategoryManager {
                 }
             } catch {
                 await MainActor.run {
-                    // On error, use fallback categories
-                    self.categories = Self.fallbackCategories
+                    // On error, keep empty or existing categories
                     self.isLoading = false
                     self.errorMessage = error.localizedDescription
                     #if DEBUG
-                    print("⚠️ Failed to load categories from API, using fallback: \(error.localizedDescription)")
+                        print("⚠️ Failed to load categories from API: \(error.localizedDescription)")
                     #endif
                 }
             }
         }
     }
-    
+
     // MARK: - Helpers
-    
+
     /// Convert CategoryDTO to TemplateCategory with UI metadata
     private static func categoryFromDTO(_ dto: CategoryDTO) -> TemplateCategory {
         let icon = uiMetadata[dto.id] ?? "tag.fill"
-        
+
         return TemplateCategory(
             id: dto.id,
             name: dto.name,
             icon: icon
         )
     }
-    
-    /// Fallback categories if API fails (matches server categories)
-    private static let fallbackCategories: [TemplateCategory] = [
-        TemplateCategory(
-            id: "portrait",
-            name: "Chân dung",
-            icon: uiMetadata["portrait"]!
-        ),
-        TemplateCategory(
-            id: "landscape",
-            name: "Phong cảnh",
-            icon: uiMetadata["landscape"]!
-        ),
-        TemplateCategory(
-            id: "artistic",
-            name: "Nghệ thuật",
-            icon: uiMetadata["artistic"]!
-        ),
-        TemplateCategory(
-            id: "vintage",
-            name: "Cổ điển",
-            icon: uiMetadata["vintage"]!
-        ),
-        TemplateCategory(
-            id: "abstract",
-            name: "Trừu tượng",
-            icon: uiMetadata["abstract"]!
-        ),
-    ]
-}
 
+}

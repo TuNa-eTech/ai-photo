@@ -14,27 +14,30 @@ struct NewSection: View {
     let onTemplateTap: (HomeViewModel.TemplateItem) -> Void
     let onToggleFavorite: (HomeViewModel.TemplateItem) -> Void
     let onSeeAllTap: () -> Void
-    
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 16),
+        GridItem(.flexible(), spacing: 16),
+    ]
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             TemplateSectionHeader(title: "New", onSeeAllTap: onSeeAllTap)
-            
+
             if templates.isEmpty && !isLoading {
                 TemplateSectionEmptyState(message: "No new templates")
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 16) {
-                        ForEach(templates) { item in
-                            TemplateCardView(
-                                item: item,
-                                isFavorite: isFavorite(item),
-                                onTap: { onTemplateTap(item) },
-                                onToggleFavorite: { onToggleFavorite(item) }
-                            )
-                        }
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(templates) { item in
+                        TemplateCardView(
+                            item: item,
+                            isFavorite: isFavorite(item),
+                            onTap: { onTemplateTap(item) },
+                            onToggleFavorite: { onToggleFavorite(item) }
+                        )
                     }
-                    .padding(.horizontal, 20)
                 }
+                .padding(.horizontal, 20)
             }
         }
     }
@@ -51,18 +54,17 @@ struct NewSection: View {
             slug: "2",
             title: "New Template 2",
             thumbnailSymbol: "star.fill"
-        )
+        ),
     ]
-    
+
     NewSection(
         templates: templates,
         isLoading: false,
         isFavorite: { _ in false },
         onTemplateTap: { _ in },
         onToggleFavorite: { _ in },
-        onSeeAllTap: { }
+        onSeeAllTap: {}
     )
     .padding()
     .background(Color.black)
 }
-
