@@ -231,6 +231,18 @@ class APIClient {
   }
 
   /**
+   * PATCH request
+   */
+  async patch<T>(
+    url: string,
+    data?: unknown,
+    config?: Parameters<typeof this.axiosInstance.patch>[2]
+  ): Promise<T> {
+    const response = await this.axiosInstance.patch<T>(url, data, config)
+    return response.data
+  }
+
+  /**
    * DELETE request
    */
   async delete<T>(url: string, config?: Parameters<typeof this.axiosInstance.delete>[1]): Promise<T> {

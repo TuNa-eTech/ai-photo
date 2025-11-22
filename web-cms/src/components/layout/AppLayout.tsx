@@ -55,11 +55,11 @@ export function AppLayout(): React.ReactElement {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       {/* AppBar */}
-      <AppBar 
-        position="sticky" 
+      <AppBar
+        position="sticky"
         elevation={0}
-        sx={{ 
-          borderBottom: 1, 
+        sx={{
+          borderBottom: 1,
           borderColor: 'divider',
           bgcolor: 'background.paper',
           color: 'text.primary',
@@ -67,17 +67,17 @@ export function AppLayout(): React.ReactElement {
       >
         <Toolbar>
           {/* Logo */}
-          <Box 
-            display="flex" 
-            alignItems="center" 
-            gap={1} 
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={1}
             sx={{ cursor: 'pointer' }}
             onClick={() => navigate('/')}
           >
             <Avatar
-              sx={{ 
-                width: 36, 
-                height: 36, 
+              sx={{
+                width: 36,
+                height: 36,
                 bgcolor: 'primary.main',
               }}
             >
@@ -95,15 +95,29 @@ export function AppLayout(): React.ReactElement {
               startIcon={<DashboardIcon />}
               onClick={() => navigate('/')}
               sx={{
-                color: isActive('/') && !isActive('/templates') ? 'primary.main' : 'text.secondary',
-                fontWeight: isActive('/') && !isActive('/templates') ? 600 : 400,
-                bgcolor: isActive('/') && !isActive('/templates') ? alpha('#3f51b5', 0.08) : 'transparent',
+                color: isActive('/') && !isActive('/templates') && !isActive('/categories') ? 'primary.main' : 'text.secondary',
+                fontWeight: isActive('/') && !isActive('/templates') && !isActive('/categories') ? 600 : 400,
+                bgcolor: isActive('/') && !isActive('/templates') && !isActive('/categories') ? alpha('#3f51b5', 0.08) : 'transparent',
                 '&:hover': {
                   bgcolor: alpha('#3f51b5', 0.12),
                 },
               }}
             >
               Dashboard
+            </Button>
+            <Button
+              startIcon={<StyleIcon />} // Reusing StyleIcon for now, or import CategoryIcon
+              onClick={() => navigate('/categories')}
+              sx={{
+                color: isActive('/categories') ? 'primary.main' : 'text.secondary',
+                fontWeight: isActive('/categories') ? 600 : 400,
+                bgcolor: isActive('/categories') ? alpha('#3f51b5', 0.08) : 'transparent',
+                '&:hover': {
+                  bgcolor: alpha('#3f51b5', 0.12),
+                },
+              }}
+            >
+              Categories
             </Button>
             <Button
               startIcon={<StyleIcon />}
@@ -191,9 +205,9 @@ export function AppLayout(): React.ReactElement {
       </AppBar>
 
       {/* Main Content */}
-      <Box 
-        component="main" 
-        sx={{ 
+      <Box
+        component="main"
+        sx={{
           flexGrow: 1,
           bgcolor: 'background.default',
           minHeight: 'calc(100vh - 64px)',

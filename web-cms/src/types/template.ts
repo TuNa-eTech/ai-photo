@@ -44,6 +44,7 @@ export interface TemplateAdmin {
   createdAt: string
   updatedAt: string
   tags?: string[]
+  categoryId?: string
 }
 
 /**
@@ -78,6 +79,7 @@ export interface CreateTemplateRequest {
   visibility?: TemplateVisibility
   tags?: string[]
   isTrendingManual?: boolean
+  categoryId?: string
 }
 
 /**
@@ -94,6 +96,7 @@ export interface UpdateTemplateRequest {
   visibility?: TemplateVisibility
   tags?: string[]
   isTrendingManual?: boolean
+  categoryId?: string
 }
 
 /**

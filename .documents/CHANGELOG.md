@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2025-11-22 - Template-Category Integration & Display Order 🎯
+
+#### Added - Database-Driven Categories
+- **Dynamic Categories**: Categories now stored in `categories` table instead of hardcoded
+  - `GET /v1/categories` returns categories from database
+  - `GET /v1/templates/categories` now fetches from `CategoriesService`
+  - Removed hardcoded `CATEGORIES` and `CATEGORY_TO_TAGS` constants
+  - Server architecture updated: `CategoriesModule` exported and imported into `TemplatesModule`
+
+#### Added - Template-Category Association
+- **Database Schema**: Added `categoryId` foreign key to `Template` model
+  - Relation: `Template.categoryId` → `Category.id` (optional)
+  - Index created for query performance
+  - Migration adds column with nullable constraint
+- **Backend API**:
+  - Updated `CreateTemplateDto` and `UpdateTemplateDto` with `categoryId` field
+  - `TemplatesService.mapToAdminApi()` includes `categoryId` in response
+  - Template filtering changed from tag-based to direct `categoryId` matching
+  - `category` query parameter now uses UUID instead of slug
+- **Web CMS**:
+  - `TemplateFormDialog` dynamically fetches categories via API
+  - Category dropdown selector added to template creation/edit form
+  - `categoryId` included in API payloads for create/update operations
+  - Updated TypeScript interfaces: `TemplateAdmin`, `CreateTemplateRequest`, `UpdateTemplateRequest`
+
+#### Added - Category Display Order
+- **Database Schema**: Added `displayOrder` field to `Category` model
+  - Type: `Int`, default value: `0`
+  - Index created for sorting performance
+  - DTO validation: `@IsInt()`, `@Min(0)`
+- **Backend**:
+  - `CategoriesService.findAll()` sorts by `displayOrder ASC` instead of `createdAt DESC`
+  - `CreateCategoryDto` and `UpdateCategoryDto` support `displayOrder` field
+- **Web CMS**:
+  - `CategoryModal` includes number input for display order with helper text
+  - `CategoriesPage` displays "Order" column with colored chips
+  - Categories list automatically reorders based on `displayOrder` values
+
+#### Fixed - Category API Issues
+- **Web CMS Form**: Removed unused `imageUrl` field from category creation form
+  - Field was optional but causing validation errors when empty
+  - Simplified form to only include: name, slug, description, displayOrder
+- **API Payloads**: Fixed missing `categoryId` in template API calls
+  - Added `categoryId` to `createTemplate()` and `updateTemplate()` payloads
+  - Templates now correctly save and retrieve category associations
+
+#### Technical Implementation
+- **Module Dependencies**:
+  - `CategoriesModule` exports `CategoriesService` for use in other modules
+  - `TemplatesModule` imports `CategoriesModule` to access categories
+- **Service Injection**:
+  - `TemplatesService` constructor injects `CategoriesService`
+  - `listCategories()` method calls `categoriesService.findAll()`
+- **iOS Compatibility**:
+  - No changes needed to iOS app - already using correct endpoint `/v1/templates/categories`
+  - Categories automatically display in `SearchView` sorted by display order
+
+#### Database Migration Required
+⚠️ **Action**: Run `docker exec imageaiwrapper-server yarn prisma db push` to add:
+- `category_id` column to `templates` table (nullable, indexed)
+- `display_order` column to `categories` table (default: 0, indexed)
+
 ### 2025-11-17 - Trending Template Management System ⭐
 
 #### Added - Web CMS Trending Features

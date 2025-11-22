@@ -64,15 +64,16 @@ Tài liệu hợp nhất mọi thông tin liên quan đến “Template” để
 - Auth: Bearer (Firebase ID token).
 - Response: `EnvelopeCategoriesList { success, data{ categories: Category[] }, error?, meta{ requestId, timestamp } }`
 - Trường trong `Category`:
-  - `id` (string): category identifier (portrait, landscape, artistic, vintage, abstract)
+  - `id` (string): UUID of category
   - `name` (string): category display name (Vietnamese)
-- Categories được định nghĩa trong `TemplatesService.CATEGORIES`:
-  - portrait → "Chân dung"
-  - landscape → "Phong cảnh"
-  - artistic → "Nghệ thuật"
-  - vintage → "Cổ điển"
-  - abstract → "Trừu tượng"
-- Category-to-tags mapping: Mỗi category map sang một array tags để filter templates (ví dụ: `portrait` → `["portrait", "chân dung", "person", "people"]`)
+  - `slug` (string): category slug for URL-friendly identifier
+  - `displayOrder` (number): sort order (ascending)
+- **Database-Driven**: Categories are stored in `categories` table and fetched dynamically
+  - `GET /v1/categories` - Public endpoint returns all categories from database
+  - `GET /v1/templates/categories` - Calls `CategoriesService.findAll()` internally
+  - Sorted by `displayOrder ASC` (manual ordering via Web CMS)
+- **Template Association**: Templates can be associated with a category via `categoryId` foreign key
+  - Filtering: `GET /v1/templates?category={categoryId}` uses direct relation instead of tag mapping
 
 Ví dụ Response:
 ```json
@@ -369,6 +370,14 @@ Authorization: Bearer <ID_TOKEN>
 
 ## 15) Changelog
 
+- 1.3 (2025-11-22): Template-Category Integration & Display Order:
+  - **Database-driven categories**: Categories moved from hardcoded to `categories` table
+  - **Template-Category association**: Added `categoryId` foreign key to `Template` model
+  - **Display order**: Added `displayOrder` field to `Category` for manual sorting
+  - **API updates**: Category filtering now uses direct relation (`categoryId`) instead of tag mapping
+  - **Web CMS**: Category management with CRUD operations, display order control
+  - **Backend architecture**: `CategoriesModule` exported and injected into `TemplatesModule`
+  - Removed hardcoded `CATEGORIES` and `CATEGORY_TO_TAGS` constants
 - 1.2 (2025-11-17): Added trending template management:
   - Added manual trending system with `isTrendingManual` field
   - New endpoints: POST/DELETE `/v1/admin/templates/{slug}/trending`

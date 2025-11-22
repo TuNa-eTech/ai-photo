@@ -13,6 +13,7 @@ import { TemplatesListPage } from '../pages/Templates/TemplatesListPage'
 import { TemplateDetailPage } from '../pages/Templates/TemplateDetailPage'
 import { IAPProductsPage } from '../pages/IAP/IAPProductsPage'
 import { TransactionsPage } from '../pages/Transactions/TransactionsPage'
+import { CategoriesPage } from '../pages/Categories/CategoriesPage'
 
 export const router = createBrowserRouter([
   {
@@ -30,6 +31,10 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <DashboardPage />,
+      },
+      {
+        path: 'categories',
+        element: <CategoriesPage />,
       },
       {
         path: 'templates',

@@ -130,10 +130,13 @@ model Template {
 
   templateAssets TemplateAsset[]
   processedImages ProcessedImage[]
+  category         Category?          @relation(fields: [categoryId], references: [id])
+  categoryId       String?            @map("category_id")
 
   @@index([status])
   @@index([visibility])
   @@index([publishedAt])
+  @@index([categoryId])
   @@map("templates")
 }
 
@@ -224,4 +227,20 @@ model IAPProduct {
   @@index([productId])
   @@index([isActive])
   @@map("iap_products")
+}
+
+model Category {
+  id           String   @id @default(uuid())
+  slug         String   @unique
+  name         String
+  description  String?
+  imageUrl     String?  @map("image_url")
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  templates   Template[]
+
+  @@index([displayOrder])
+  @@map("categories")
 }

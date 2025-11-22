@@ -16,6 +16,7 @@ import {
   TemplateStatus,
 } from '@prisma/client';
 import { generateSlug, generateUniqueSlug } from '../utils/slug';
+import { CategoriesService } from '../categories/categories.service';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -53,6 +54,7 @@ export type ApiTemplateAdmin = {
   createdAt: string;
   updatedAt: string;
   tags?: string[];
+  categoryId?: string;
 };
 
 @Injectable()
@@ -60,25 +62,8 @@ export class TemplatesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly fileService: FileService,
-  ) {}
-
-  // Category definitions with metadata
-  private readonly CATEGORIES: Array<{ id: string; name: string }> = [
-    { id: 'portrait', name: 'Chân dung' },
-    { id: 'landscape', name: 'Phong cảnh' },
-    { id: 'artistic', name: 'Nghệ thuật' },
-    { id: 'vintage', name: 'Cổ điển' },
-    { id: 'abstract', name: 'Trừu tượng' },
-  ];
-
-  // Category-to-tags mapping for filtering
-  private readonly CATEGORY_TO_TAGS: Record<string, string[]> = {
-    portrait: ['portrait', 'chân dung', 'person', 'people'],
-    landscape: ['landscape', 'phong cảnh', 'scenery', 'nature'],
-    artistic: ['artistic', 'nghệ thuật', 'art', 'creative'],
-    vintage: ['vintage', 'cổ điển', 'classic', 'retro'],
-    abstract: ['abstract', 'trừu tượng', 'geometric', 'pattern'],
-  };
+    private readonly categoriesService: CategoriesService,
+  ) { }
 
   private mapToApi(t: DbTemplate): ApiTemplate {
     return {
@@ -125,18 +110,15 @@ export class TemplatesService {
       ];
     }
 
-    // Build tags list from category and/or tags parameter
-    let tagList: string[] = [];
-
-    // If category is provided, map it to tags
+    // Filter by category (direct relation)
     if (category && category.trim()) {
-      const categoryTags = this.CATEGORY_TO_TAGS[category.toLowerCase()];
-      if (categoryTags) {
-        tagList.push(...categoryTags);
-      }
+      where.categoryId = category.trim();
     }
 
-    // If tags parameter is also provided, combine with category tags
+    // Build tags list from tags parameter
+    let tagList: string[] = [];
+
+    // If tags parameter is provided, add to tagList
     if (tags && tags.trim()) {
       const tagsFromParam = tags
         .split(',')
@@ -177,8 +159,11 @@ export class TemplatesService {
   }
 
   async listCategories(): Promise<{ categories: ApiCategory[] }> {
+    // Fetch categories from database instead of hardcoded
+    const dbCategories = await this.categoriesService.findAll();
+
     return {
-      categories: this.CATEGORIES.map((cat) => ({
+      categories: dbCategories.map((cat) => ({
         id: cat.id,
         name: cat.name,
       })),
@@ -257,6 +242,7 @@ export class TemplatesService {
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt.toISOString(),
       tags: t.tags,
+      categoryId: t.categoryId ?? undefined,
     };
   }
 
@@ -378,6 +364,7 @@ export class TemplatesService {
         visibility: dto.visibility ?? 'public',
         tags: dto.tags ?? [],
         isTrendingManual: dto.isTrendingManual ?? false,
+        categoryId: dto.categoryId,
       },
     });
 
@@ -421,6 +408,7 @@ export class TemplatesService {
         visibility: dto.visibility,
         tags: dto.tags,
         isTrendingManual: dto.isTrendingManual,
+        categoryId: dto.categoryId,
       },
     });
 

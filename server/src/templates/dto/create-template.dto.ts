@@ -62,4 +62,8 @@ export class CreateTemplateDto {
   @IsOptional()
   @IsBoolean()
   isTrendingManual?: boolean;
+
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
 }

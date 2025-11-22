@@ -89,8 +89,9 @@ export async function createTemplate(data: CreateTemplateRequest): Promise<Templ
     visibility: data.visibility,
     tags: data.tags,
     isTrendingManual: data.isTrendingManual,
+    categoryId: data.categoryId,
   }
-  
+
   return apiClient.post<TemplateAdmin>('/v1/admin/templates', apiData)
 }
 
@@ -113,8 +114,9 @@ export async function updateTemplate(
     visibility: data.visibility,
     tags: data.tags,
     isTrendingManual: data.isTrendingManual,
+    categoryId: data.categoryId,
   }
-  
+
   return apiClient.put<TemplateAdmin>(`/v1/admin/templates/${slug}`, apiData)
 }
 

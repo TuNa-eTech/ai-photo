@@ -292,6 +292,53 @@ docker-compose exec db psql -U imageai -d imageai_db -c "\dt"
 - Chỉ dùng khi muốn reset database hoàn toàn
 - Nếu muốn giữ dữ liệu, chỉ dùng `docker-compose down` (không có `-v`)
 
+### Schema Updates (Prisma db push)
+
+**Khi nào cần chạy `prisma db push`:**
+- Khi có thay đổi schema nhưng không muốn tạo migration file
+- Trong quá trình phát triển để đồng bộ schema nhanh
+- Sau khi thêm field mới vào model trong `schema.prisma`
+
+**Ví dụ: Template-Category Integration (2025-11-22)**
+
+Các thay đổi schema:
+- Thêm `categoryId` vào `Template` model (foreign key đến `Category`)
+- Thêm `displayOrder` vào `Category` model (để sắp xếp thủ công)
+
+```bash
+# Push schema changes to database
+docker exec imageaiwrapper-server yarn prisma db push
+```
+
+Lệnh này sẽ:
+1. Phân tích schema trong `prisma/schema.prisma`
+2. So sánh với database hiện tại
+3. Tạo và chạy các câu SQL để đồng bộ
+4. Regenerate Prisma Client
+
+**Lưu ý**:
+- `db push` không tạo migration files (dùng cho dev)
+- Cho production nên dùng `prisma migrate deploy` với migration files
+- Sau khi push, cần rebuild containers để có Prisma Client mới
+
+**Kiểm tra schema đã được áp dụng:**
+```bash
+# Kiểm tra columns của bảng categories
+docker exec imageaiwrapper-server yarn prisma db execute --stdin <<EOF
+SELECT column_name, data_type, is_nullable 
+FROM information_schema.columns 
+WHERE table_name = 'categories';
+EOF
+
+# Kiểm tra columns của bảng templates
+docker exec imageaiwrapper-server yarn prisma db execute --stdin <<EOF
+SELECT column_name, data_type, is_nullable 
+FROM information_schema.columns 
+WHERE table_name = 'templates' 
+AND column_name = 'category_id';
+EOF
+```
+
 -------------------------- Hướng dẫn deploy bằng Docker Context -----------------------
 Chắc chắn rồi. Đây là hướng dẫn đầy đủ, cụ thể từng bước để bạn deploy bằng **Docker Context** qua SSH, bao gồm cả bước sửa lỗi "passphrase" bạn vừa gặp.
 

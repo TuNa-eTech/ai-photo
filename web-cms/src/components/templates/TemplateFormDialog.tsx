@@ -40,6 +40,8 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import EnhancedImageUpload from './EnhancedImageUpload'
 import { TrendingBadge } from '../common/TrendingBadge'
 import type { TemplateAdmin, CreateTemplateRequest, UpdateTemplateRequest, TemplateStatus, TemplateVisibility } from '../../types'
+import type { Category } from '../../types/category'
+import { categoriesApi } from '../../api/categories'
 import { generateSlug } from '../../utils/slug'
 import { validateImageFile } from '../../utils/imageHelper'
 import { Checkbox, AlertTitle } from '@mui/material'
@@ -97,30 +99,39 @@ export function TemplateFormDialog({
     visibility: 'public',
     tags: [],
     isTrendingManual: false,
+    categoryId: '',
   })
 
   const [tagsInput, setTagsInput] = useState<string>('')
-  const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const [categories, setCategories] = useState<Category[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
 
   // Category-to-tags mapping (matching server mapping)
-  const CATEGORY_TO_TAGS: Record<string, string[]> = {
-    portrait: ['portrait', 'chân dung', 'person', 'people'],
-    landscape: ['landscape', 'phong cảnh', 'scenery', 'nature'],
-    artistic: ['artistic', 'nghệ thuật', 'art', 'creative'],
-    vintage: ['vintage', 'cổ điển', 'classic', 'retro'],
-    abstract: ['abstract', 'trừu tượng', 'geometric', 'pattern'],
-  }
+  // const CATEGORY_TO_TAGS: Record<string, string[]> = {
+  //   portrait: ['portrait', 'chân dung', 'person', 'people'],
+  //   landscape: ['landscape', 'phong cảnh', 'scenery', 'nature'],
+  //   artistic: ['artistic', 'nghệ thuật', 'art', 'creative'],
+  //   vintage: ['vintage', 'cổ điển', 'classic', 'retro'],
+  //   abstract: ['abstract', 'trừu tượng', 'geometric', 'pattern'],
+  // }
 
-  const CATEGORY_OPTIONS = [
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await categoriesApi.getAll()
+        setCategories(data)
+      } catch (err) {
+        console.error('Failed to fetch categories:', err)
+      }
+    }
+    fetchCategories()
+  }, [])
+
+  const categoryOptions = [
     { value: '', label: 'None' },
-    { value: 'portrait', label: 'Portrait' },
-    { value: 'landscape', label: 'Landscape' },
-    { value: 'artistic', label: 'Artistic' },
-    { value: 'vintage', label: 'Vintage' },
-    { value: 'abstract', label: 'Abstract' },
+    ...categories.map(cat => ({ value: cat.id, label: cat.name }))
   ]
 
   useEffect(() => {
@@ -136,11 +147,11 @@ export function TemplateFormDialog({
         visibility: template.visibility || 'public',
         tags: template.tags || [],
         isTrendingManual: template.isTrendingManual ?? false,
+        categoryId: template.categoryId || '',
       })
       setTagsInput(template.tags?.join(', ') || '')
       setThumbnailPreview(template.thumbnailUrl || null)
       setThumbnailFile(null)
-      setSelectedCategory('') // Reset category on edit (we don't store it)
       setActiveTab(0)
     } else {
       setFormData({
@@ -154,35 +165,22 @@ export function TemplateFormDialog({
         visibility: 'public',
         tags: [],
         isTrendingManual: false,
+        categoryId: '',
       })
       setTagsInput('')
       setThumbnailPreview(null)
       setThumbnailFile(null)
-      setSelectedCategory('')
       setActiveTab(0)
     }
     setErrors({})
   }, [template, open])
 
-  // Handle category change - auto-populate tags
-  const handleCategoryChange = (category: string): void => {
-    setSelectedCategory(category)
-    if (category && CATEGORY_TO_TAGS[category]) {
-      const suggestedTags = CATEGORY_TO_TAGS[category]
-      // If tagsInput is empty, populate with suggested tags
-      // Otherwise, append suggested tags that aren't already present
-      if (!tagsInput.trim()) {
-        setTagsInput(suggestedTags.join(', '))
-      } else {
-        const existingTags = tagsInput.split(',').map((t) => t.trim().toLowerCase())
-        const newTags = suggestedTags.filter(
-          (tag) => !existingTags.includes(tag.toLowerCase())
-        )
-        if (newTags.length > 0) {
-          setTagsInput(`${tagsInput}, ${newTags.join(', ')}`)
-        }
-      }
-    }
+  // Handle category change
+  const handleCategoryChange = (categoryId: string): void => {
+    setFormData({ ...formData, categoryId })
+
+    // Optional: Auto-populate tags based on category slug if needed
+    // For now, we just set the categoryId
   }
 
   const validateForm = (): boolean => {
@@ -282,6 +280,7 @@ export function TemplateFormDialog({
         visibility: formData.visibility,
         tags: tags.length > 0 ? tags : undefined,
         isTrendingManual: formData.isTrendingManual,
+        categoryId: formData.categoryId || undefined,
       }
       onSubmit(updateData, thumbnailFile || undefined)
     } else {
@@ -294,6 +293,7 @@ export function TemplateFormDialog({
         modelName: formData.modelName || undefined,
         tags: tags.length > 0 ? tags : undefined,
         isTrendingManual: formData.isTrendingManual,
+        categoryId: formData.categoryId || undefined,
       }
       onSubmit(createData, thumbnailFile || undefined)
     }
@@ -309,10 +309,10 @@ export function TemplateFormDialog({
   const negativePromptLength = formData.negativePrompt?.length || 0
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={handleClose} 
-      maxWidth="md" 
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="md"
       fullWidth
       PaperProps={{
         sx: {
@@ -345,8 +345,8 @@ export function TemplateFormDialog({
         )}
 
         <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
-          <Tabs 
-            value={activeTab} 
+          <Tabs
+            value={activeTab}
             onChange={(_, newValue) => setActiveTab(newValue)}
             variant="fullWidth"
           >
@@ -402,12 +402,12 @@ export function TemplateFormDialog({
               <FormControl fullWidth>
                 <InputLabel>Category</InputLabel>
                 <Select
-                  value={selectedCategory}
+                  value={formData.categoryId || ''}
                   label="Category"
                   onChange={(e) => handleCategoryChange(e.target.value)}
                   disabled={loading}
                 >
-                  {CATEGORY_OPTIONS.map((option) => (
+                  {categoryOptions.map((option) => (
                     <MenuItem key={option.value} value={option.value}>
                       {option.label}
                     </MenuItem>
@@ -454,8 +454,8 @@ export function TemplateFormDialog({
                   <Typography variant="subtitle2" color="text.secondary">
                     Positive Prompt *
                   </Typography>
-                  <Chip 
-                    label={`${promptLength} characters`} 
+                  <Chip
+                    label={`${promptLength} characters`}
                     size="small"
                     color={promptLength < 50 ? 'warning' : promptLength > 200 ? 'success' : 'default'}
                   />
@@ -485,8 +485,8 @@ export function TemplateFormDialog({
                   <Typography variant="subtitle2" color="text.secondary">
                     Negative Prompt
                   </Typography>
-                  <Chip 
-                    label={`${negativePromptLength} characters`} 
+                  <Chip
+                    label={`${negativePromptLength} characters`}
                     size="small"
                     variant="outlined"
                   />
