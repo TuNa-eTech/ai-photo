@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>507160530687-9ajssu4t6d3fi0416oj41l0r7ks3mqr1.apps.googleusercontent.com</string>
+	<string>507160530687-39n2i8jo71l8l3o1vgfcuqtcq3frgqd2.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.507160530687-9ajssu4t6d3fi0416oj41l0r7ks3mqr1</string>
+	<string>com.googleusercontent.apps.507160530687-39n2i8jo71l8l3o1vgfcuqtcq3frgqd2</string>
 	<key>API_KEY</key>
 	<string>AIzaSyBFyNaKan4VtE9rYVRAy-bu0u6WepEB40c</string>
 	<key>GCM_SENDER_ID</key>
@@ -13,7 +13,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.attech.imageaiwrapper</string>
+	<string>com.attech.bokphoto</string>
 	<key>PROJECT_ID</key>
 	<string>imageai-41077</string>
 	<key>STORAGE_BUCKET</key>
@@ -29,6 +29,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:507160530687:ios:cca6c22fb7cbae64e3c6ca</string>
+	<string>1:507160530687:ios:66b6cffbe45b6e84e3c6ca</string>
 </dict>
 </plist>
