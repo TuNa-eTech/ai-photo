@@ -29,11 +29,14 @@ struct SplashView: View {
 
 struct RootRouterView: View {
     @Environment(AuthViewModel.self) private var model
+    @AppStorage("hasShownOnboarding") private var hasShownOnboarding: Bool = false
 
     var body: some View {
         Group {
             if !model.isBootstrapped {
                 SplashView()
+            } else if !hasShownOnboarding {
+                OnboardingView()
             } else if model.isAuthenticated {
                 // Show MainTabView when authenticated
                 MainTabView()

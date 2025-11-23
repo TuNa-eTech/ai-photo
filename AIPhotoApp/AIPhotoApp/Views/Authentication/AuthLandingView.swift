@@ -12,7 +12,7 @@ struct AuthLandingView: View {
     @Environment(LocalizationModel.self) private var i18n
 
     @State private var showCard = false
-    @State private var logoScale: CGFloat = 0.8
+    @State private var logoScale: CGFloat = 1.0
 
     var body: some View {
         NavigationStack {
@@ -213,7 +213,7 @@ struct BrandLogoView: View {
             // Glass circle background
             Circle()
                 .fill(.ultraThinMaterial)
-                .frame(width: 120, height: 120)
+                .frame(width: 150, height: 150)
                 .overlay(
                     Circle()
                         .stroke(
@@ -231,11 +231,7 @@ struct BrandLogoView: View {
                 .shadow(color: GlassTokens.shadowColor, radius: 20, y: 10)
 
             // App Logo
-            Image("AppIcon")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 80, height: 80)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            AppIconImage(size: 150)
         }
         .accessibilityHidden(true)  // Decorative
     }
