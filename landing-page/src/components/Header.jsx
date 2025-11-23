@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import LanguageSwitcher from './LanguageSwitcher.jsx';
+
 import ThemeToggle from './ThemeToggle.jsx';
 
 export default function Header() {
@@ -33,7 +33,6 @@ export default function Header() {
           <a href={appUrl} className="px-4 py-2 rounded bg-brand-emphasis text-white hover:opacity-90">
             {t('cta.download')}
           </a>
-          <LanguageSwitcher />
           <ThemeToggle />
         </div>
         <button
@@ -54,7 +53,6 @@ export default function Header() {
             <a href="#faq" onClick={() => setOpen(false)} className="hover:underline">{t('nav.faq')}</a>
             <a href={appUrl} onClick={() => setOpen(false)} className="px-4 py-2 rounded bg-brand-emphasis text-white hover:opacity-90">{t('cta.download')}</a>
             <div className="flex items-center gap-3">
-              <LanguageSwitcher />
               <ThemeToggle />
             </div>
           </div>

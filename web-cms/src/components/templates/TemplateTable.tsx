@@ -26,7 +26,6 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import PublishIcon from '@mui/icons-material/Publish'
 import UnpublishedIcon from '@mui/icons-material/Unpublished'
 import VisibilityIcon from '@mui/icons-material/Visibility'
-import LocalOfferIcon from '@mui/icons-material/LocalOffer'
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment'
 import LocalFireDepartmentOutlinedIcon from '@mui/icons-material/LocalFireDepartmentOutlined'
 import type { TemplateAdmin } from '../../types'
@@ -102,11 +101,11 @@ export function TemplateTable({
   }
 
   return (
-    <TableContainer 
-      component={Paper} 
+    <TableContainer
+      component={Paper}
       elevation={0}
-      sx={{ 
-        border: 1, 
+      sx={{
+        border: 1,
         borderColor: 'divider',
         borderRadius: 2,
       }}
@@ -119,7 +118,6 @@ export function TemplateTable({
             <TableCell sx={{ width: 120 }}>Status</TableCell>
             <TableCell sx={{ width: 100 }}>Trending</TableCell>
             <TableCell sx={{ width: 120 }}>Visibility</TableCell>
-            <TableCell sx={{ minWidth: 150 }}>Tags</TableCell>
             <TableCell sx={{ width: 140 }}>Published</TableCell>
             <TableCell sx={{ width: 100 }}>Usage</TableCell>
             <TableCell align="right" sx={{ width: 180 }}>Actions</TableCell>
@@ -219,48 +217,11 @@ export function TemplateTable({
                   size="small"
                   color={getVisibilityColor(template.visibility)}
                   variant="outlined"
-                  sx={{ 
+                  sx={{
                     fontWeight: 500,
                     textTransform: 'capitalize',
                   }}
                 />
-              </TableCell>
-
-              {/* Tags */}
-              <TableCell>
-                {template.tags && template.tags.length > 0 ? (
-                  <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                    {template.tags.slice(0, 2).map((tag) => (
-                      <Chip
-                        key={tag}
-                        label={tag}
-                        size="small"
-                        icon={<LocalOfferIcon />}
-                        sx={{ 
-                          height: 20,
-                          fontSize: '0.7rem',
-                          '& .MuiChip-icon': {
-                            fontSize: '0.9rem',
-                          }
-                        }}
-                      />
-                    ))}
-                    {template.tags.length > 2 && (
-                      <Chip
-                        label={`+${template.tags.length - 2}`}
-                        size="small"
-                        sx={{ 
-                          height: 20,
-                          fontSize: '0.7rem',
-                        }}
-                      />
-                    )}
-                  </Stack>
-                ) : (
-                  <Typography variant="caption" color="text.disabled">
-                    No tags
-                  </Typography>
-                )}
               </TableCell>
 
               {/* Published Date */}

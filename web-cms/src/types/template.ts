@@ -100,6 +100,14 @@ export interface UpdateTemplateRequest {
 }
 
 /**
+ * Bulk Update Template Request
+ */
+export interface BulkUpdateTemplateRequest {
+  templateIds: string[]
+  updates: Partial<UpdateTemplateRequest>
+}
+
+/**
  * Templates Query Parameters
  */
 export interface TemplatesQueryParams {

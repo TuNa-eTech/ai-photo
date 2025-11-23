@@ -20,7 +20,6 @@ import EditIcon from '@mui/icons-material/Edit'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
 import VisibilityIcon from '@mui/icons-material/Visibility'
-import LocalOfferIcon from '@mui/icons-material/LocalOffer'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import CodeIcon from '@mui/icons-material/Code'
 import { formatDistanceToNow } from 'date-fns'
@@ -127,26 +126,6 @@ export function TemplateInfoCard({ template, onEdit }: TemplateInfoCardProps): R
             sx={{ fontWeight: 500, textTransform: 'capitalize' }}
           />
         </Stack>
-
-        {/* Tags */}
-        {template.tags && template.tags.length > 0 && (
-          <Box mb={3}>
-            <Typography variant="subtitle2" gutterBottom display="flex" alignItems="center" gap={0.5}>
-              <LocalOfferIcon fontSize="small" />
-              Tags
-            </Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {template.tags.map((tag) => (
-                <Chip
-                  key={tag}
-                  label={tag}
-                  size="small"
-                  variant="outlined"
-                />
-              ))}
-            </Stack>
-          </Box>
-        )}
 
         <Divider sx={{ my: 3 }} />
 

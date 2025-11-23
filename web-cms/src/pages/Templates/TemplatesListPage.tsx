@@ -14,11 +14,14 @@ import {
   Button,
   Alert,
   Snackbar,
+  Stack,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
+import EditIcon from '@mui/icons-material/Edit'
 import { useAuth } from '../../auth'
-import { TemplateTable } from '../../components/templates/TemplateTable'
+import { TemplateTable } from '../../components/templates/TemplateTable.v2'
 import { TemplatesFilters } from '../../components/templates/TemplatesFilters'
+import { BulkEditDialog } from '../../components/templates/BulkEditDialog'
 import { TemplateFormDialog } from '../../components/templates/TemplateFormDialog'
 import { ConfirmDialog } from '../../components/common/ConfirmDialog'
 import { Pagination } from '../../components/common/Pagination'
@@ -30,6 +33,7 @@ import {
   publishTemplate,
   unpublishTemplate,
   uploadTemplateAsset,
+  bulkUpdateTemplates,
 } from '../../api/templates'
 import type {
   TemplateAdmin,
@@ -55,6 +59,8 @@ export function TemplatesListPage(): React.ReactElement {
   const [editingTemplate, setEditingTemplate] = useState<TemplateAdmin | null>(null)
   const [deletingTemplate, setDeletingTemplate] = useState<TemplateAdmin | null>(null)
   const [publishingTemplate, setPublishingTemplate] = useState<TemplateAdmin | null>(null)
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([])
+  const [bulkEditDialogOpen, setBulkEditDialogOpen] = useState(false)
 
   const [snackbar, setSnackbar] = useState<{
     open: boolean
@@ -144,6 +150,22 @@ export function TemplatesListPage(): React.ReactElement {
     },
   })
 
+  // Bulk update mutation
+  const bulkUpdateMutation = useMutation({
+    mutationFn: ({ templateIds, updates }: { templateIds: string[]; updates: Partial<UpdateTemplateRequest> }) =>
+      bulkUpdateTemplates(templateIds, updates),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['templates', 'admin'] })
+      setBulkEditDialogOpen(false)
+      setSelectedTemplateIds([])
+      showSnackbar(`${result.updated} template(s) updated successfully`, 'success')
+    },
+    onError: (error: Error) => {
+      const message = error instanceof APIClientError ? error.message : 'Failed to bulk update templates'
+      showSnackbar(message, 'error')
+    },
+  })
+
   // Handlers
   const showSnackbar = (message: string, severity: 'success' | 'error' | 'info'): void => {
     setSnackbar({ open: true, message, severity })
@@ -187,7 +209,7 @@ export function TemplatesListPage(): React.ReactElement {
     if (editingTemplate) {
       // Update existing template
       updateMutation.mutate({ slug: editingTemplate.slug, data: data as UpdateTemplateRequest })
-      
+
       // If thumbnail file is provided, upload it
       if (thumbnailFile) {
         try {
@@ -206,7 +228,7 @@ export function TemplatesListPage(): React.ReactElement {
       // Create new template
       try {
         const newTemplate = await createTemplate(data as CreateTemplateRequest)
-        
+
         // If thumbnail file is provided, upload it
         if (thumbnailFile) {
           await uploadTemplateAsset(newTemplate.slug, {
@@ -214,13 +236,13 @@ export function TemplatesListPage(): React.ReactElement {
             file: thumbnailFile,
           })
         }
-        
+
         queryClient.invalidateQueries({ queryKey: ['templates', 'admin'] })
         setFormDialogOpen(false)
         setEditingTemplate(null)
         showSnackbar(
-          thumbnailFile 
-            ? 'Template and thumbnail created successfully' 
+          thumbnailFile
+            ? 'Template and thumbnail created successfully'
             : 'Template created successfully',
           'success'
         )
@@ -255,6 +277,14 @@ export function TemplatesListPage(): React.ReactElement {
     unpublishMutation.mutate(template.slug)
   }
 
+  const handleBulkEdit = (): void => {
+    setBulkEditDialogOpen(true)
+  }
+
+  const handleBulkEditSubmit = (updates: Partial<UpdateTemplateRequest>): void => {
+    bulkUpdateMutation.mutate({ templateIds: selectedTemplateIds, updates })
+  }
+
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Header */}
@@ -267,9 +297,21 @@ export function TemplatesListPage(): React.ReactElement {
             Manage your AI image generation templates
           </Typography>
         </Box>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateClick} size="large">
-          New Template
-        </Button>
+        <Stack direction="row" spacing={2}>
+          {selectedTemplateIds.length > 0 && (
+            <Button
+              variant="outlined"
+              startIcon={<EditIcon />}
+              onClick={handleBulkEdit}
+              size="large"
+            >
+              Bulk Edit ({selectedTemplateIds.length})
+            </Button>
+          )}
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateClick} size="large">
+            New Template
+          </Button>
+        </Stack>
       </Box>
 
       {/* Error Alert */}
@@ -290,6 +332,8 @@ export function TemplatesListPage(): React.ReactElement {
       <TemplateTable
         templates={data?.templates || []}
         loading={isLoading}
+        selectedIds={selectedTemplateIds}
+        onSelectionChange={setSelectedTemplateIds}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onPublish={handlePublish}
@@ -338,15 +382,23 @@ export function TemplatesListPage(): React.ReactElement {
       <ConfirmDialog
         open={!!publishingTemplate}
         title="Publish Template"
-        message={`Are you sure you want to publish "${publishingTemplate?.name}"? ${
-          !publishingTemplate?.thumbnailUrl
-            ? 'Warning: This template does not have a thumbnail. Publishing may fail.'
-            : ''
-        }`}
+        message={`Are you sure you want to publish "${publishingTemplate?.name}"? ${!publishingTemplate?.thumbnailUrl
+          ? 'Warning: This template does not have a thumbnail. Publishing may fail.'
+          : ''
+          }`}
         confirmText="Publish"
         confirmColor="success"
         onConfirm={handlePublishConfirm}
         onCancel={() => setPublishingTemplate(null)}
+      />
+
+      {/* Bulk Edit Dialog */}
+      <BulkEditDialog
+        open={bulkEditDialogOpen}
+        selectedCount={selectedTemplateIds.length}
+        onClose={() => setBulkEditDialogOpen(false)}
+        onSubmit={handleBulkEditSubmit}
+        loading={bulkUpdateMutation.isPending}
       />
 
       {/* Snackbar */}

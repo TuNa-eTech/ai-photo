@@ -2,8 +2,8 @@ import {
   IsString,
   IsOptional,
   IsEnum,
-  IsArray,
   IsBoolean,
+  IsArray,
   Matches,
   ValidateIf,
 } from 'class-validator';
@@ -55,15 +55,15 @@ export class CreateTemplateDto {
   visibility?: TemplateVisibility;
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  tags?: string[];
-
-  @IsOptional()
   @IsBoolean()
   isTrendingManual?: boolean;
 
   @IsOptional()
   @IsString()
   categoryId?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 }

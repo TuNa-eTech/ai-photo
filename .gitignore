@@ -3,3 +3,4 @@ build/
 .gemini/settings.json
 backend/assets/
 .env
+buildServer.json

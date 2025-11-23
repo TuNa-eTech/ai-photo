@@ -162,6 +162,20 @@ export async function unsetTemplateTrending(slug: string): Promise<TemplateAdmin
   return apiClient.delete<TemplateAdmin>(`/v1/admin/templates/${slug}/trending`)
 }
 
+/**
+ * Bulk update multiple templates (admin)
+ * POST /v1/admin/templates/bulk-update
+ */
+export async function bulkUpdateTemplates(
+  templateIds: string[],
+  updates: Partial<UpdateTemplateRequest>
+): Promise<{ updated: number }> {
+  return apiClient.post<{ updated: number }>('/v1/admin/templates/bulk-update', {
+    templateIds,
+    updates,
+  })
+}
+
 // ============================================================================
 // ADMIN TEMPLATE ASSETS API
 // ============================================================================

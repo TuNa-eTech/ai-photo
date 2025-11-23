@@ -94,15 +94,13 @@ export function TemplateFormDialog({
     prompt: '',
     negativePrompt: '',
     modelProvider: 'gemini',
-    modelName: 'gemini-1.5-pro',
+    modelName: 'gemini-2.5-flash-image',
     status: 'draft',
     visibility: 'public',
-    tags: [],
     isTrendingManual: false,
     categoryId: '',
   })
 
-  const [tagsInput, setTagsInput] = useState<string>('')
   const [categories, setCategories] = useState<Category[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
@@ -142,14 +140,12 @@ export function TemplateFormDialog({
         prompt: template.prompt || '',
         negativePrompt: template.negativePrompt || '',
         modelProvider: template.modelProvider || 'gemini',
-        modelName: template.modelName || 'gemini-1.5-pro',
+        modelName: template.modelName || 'gemini-2.5-flash-image',
         status: template.status || 'draft',
         visibility: template.visibility || 'public',
-        tags: template.tags || [],
         isTrendingManual: template.isTrendingManual ?? false,
         categoryId: template.categoryId || '',
       })
-      setTagsInput(template.tags?.join(', ') || '')
       setThumbnailPreview(template.thumbnailUrl || null)
       setThumbnailFile(null)
       setActiveTab(0)
@@ -160,14 +156,12 @@ export function TemplateFormDialog({
         prompt: '',
         negativePrompt: '',
         modelProvider: 'gemini',
-        modelName: 'gemini-1.5-pro',
+        modelName: 'gemini-2.5-flash-image',
         status: 'draft',
         visibility: 'public',
-        tags: [],
         isTrendingManual: false,
         categoryId: '',
       })
-      setTagsInput('')
       setThumbnailPreview(null)
       setThumbnailFile(null)
       setActiveTab(0)
@@ -263,11 +257,6 @@ export function TemplateFormDialog({
       return
     }
 
-    const tags = tagsInput
-      .split(',')
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0)
-
     if (isEdit) {
       const updateData: UpdateTemplateRequest = {
         name: formData.name,
@@ -278,7 +267,6 @@ export function TemplateFormDialog({
         modelName: formData.modelName || undefined,
         status: formData.status,
         visibility: formData.visibility,
-        tags: tags.length > 0 ? tags : undefined,
         isTrendingManual: formData.isTrendingManual,
         categoryId: formData.categoryId || undefined,
       }
@@ -291,7 +279,6 @@ export function TemplateFormDialog({
         negativePrompt: formData.negativePrompt || undefined,
         modelProvider: formData.modelProvider || undefined,
         modelName: formData.modelName || undefined,
-        tags: tags.length > 0 ? tags : undefined,
         isTrendingManual: formData.isTrendingManual,
         categoryId: formData.categoryId || undefined,
       }
@@ -417,16 +404,6 @@ export function TemplateFormDialog({
                   Selecting a category will suggest relevant tags. You can add additional tags.
                 </Typography>
               </FormControl>
-
-              <TextField
-                fullWidth
-                label="Tags"
-                value={tagsInput}
-                onChange={(e) => setTagsInput(e.target.value)}
-                helperText="Comma-separated tags (e.g., anime, portrait, art)"
-                disabled={loading}
-                placeholder="anime, portrait, art"
-              />
             </Stack>
           </TabPanel>
 

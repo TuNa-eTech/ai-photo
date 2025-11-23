@@ -2,8 +2,8 @@ import {
   IsString,
   IsOptional,
   IsEnum,
-  IsArray,
   IsBoolean,
+  IsArray,
 } from 'class-validator';
 import { TemplateStatus, TemplateVisibility } from '@prisma/client';
 
@@ -45,15 +45,15 @@ export class UpdateTemplateDto {
   visibility?: TemplateVisibility;
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  tags?: string[];
-
-  @IsOptional()
   @IsBoolean()
   isTrendingManual?: boolean;
 
   @IsOptional()
   @IsString()
   categoryId?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 }

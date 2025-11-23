@@ -28,7 +28,7 @@ import { BearerAuthGuard } from '../auth/bearer-auth.guard';
 @Controller('v1/admin/templates')
 @UseGuards(BearerAuthGuard)
 export class TemplatesAdminController {
-  constructor(private readonly templatesService: TemplatesService) {}
+  constructor(private readonly templatesService: TemplatesService) { }
 
   /**
    * List all templates (admin view with full details and filters)
@@ -116,6 +116,16 @@ export class TemplatesAdminController {
   @Delete(':slug/trending')
   async unsetTrending(@Param('slug') slug: string) {
     return this.templatesService.setTrending(slug, false);
+  }
+
+  /**
+   * Bulk update templates
+   * POST /v1/admin/templates/bulk-update
+   */
+  @Post('bulk-update')
+  async bulkUpdate(@Body() bulkUpdateDto: any) {
+    const { templateIds, updates } = bulkUpdateDto;
+    return this.templatesService.bulkUpdateTemplates(templateIds, updates);
   }
 
   /**

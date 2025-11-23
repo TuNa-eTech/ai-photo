@@ -1,36 +1,118 @@
 {
-  "nav": { "features": "Features", "pricing": "Pricing", "faq": "FAQ" },
-  "cta": { "download": "Download on iOS", "startFree": "Start with 2 free credits" },
+  "nav": {
+    "features": "Features",
+    "pricing": "Pricing",
+    "faq": "FAQ"
+  },
+  "cta": {
+    "download": "Download on iOS",
+    "startFree": "Start with 2 free credits"
+  },
   "hero": {
     "title": "Cinematic photos in one tap",
-    "subtitle": "Turn portraits into cinematic or anime styles in seconds. Fast, private, social-ready."
+    "subtitle": "Turn portraits into cinematic or anime styles in seconds. Fast, private, social-ready.",
+    "beforeLabel": "Before",
+    "afterLabel": "After"
+  },
+  "bentoFeatures": {
+    "title": "Advanced AI",
+    "titleHighlight": "Technology",
+    "subtitle": "All the tools you need, packed into one app.",
+    "removeBackground": {
+      "title": "Remove Background",
+      "desc": "Separate subjects from backgrounds in 1 second with absolute precision."
+    },
+    "upscale": {
+      "title": "Upscale 4K",
+      "desc": "Sharpen blurry photos, increase resolution up to 4x."
+    },
+    "aiStyle": {
+      "title": "AI Style",
+      "desc": "Transform photos into paintings, anime or artistic styles."
+    },
+    "magicEraser": {
+      "title": "Magic Eraser",
+      "desc": "Remove unwanted people and objects with a light touch. AI automatically recreates perfect backgrounds."
+    }
   },
   "features": {
     "title": "Why AI Photo Studio",
     "items": [
-      { "title": "Cinematic & Anime", "desc": "Hundreds of styles tuned for social media." },
-      { "title": "Fast & Private", "desc": "Optimized delivery, privacy-first processing." },
-      { "title": "Studio Quality", "desc": "Natural skin tones, sharp details." }
+      {
+        "title": "Cinematic & Anime",
+        "desc": "Hundreds of styles tuned for social media."
+      },
+      {
+        "title": "Fast & Private",
+        "desc": "Optimized delivery, privacy-first processing."
+      },
+      {
+        "title": "Studio Quality",
+        "desc": "Natural skin tones, sharp details."
+      }
     ]
   },
-  "socialProof": { "title": "Trusted by creators" },
-  "testimonials": { "title": "What users say" },
+  "socialProof": {
+    "title": "Trusted by creators"
+  },
+  "testimonials": {
+    "title": "What users say"
+  },
   "pricing": {
     "title": "Simple pricing",
-    "toggle": { "monthly": "Monthly", "yearly": "Yearly (-20%)" },
+    "toggle": {
+      "monthly": "Monthly",
+      "yearly": "Yearly (-20%)"
+    },
     "plans": [
-      { "name": "Starter", "priceM": 5, "priceY": 48, "features": ["50 credits", "All styles", "Standard support"] },
-      { "name": "Pro", "priceM": 12, "priceY": 115, "features": ["150 credits", "All styles", "Priority support"] },
-      { "name": "Studio", "priceM": 25, "priceY": 240, "features": ["400 credits", "All styles", "Priority support"] }
+      {
+        "name": "Starter",
+        "priceM": 5,
+        "priceY": 48,
+        "features": [
+          "50 credits",
+          "All styles",
+          "Standard support"
+        ]
+      },
+      {
+        "name": "Pro",
+        "priceM": 12,
+        "priceY": 115,
+        "features": [
+          "150 credits",
+          "All styles",
+          "Priority support"
+        ]
+      },
+      {
+        "name": "Studio",
+        "priceM": 25,
+        "priceY": 240,
+        "features": [
+          "400 credits",
+          "All styles",
+          "Priority support"
+        ]
+      }
     ],
     "currency": "USD"
   },
   "faq": {
     "title": "FAQ",
     "items": [
-      { "q": "How does it work?", "a": "Upload a portrait and choose a style. Get results in seconds." },
-      { "q": "Is my data private?", "a": "We prioritize privacy. See our Privacy Policy for details." },
-      { "q": "Can I cancel anytime?", "a": "Yes, there’s no long-term commitment." }
+      {
+        "q": "How does it work?",
+        "a": "Upload a portrait and choose a style. Get results in seconds."
+      },
+      {
+        "q": "Is my data private?",
+        "a": "We prioritize privacy. See our Privacy Policy for details."
+      },
+      {
+        "q": "Can I cancel anytime?",
+        "a": "Yes, there’s no long-term commitment."
+      }
     ]
   },
   "form": {
@@ -47,8 +129,16 @@
       "message": "Please enter a message"
     }
   },
-  "footer": { "privacy": "Privacy", "terms": "Terms", "rights": "All rights reserved." },
-  "cookie": { "title": "Analytics cookies", "accept": "Accept", "reject": "Reject" },
+  "footer": {
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "rights": "All rights reserved."
+  },
+  "cookie": {
+    "title": "Analytics cookies",
+    "accept": "Accept",
+    "reject": "Reject"
+  },
   "legal": {
     "toc": "On this page",
     "updated": "Updated: {{date}}",

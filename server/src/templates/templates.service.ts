@@ -587,6 +587,45 @@ export class TemplatesService {
   }
 
   /**
+   * Bulk update multiple templates
+   */
+  async bulkUpdateTemplates(
+    templateIds: string[],
+    updates: {
+      status?: TemplateStatus;
+      visibility?: string;
+      isTrendingManual?: boolean;
+      modelProvider?: string;
+      modelName?: string;
+      categoryId?: string;
+    },
+  ): Promise<{ updated: number }> {
+    // Validate that at least one template ID is provided
+    if (!templateIds || templateIds.length === 0) {
+      throw new ConflictException('No template IDs provided for bulk update');
+    }
+
+    // Build update data object, only including defined fields
+    const updateData: any = {};
+    if (updates.status !== undefined) updateData.status = updates.status;
+    if (updates.visibility !== undefined) updateData.visibility = updates.visibility;
+    if (updates.isTrendingManual !== undefined) updateData.isTrendingManual = updates.isTrendingManual;
+    if (updates.modelProvider !== undefined) updateData.modelProvider = updates.modelProvider;
+    if (updates.modelName !== undefined) updateData.modelName = updates.modelName;
+    if (updates.categoryId !== undefined) updateData.categoryId = updates.categoryId;
+
+    // Perform bulk update
+    const result = await this.prisma.template.updateMany({
+      where: {
+        id: { in: templateIds },
+      },
+      data: updateData,
+    });
+
+    return { updated: result.count };
+  }
+
+  /**
    * Convert DTO AssetKind to Prisma AssetKind enum
    */
   private mapToPrismaAssetKind(kind: AssetKind): AssetKind {
