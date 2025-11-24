@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import GradientButton from '../ui/GradientButton';
 
 const NavBar = () => {
+    const { t } = useTranslation();
     const [scrolled, setScrolled] = useState(false);
     const location = useLocation();
     const isHome = location.pathname === '/';
@@ -23,21 +25,22 @@ const NavBar = () => {
             <div className="container mx-auto px-4 flex items-center justify-between">
                 <Link to="/" className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-accent-gradient flex items-center justify-center text-white font-bold">
-                        AI
+                        B
                     </div>
-                    <span className="text-xl font-bold tracking-tight text-white">ImageAI</span>
+                    <span className="text-xl font-bold tracking-tight text-white">BokPhotoAI</span>
                 </Link>
 
                 {isHome && (
                     <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-300">
-                        <a href="#features" className="hover:text-white transition-colors">Tính năng</a>
-                        <a href="#showcase" className="hover:text-white transition-colors">Showcase</a>
-                        <a href="#pricing" className="hover:text-white transition-colors">Bảng giá</a>
+                        <a href="#features" className="hover:text-white transition-colors">{t('nav.features')}</a>
+                        <a href="#showcase" className="hover:text-white transition-colors">{t('nav.showcase')}</a>
+                        <a href="#pricing" className="hover:text-white transition-colors">{t('nav.pricing')}</a>
+                        <Link to="/contact" className="hover:text-white transition-colors">{t('nav.contact')}</Link>
                     </div>
                 )}
 
                 <GradientButton className="text-sm px-6 py-2">
-                    Tải App
+                    {t('cta.download')}
                 </GradientButton>
             </div>
         </nav>

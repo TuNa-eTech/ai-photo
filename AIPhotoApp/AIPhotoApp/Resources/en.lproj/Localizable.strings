@@ -263,3 +263,5 @@
 /* InsufficientCreditsView keys */
 "l10n.photo.accessibility.saveToPhotos" = "Save image to Photos";
 "l10n.projects.viewAll" = "View All Projects";
+"l10n.category.all" = "All";
+"l10n.category.trending" = "Trending";

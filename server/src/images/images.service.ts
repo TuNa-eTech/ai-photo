@@ -14,6 +14,7 @@ import { TemplatesService } from '../templates/templates.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreditsService } from '../credits/credits.service';
 import { ProcessImageDto, ProcessImageResponse } from './dto';
+import { delay } from 'rxjs';
 
 @Injectable()
 export class ImagesService {
@@ -26,7 +27,7 @@ export class ImagesService {
     private readonly configService: ConfigService,
     @Inject(forwardRef(() => CreditsService))
     private readonly creditsService: CreditsService,
-  ) {}
+  ) { }
 
   /**
    * Read mock image from mock_dev/test_img.png and convert to base64
@@ -78,6 +79,8 @@ export class ImagesService {
         this.logger.log(
           '🔄 Mock image mode enabled - using mock_dev/test_img.png',
         );
+        /// delay 2s
+        delay(2000);
 
         // 1. Validate image (still validate input even in mock mode)
         const validation = this.geminiService.validateImageBase64(

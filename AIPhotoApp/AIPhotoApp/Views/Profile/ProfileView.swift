@@ -86,7 +86,7 @@ struct ProfileView: View {
             .sheet(isPresented: $showHelpWebView) {
                 WebViewSheet(
                     title: L10n.tr("l10n.profile.help.title"),
-                    url: URL(string: "https://bokphoto.e-tech.network/#faq")
+                    url: URL(string: "https://bokphoto.e-tech.network/contact")
                         ?? URL(fileURLWithPath: "")
                 )
             }

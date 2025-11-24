@@ -1,12 +1,15 @@
 {
   "nav": {
     "features": "Features",
+    "showcase": "Showcase",
     "pricing": "Pricing",
+    "contact": "Contact",
     "faq": "FAQ"
   },
   "cta": {
     "download": "Download on iOS",
-    "startFree": "Start with 2 free credits"
+    "startFree": "Start with 2 free credits",
+    "ready": "Ready to create?"
   },
   "hero": {
     "title": "Cinematic photos in one tap",
@@ -36,7 +39,7 @@
     }
   },
   "features": {
-    "title": "Why AI Photo Studio",
+    "title": "Why BokPhotoAI",
     "items": [
       {
         "title": "Cinematic & Anime",
@@ -56,7 +59,17 @@
     "title": "Trusted by creators"
   },
   "testimonials": {
-    "title": "What users say"
+    "title": "What users say",
+    "items": [
+      {
+        "quote": "Studio-quality portraits without the studio. Love the cinematic styles!",
+        "author": "Alex, Creator"
+      },
+      {
+        "quote": "Anime looks are spot on. Perfect for my socials.",
+        "author": "Minh, Influencer"
+      }
+    ]
   },
   "pricing": {
     "title": "Simple pricing",
@@ -115,6 +128,41 @@
       }
     ]
   },
+  "contact": {
+    "title": "Contact Us",
+    "subtitle": "We are always ready to listen and support you.",
+    "form": {
+      "title": "Send a message",
+      "name": "Name",
+      "namePlaceholder": "Enter your name",
+      "email": "Email",
+      "emailPlaceholder": "example@email.com",
+      "message": "Message",
+      "messagePlaceholder": "Message content...",
+      "submit": "Send Message"
+    },
+    "support": {
+      "title": "Support Email",
+      "email": "support@e-tech.network"
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "items": [
+        {
+          "question": "What is BokPhotoAI?",
+          "answer": "BokPhotoAI is an AI-powered photo editing app that creates unique and artistic photos."
+        },
+        {
+          "question": "Where can I download the app?",
+          "answer": "The app is currently in development and will be available on the App Store soon."
+        },
+        {
+          "question": "Is the app free?",
+          "answer": "We offer both free and paid versions with advanced features."
+        }
+      ]
+    }
+  },
   "form": {
     "title": "Contact us",
     "name": "Name",
@@ -132,7 +180,7 @@
   "footer": {
     "privacy": "Privacy",
     "terms": "Terms",
-    "rights": "All rights reserved."
+    "rights": "© 2025 BokPhotoAI. All rights reserved."
   },
   "cookie": {
     "title": "Analytics cookies",
@@ -164,7 +212,7 @@
         },
         "contact": {
           "title": "Contact",
-          "body": "Questions about privacy? Contact us at support@aiphotostudio.app."
+          "body": "Questions about privacy? Contact us at support@e-tech.network."
         }
       }
     },
@@ -190,7 +238,7 @@
         },
         "contact": {
           "title": "Contact",
-          "body": "For questions about these Terms, contact legal@aiphotostudio.app."
+          "body": "For questions about these Terms, contact support@e-tech.network."
         }
       }
     }

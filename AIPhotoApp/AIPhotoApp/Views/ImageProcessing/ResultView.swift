@@ -14,7 +14,7 @@ import Photos
 struct ResultView: View {
     let project: Project
     let originalImage: UIImage?
-    
+
     @Environment(\.dismiss) private var dismiss
     @State private var processedImage: UIImage?
     @State private var mode: Mode = .after
@@ -22,29 +22,29 @@ struct ResultView: View {
     @State private var showPermissionDeniedAlert: Bool = false
     @State private var comparePosition: CGFloat = 0.5
     @State private var showZoomHint: Bool = true
-    
+
     enum Mode: String, CaseIterable, Identifiable {
         case before = "Before"
         case after = "After"
         case compare = "Compare"
         var id: String { rawValue }
     }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
                 GlassBackgroundView(animated: true)
-                
+
                 VStack(spacing: 0) {
                     // Mode control
                     GlassSegmentedControl(mode: $mode)
                         .padding(.horizontal, 20)
                         .padding(.top, 16)
                         .padding(.bottom, 20)
-                    
+
                     // Image area - centered
                     Spacer()
-                    
+
                     Group {
                         if mode == .compare, let before = originalImage, let after = processedImage {
                             CompareView(before: before, after: after, position: $comparePosition)
@@ -87,7 +87,7 @@ struct ResultView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.horizontal, 20)
-                    
+
                     if showZoomHint, processedImage != nil {
                         Text(L10n.tr("l10n.result.doubleTapZoom"))
                             .font(.caption2)
@@ -100,7 +100,7 @@ struct ResultView: View {
                                 }
                             }
                     }
-                    
+
                     Spacer()
                 }
                 .navigationTitle(L10n.tr("l10n.result.title"))
@@ -128,7 +128,7 @@ struct ResultView: View {
                                 }
                                 .buttonStyle(GlassCTAButtonStyle())
                                 .accessibilityLabel(Text(L10n.tr("l10n.photo.accessibility.saveToPhotos")))
-                                
+
                                 ShareLink(
                                     item: Image(uiImage: after),
                                     preview: SharePreview("My AI Image", image: Image(uiImage: after))
@@ -139,7 +139,7 @@ struct ResultView: View {
                                 .buttonStyle(GlassCTAButtonStyle())
                             }
                             .font(.headline)
-                            
+
                             // Secondary action row (Projects)
                             NavigationLink {
                                 MyProjectsView()
@@ -187,7 +187,7 @@ struct ResultView: View {
             Text(L10n.tr("l10n.photo.permissionMessage"))
         }
     }
-    
+
     // MARK: - Save
     private func saveToPhotos(_ image: UIImage) {
         Task {
@@ -208,7 +208,7 @@ struct ResultView: View {
 
 private struct GlassSegmentedControl: View {
     @Binding var mode: ResultView.Mode
-    
+
     var body: some View {
         HStack(spacing: 8) {
             segment("Before", .before, "photo")
@@ -219,7 +219,7 @@ private struct GlassSegmentedControl: View {
         .background(.ultraThinMaterial.opacity(0.9), in: Capsule())
         .overlay(Capsule().stroke(GlassTokens.borderColor.opacity(0.3), lineWidth: 0.8))
     }
-    
+
     @ViewBuilder
     private func segment(_ title: String, _ value: ResultView.Mode, _ system: String) -> some View {
         let isSelected = mode == value
@@ -352,7 +352,7 @@ private struct CompareView: View {
                         )
                         .background(.ultraThinMaterial.opacity(0.9))
                         .overlay(Circle().stroke(GlassTokens.borderColor.opacity(0.4), lineWidth: 1.5))
-                    
+
                     HStack(spacing: 2) {
                         Image(systemName: "chevron.left")
                             .font(.caption2.weight(.semibold))

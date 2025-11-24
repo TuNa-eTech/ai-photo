@@ -14,16 +14,16 @@ import UIKit
 struct InsufficientCreditsView: View {
      @Environment(\.dismiss) private var dismiss
      @Environment(AuthViewModel.self) private var authViewModel
-     
+
      @State private var creditsViewModel = CreditsViewModel()
      @State private var showCreditsPurchase = false
      @State private var showLoadingOverlay = false
      @State private var hasRefreshed = false
-     
+
      var body: some View {
           ZStack {
               GlassBackgroundView()
-              
+
               ScrollView(showsIndicators: false) {
                   VStack(spacing: 24) {
                       headerSection
@@ -34,7 +34,7 @@ struct InsufficientCreditsView: View {
                   .padding(.top, 20)
                   .padding(.bottom, 40)
               }
-              
+
               if showLoadingOverlay {
                   loadingOverlay
               }
@@ -93,7 +93,7 @@ struct InsufficientCreditsView: View {
              }
          }
      }
-    
+
     // MARK: - Header
      private var headerSection: some View {
          VStack(spacing: 12) {
@@ -119,7 +119,7 @@ struct InsufficientCreditsView: View {
          }
          .padding(.vertical, 8)
      }
-    
+
     // MARK: - Options
     private var optionsSection: some View {
         VStack(spacing: 16) {
@@ -127,7 +127,7 @@ struct InsufficientCreditsView: View {
             purchaseCreditsCard
         }
     }
-    
+
     private var watchAdCard: some View {
          OptionCard(
              icon: "play.circle.fill",
@@ -153,7 +153,7 @@ struct InsufficientCreditsView: View {
              }
          )
      }
-    
+
     private var purchaseCreditsCard: some View {
          OptionCard(
              icon: "creditcard.fill",
@@ -170,7 +170,7 @@ struct InsufficientCreditsView: View {
              }
          )
      }
-    
+
     // MARK: - Info
      private var infoSection: some View {
          VStack(alignment: .leading, spacing: 12) {
@@ -200,7 +200,7 @@ struct InsufficientCreditsView: View {
          .padding(20)
          .glassCard()
      }
-    
+
     // MARK: - Loading Overlay
      private var loadingOverlay: some View {
          ZStack {

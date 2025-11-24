@@ -14,6 +14,8 @@ COPY tsconfig*.json nest-cli.json ./
 COPY src ./src
 # Copy Firebase Admin SDK credentials (if exists)
 COPY firebase-adminsdk.json* ./
+# Copy mock image directory for development/testing
+COPY mock_dev ./mock_dev
 
 # Generate Prisma client and build the app
 RUN yarn prisma:generate
@@ -32,6 +34,8 @@ COPY package.json ./
 COPY --from=builder /app/prisma ./prisma
 # Copy Firebase Admin SDK credentials (if exists)
 COPY --from=builder /app/firebase-adminsdk.json* ./
+# Copy mock_dev directory for development/testing
+COPY --from=builder /app/mock_dev ./mock_dev
 
 # Expose port and run the server
 EXPOSE 8080

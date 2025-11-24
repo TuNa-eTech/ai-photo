@@ -18,7 +18,6 @@ struct TemplateSelectionView: View {
     @State private var showImageProcessing: Bool = false
     @State private var loadErrorMessage: String?
     @State private var showLoadErrorAlert: Bool = false
-
     // Action Sheet + Picker/Camera states
     @State private var showSourceDialog: Bool = false
     @State private var showLibraryPicker: Bool = false
@@ -75,26 +74,18 @@ struct TemplateSelectionView: View {
             Text(loadErrorMessage ?? L10n.tr("l10n.image.unknownError"))
         }
         .photosPicker(
-            isPresented: $showLibraryPicker,
-            selection: $selectedPhotoItem,
-            matching: .images
+            isPresented: $showLibraryPicker, selection: $selectedPhotoItem, matching: .images
         )
         #if canImport(UIKit)
-            .fullScreenCover(isPresented: $showCamera) {
+            .sheet(isPresented: $showCamera) {
                 CameraPicker(
                     onImage: { image in
                         selectedImage = image
-                        showCamera = false
-                        // Delay to allow camera to dismiss smoothly before navigation
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            showImageProcessing = true
-                        }
+                        showImageProcessing = true
                     },
                     onCancel: {
-                        showCamera = false
-                    }
-                )
-                .ignoresSafeArea()
+                        // no-op
+                    })
             }
         #endif
         .alert(L10n.tr("l10n.camera.unavailable"), isPresented: $showCameraUnavailableAlert) {
@@ -138,40 +129,6 @@ struct TemplateSelectionView: View {
         // If all attempts fail, show a friendly message
         loadErrorMessage = L10n.tr("l10n.image.cannotLoadTip")
         showLoadErrorAlert = true
-    }
-}
-
-// MARK: - Preview
-
-#Preview("New Template") {
-    let authViewModel = AuthViewModel(authService: AuthService(), userRepository: UserRepository())
-    NavigationStack {
-        TemplateSelectionView(
-            template: TemplateDTO(
-                id: "anime-style",
-                name: "Anime Style",
-                thumbnailURL: URL(string: "https://picsum.photos/400/300"),
-                publishedAt: Calendar.current.date(byAdding: .day, value: -3, to: Date()),
-                usageCount: 150
-            )
-        )
-        .environment(authViewModel)
-    }
-}
-
-#Preview("Simple Template") {
-    let authViewModel = AuthViewModel(authService: AuthService(), userRepository: UserRepository())
-    NavigationStack {
-        TemplateSelectionView(
-            template: TemplateDTO(
-                id: "watercolor",
-                name: "Watercolor Painting",
-                thumbnailURL: URL(string: "https://picsum.photos/400/300?random=2"),
-                publishedAt: nil,
-                usageCount: nil
-            )
-        )
-        .environment(authViewModel)
     }
 }
 

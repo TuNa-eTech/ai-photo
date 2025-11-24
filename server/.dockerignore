@@ -91,7 +91,7 @@ data/
 *.db
 
 # Development directories
-mock_dev/
+#mock_dev/
 generated/
 
 # Firebase credentials

@@ -10,15 +10,6 @@ import SwiftUI
 
 @Observable
 final class CategoryManager {
-    // MARK: - UI Metadata Mapping (icons for categories)
-    // This mapping is local UI design constants and doesn't change
-    private static let uiMetadata: [String: String] = [
-        "portrait": "person.fill",
-        "landscape": "photo.fill",
-        "artistic": "paintpalette.fill",
-        "vintage": "camera.fill",
-        "abstract": "wand.and.stars",
-    ]
 
     // MARK: - State
     var categories: [TemplateCategory] = []
@@ -26,17 +17,21 @@ final class CategoryManager {
     var errorMessage: String?
 
     // MARK: - All Category (special case, always available)
-    static let allCategory = TemplateCategory(
-        id: "all",
-        name: "Tất cả",
-        icon: "square.grid.2x2"
-    )
+    static var allCategory: TemplateCategory {
+        TemplateCategory(
+            id: "all",
+            name: L10n.tr("l10n.category.all"),
+            icon: "square.grid.2x2"
+        )
+    }
 
-    static let trendingCategory = TemplateCategory(
-        id: "trending",
-        name: "Thịnh hành",  // Trending
-        icon: "chart.line.uptrend.xyaxis"
-    )
+    static var trendingCategory: TemplateCategory {
+        TemplateCategory(
+            id: "trending",
+            name: L10n.tr("l10n.category.trending"),
+            icon: "chart.line.uptrend.xyaxis"
+        )
+    }
 
     // MARK: - Computed
     var allCategories: [TemplateCategory] {
@@ -85,7 +80,8 @@ final class CategoryManager {
 
     /// Convert CategoryDTO to TemplateCategory with UI metadata
     private static func categoryFromDTO(_ dto: CategoryDTO) -> TemplateCategory {
-        let icon = uiMetadata[dto.id] ?? "tag.fill"
+        // Default icon since we removed the hardcoded mapping
+        let icon = "tag.fill"
 
         return TemplateCategory(
             id: dto.id,

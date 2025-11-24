@@ -14,6 +14,10 @@ struct AuthLandingView: View {
     @State private var showCard = false
     @State private var logoScale: CGFloat = 1.0
 
+    // Webview states
+    @State private var showPrivacyWebView = false
+    @State private var showTermsWebView = false
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -141,24 +145,24 @@ struct AuthLandingView: View {
                                         .foregroundStyle(GlassTokens.textSecondary)
 
                                     HStack(spacing: 16) {
-                                        Link(
-                                            L10n.tr("l10n.auth.terms"),
-                                            destination: URL(
-                                                string: "https://bokphoto.e-tech.network/terms")!
-                                        )
-                                        .font(.caption.weight(.medium))
-                                        .foregroundStyle(GlassTokens.textPrimary)
+                                        Button(action: {
+                                            showTermsWebView = true
+                                        }) {
+                                            Text(L10n.tr("l10n.auth.terms"))
+                                                .font(.caption.weight(.medium))
+                                                .foregroundStyle(GlassTokens.textPrimary)
+                                        }
 
                                         Text("•")
                                             .foregroundStyle(GlassTokens.textSecondary)
 
-                                        Link(
-                                            L10n.tr("l10n.auth.privacy"),
-                                            destination: URL(
-                                                string: "https://bokphoto.e-tech.network/privacy")!
-                                        )
-                                        .font(.caption.weight(.medium))
-                                        .foregroundStyle(GlassTokens.textPrimary)
+                                        Button(action: {
+                                            showPrivacyWebView = true
+                                        }) {
+                                            Text(L10n.tr("l10n.auth.privacy"))
+                                                .font(.caption.weight(.medium))
+                                                .foregroundStyle(GlassTokens.textPrimary)
+                                        }
                                     }
                                 }
                                 .padding(.top, 8)
@@ -193,6 +197,20 @@ struct AuthLandingView: View {
                 }
             }
             .navigationBarHidden(true)
+            .sheet(isPresented: $showPrivacyWebView) {
+                WebViewSheet(
+                    title: L10n.tr("l10n.profile.aboutPrivacy.title"),
+                    url: URL(string: "https://bokphoto.e-tech.network/privacy")
+                        ?? URL(fileURLWithPath: "")
+                )
+            }
+            .sheet(isPresented: $showTermsWebView) {
+                WebViewSheet(
+                    title: L10n.tr("l10n.profile.terms.title"),
+                    url: URL(string: "https://bokphoto.e-tech.network/terms")
+                        ?? URL(fileURLWithPath: "")
+                )
+            }
         }
         .onAppear {
             withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.1)) {

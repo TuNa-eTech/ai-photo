@@ -244,3 +244,5 @@
 /* InsufficientCreditsView keys (VI) */
 "l10n.photo.accessibility.saveToPhotos" = "Lưu ảnh vào Ảnh";
 "l10n.projects.viewAll" = "Xem tất cả dự án";
+"l10n.category.all" = "Tất cả";
+"l10n.category.trending" = "Thịnh hành";
