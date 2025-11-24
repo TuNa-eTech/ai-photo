@@ -125,7 +125,7 @@ struct ImageProcessingView: View {
         if case .completed(let project) = newValue {
             Task { @MainActor in
                 #if canImport(UIKit)
-                HapticFeedback.light()
+                    HapticFeedback.light()
                 #endif
                 // Refresh credits after completion
                 await creditsViewModel.refreshCreditsBalance()
@@ -137,7 +137,8 @@ struct ImageProcessingView: View {
         }
         // Check for insufficient credits error
         if case .failed(let error) = newValue,
-           case .insufficientCredits = error {
+            case .insufficientCredits = error
+        {
             creditsBeforeInsufficientError = creditsViewModel.creditsBalance
             hasReturnedWithInsufficientCredits = true
             navigateToInsufficientCredits = true
@@ -164,21 +165,11 @@ struct ImageProcessingView: View {
         Task { @MainActor in
             await creditsViewModel.refreshCreditsBalance()
             if case .failed(let error) = viewModel?.processingState,
-               case .insufficientCredits = error,
-               creditsViewModel.creditsBalance > 0 {
+                case .insufficientCredits = error,
+                creditsViewModel.creditsBalance > 0
+            {
                 await viewModel?.processImage(template: template, image: image)
             }
-        }
-    }
-}
-
-extension ImageProcessingViewModel.ProcessingState {
-    var canShowProgress: Bool {
-        switch self {
-        case .uploading, .processing, .processingInBackground:
-            return true
-        default:
-            return false
         }
     }
 }
@@ -204,13 +195,15 @@ extension ImageProcessingViewModel.ProcessingState {
             usageCount: usageCount
         )
 
-        let uiImage = UIImage(systemName: "person.crop.square")?
+        let uiImage =
+            UIImage(systemName: "person.crop.square")?
             .withTintColor(.black, renderingMode: .alwaysOriginal) ?? UIImage()
 
         // Mock dependencies for preview
         let mockAuthService = AuthService()
         let mockUserRepository = UserRepository(client: APIClient())
-        let authViewModel = AuthViewModel(authService: mockAuthService, userRepository: mockUserRepository)
+        let authViewModel = AuthViewModel(
+            authService: mockAuthService, userRepository: mockUserRepository)
 
         ImageProcessingView(template: template, image: uiImage)
             .environment(authViewModel)

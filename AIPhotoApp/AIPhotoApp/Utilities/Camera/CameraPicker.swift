@@ -5,6 +5,8 @@
     struct CameraPicker: UIViewControllerRepresentable {
         typealias UIViewControllerType = UIImagePickerController
 
+        @Environment(\.dismiss) private var dismiss
+
         var onImage: (UIImage) -> Void
         var onCancel: () -> Void = {}
 
@@ -13,6 +15,7 @@
             picker.sourceType = .camera
             picker.allowsEditing = false
             picker.delegate = context.coordinator
+            picker.modalPresentationStyle = .fullScreen
             return picker
         }
 
@@ -20,7 +23,7 @@
         }
 
         func makeCoordinator() -> Coordinator {
-            Coordinator(onImage: onImage, onCancel: onCancel)
+            Coordinator(onImage: onImage, onCancel: onCancel, dismiss: dismiss)
         }
 
         final class Coordinator: NSObject, UIImagePickerControllerDelegate,
@@ -28,10 +31,15 @@
         {
             let onImage: (UIImage) -> Void
             let onCancel: () -> Void
+            let dismiss: DismissAction
 
-            init(onImage: @escaping (UIImage) -> Void, onCancel: @escaping () -> Void) {
+            init(
+                onImage: @escaping (UIImage) -> Void, onCancel: @escaping () -> Void,
+                dismiss: DismissAction
+            ) {
                 self.onImage = onImage
                 self.onCancel = onCancel
+                self.dismiss = dismiss
             }
 
             func imagePickerController(
@@ -42,10 +50,12 @@
                 if let image = image {
                     onImage(image)
                 }
+                dismiss()
             }
 
             func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
                 onCancel()
+                dismiss()
             }
         }
     }
