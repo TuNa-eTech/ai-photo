@@ -24,9 +24,21 @@ import {
 import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import LogoutIcon from '@mui/icons-material/Logout'
 import DashboardIcon from '@mui/icons-material/Dashboard'
-import StyleIcon from '@mui/icons-material/Style'
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart'
 import HistoryIcon from '@mui/icons-material/History'
+import PeopleIcon from '@mui/icons-material/People'
+import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary'
+import CategoryIcon from '@mui/icons-material/Category'
+
+const mockData = [
+  { label: 'Dashboard', icon: DashboardIcon, link: '/' },
+  { label: 'Users', icon: PeopleIcon, link: '/users' },
+  { label: 'Templates', icon: PhotoLibraryIcon, link: '/templates' },
+  { label: 'Categories', icon: CategoryIcon, link: '/categories' },
+  { label: 'IAP Products', icon: ShoppingCartIcon, link: '/iap-products' },
+  { label: 'Transactions', icon: HistoryIcon, link: '/transactions' },
+];
+
 import { useAuth } from '../../auth'
 
 export function AppLayout(): React.ReactElement {
@@ -91,76 +103,28 @@ export function AppLayout(): React.ReactElement {
 
           {/* Navigation */}
           <Stack direction="row" spacing={1} sx={{ ml: 4 }}>
-            <Button
-              startIcon={<DashboardIcon />}
-              onClick={() => navigate('/')}
-              sx={{
-                color: isActive('/') && !isActive('/templates') && !isActive('/categories') ? 'primary.main' : 'text.secondary',
-                fontWeight: isActive('/') && !isActive('/templates') && !isActive('/categories') ? 600 : 400,
-                bgcolor: isActive('/') && !isActive('/templates') && !isActive('/categories') ? alpha('#3f51b5', 0.08) : 'transparent',
-                '&:hover': {
-                  bgcolor: alpha('#3f51b5', 0.12),
-                },
-              }}
-            >
-              Dashboard
-            </Button>
-            <Button
-              startIcon={<StyleIcon />} // Reusing StyleIcon for now, or import CategoryIcon
-              onClick={() => navigate('/categories')}
-              sx={{
-                color: isActive('/categories') ? 'primary.main' : 'text.secondary',
-                fontWeight: isActive('/categories') ? 600 : 400,
-                bgcolor: isActive('/categories') ? alpha('#3f51b5', 0.08) : 'transparent',
-                '&:hover': {
-                  bgcolor: alpha('#3f51b5', 0.12),
-                },
-              }}
-            >
-              Categories
-            </Button>
-            <Button
-              startIcon={<StyleIcon />}
-              onClick={() => navigate('/templates')}
-              sx={{
-                color: isActive('/templates') ? 'primary.main' : 'text.secondary',
-                fontWeight: isActive('/templates') ? 600 : 400,
-                bgcolor: isActive('/templates') ? alpha('#3f51b5', 0.08) : 'transparent',
-                '&:hover': {
-                  bgcolor: alpha('#3f51b5', 0.12),
-                },
-              }}
-            >
-              Templates
-            </Button>
-            <Button
-              startIcon={<ShoppingCartIcon />}
-              onClick={() => navigate('/iap-products')}
-              sx={{
-                color: isActive('/iap-products') ? 'primary.main' : 'text.secondary',
-                fontWeight: isActive('/iap-products') ? 600 : 400,
-                bgcolor: isActive('/iap-products') ? alpha('#3f51b5', 0.08) : 'transparent',
-                '&:hover': {
-                  bgcolor: alpha('#3f51b5', 0.12),
-                },
-              }}
-            >
-              IAP Products
-            </Button>
-            <Button
-              startIcon={<HistoryIcon />}
-              onClick={() => navigate('/transactions')}
-              sx={{
-                color: isActive('/transactions') ? 'primary.main' : 'text.secondary',
-                fontWeight: isActive('/transactions') ? 600 : 400,
-                bgcolor: isActive('/transactions') ? alpha('#3f51b5', 0.08) : 'transparent',
-                '&:hover': {
-                  bgcolor: alpha('#3f51b5', 0.12),
-                },
-              }}
-            >
-              Transactions
-            </Button>
+            {mockData.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.link) && (item.link === '/' ? location.pathname === '/' : true);
+
+              return (
+                <Button
+                  key={item.link}
+                  startIcon={<Icon />}
+                  onClick={() => navigate(item.link)}
+                  sx={{
+                    color: active ? 'primary.main' : 'text.secondary',
+                    fontWeight: active ? 600 : 400,
+                    bgcolor: active ? alpha('#3f51b5', 0.08) : 'transparent',
+                    '&:hover': {
+                      bgcolor: alpha('#3f51b5', 0.12),
+                    },
+                  }}
+                >
+                  {item.label}
+                </Button>
+              );
+            })}
           </Stack>
 
           <Box sx={{ flexGrow: 1 }} />

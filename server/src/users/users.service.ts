@@ -187,4 +187,62 @@ export class UsersService {
       updated_at: user.updatedAt,
     };
   }
+
+  /**
+   * Get all users with pagination and filtering
+   */
+  async findAll(
+    page: number,
+    limit: number,
+    search?: string,
+    type?: 'all' | 'anonymous' | 'real',
+  ) {
+    const skip = (page - 1) * limit;
+    const where: any = {};
+
+    // Filter by type
+    if (type === 'anonymous') {
+      where.isAnonymous = true;
+    } else if (type === 'real') {
+      where.isAnonymous = false;
+    }
+
+    // Filter by search term (name or email)
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return {
+      data: users.map((user) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar_url: user.avatarUrl ?? undefined,
+        credits: user.credits,
+        is_anonymous: user.isAnonymous,
+        last_active_at: user.lastActiveAt,
+        created_at: user.createdAt,
+        updated_at: user.updatedAt,
+      })),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
 }

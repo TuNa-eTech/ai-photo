@@ -14,6 +14,7 @@ import { TemplateDetailPage } from '../pages/Templates/TemplateDetailPage'
 import { IAPProductsPage } from '../pages/IAP/IAPProductsPage'
 import { TransactionsPage } from '../pages/Transactions/TransactionsPage'
 import { CategoriesPage } from '../pages/Categories/CategoriesPage'
+import { UsersPage } from '../pages/Users/UsersPage';
 
 export const router = createBrowserRouter([
   {
@@ -31,6 +32,10 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <DashboardPage />,
+      },
+      {
+        path: 'users',
+        element: <UsersPage />,
       },
       {
         path: 'categories',

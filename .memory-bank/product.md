@@ -50,6 +50,7 @@ User experience goals
 
 Current features (Web CMS)
 - **Dashboard**: Overview with stats (total, published, drafts, usage) and recent templates list.
+- **User Management**: View, search, and filter users (Real vs Anonymous) with pagination.
 - **Templates List**: Full CRUD with advanced filters (search, status, visibility, tags, sort), pagination.
 - **Template Detail**: 2-column layout with comprehensive info display and image generator.
 - **Image Generator**: Test AI generation with file upload or URL paste, see side-by-side comparison.

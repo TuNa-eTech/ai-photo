@@ -26,6 +26,7 @@ web-cms/
 │   ├── api/                    # API client layer
 │   │   ├── client.ts          # Base axios client with interceptors
 │   │   ├── templates.ts       # Templates API functions
+│   │   ├── users.ts           # Users API functions
 │   │   └── images.ts          # Image processing API
 │   ├── auth/                   # Authentication
 │   │   ├── AuthContext.tsx    # Firebase auth context
@@ -52,6 +53,9 @@ web-cms/
 │   │   ├── Templates/
 │   │   │   ├── TemplatesListPage.tsx
 │   │   │   └── TemplateDetailPage.tsx
+│   │   │   └── TemplateDetailPage.tsx
+│   │   ├── Users/
+│   │   │   └── UsersPage.tsx
 │   │   └── Login/
 │   │       └── LoginPage.tsx
 │   ├── router/
@@ -105,7 +109,11 @@ web-cms/
 - `updateTemplate(slug, data)` - Update template
 - `deleteTemplate(slug)` - Delete template
 - `publishTemplate(slug)` - Publish template
+- `publishTemplate(slug)` - Publish template
 - `unpublishTemplate(slug)` - Unpublish template
+
+#### Users API (`api/users.ts`)
+- `getUsers(params)` - List users with pagination, search, and filtering
 
 #### Images API (`api/images.ts`)
 - `processImage(request)` - Process image with AI template
@@ -166,7 +174,17 @@ Custom Material-UI theme with professional design:
   - Create new template button
   - Templates table with actions (edit, delete, publish/unpublish, view)
   - Pagination
+  - Pagination
   - Snackbar notifications
+
+#### Users Management (`pages/Users/UsersPage.tsx`)
+- User administration page
+- Features:
+  - User list with avatar, name, email
+  - User type indicator (Real vs Anonymous)
+  - Search by name/email
+  - Filter by user type
+  - Pagination
 
 #### Template Detail (`pages/Templates/TemplateDetailPage.tsx`)
 - Comprehensive template view and testing

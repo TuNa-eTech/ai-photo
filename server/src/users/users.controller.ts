@@ -3,6 +3,8 @@ import { BearerAuthGuard } from '../auth/bearer-auth.guard';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { UsersService } from './users.service';
+import { GetUsersDto } from './dto/get-users.dto';
+import { Query } from '@nestjs/common';
 
 /**
  * Users controller
@@ -44,5 +46,21 @@ export class UsersController {
     const deviceId = req.headers['x-device-id'] as string | undefined;
 
     return this.usersService.registerUser(firebaseUid, dto, isAnonymous, deviceId);
+  }
+
+  /**
+   * GET /v1/users
+   * Get all users with pagination and filtering
+   * Requires Admin privileges (TODO: Add AdminGuard)
+   */
+  @Get()
+  @UseGuards(BearerAuthGuard)
+  async findAll(@Query() query: GetUsersDto) {
+    return this.usersService.findAll(
+      query.page || 1,
+      query.limit || 10,
+      query.search,
+      query.type,
+    );
   }
 }
