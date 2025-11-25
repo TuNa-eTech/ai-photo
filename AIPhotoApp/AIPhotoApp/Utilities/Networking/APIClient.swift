@@ -18,19 +18,25 @@
 
 import Foundation
 
+#if canImport(UIKit)
+    import UIKit
+#endif
+
 // MARK: - Network Logger
 
 struct NetworkLogger {
     var enabled: Bool = {
         #if DEBUG
-        true
+            true
         #else
-        false
+            false
         #endif
     }()
-    var redactHeaders: Set<String> = ["authorization", "api-key", "x-api-key", "cookie", "set-cookie"]
-    var maxBodyLength: Int = 100_000 // truncate very large bodies to avoid Xcode lag
-    
+    var redactHeaders: Set<String> = [
+        "authorization", "api-key", "x-api-key", "cookie", "set-cookie",
+    ]
+    var maxBodyLength: Int = 100_000  // truncate very large bodies to avoid Xcode lag
+
     /// Extract safe token info (prefix + length + suffix) for debugging
     private func extractTokenInfo(from authHeader: String) -> String {
         // Format: "Bearer <token>"
@@ -38,10 +44,10 @@ struct NetworkLogger {
         guard parts.count == 2, parts[0].lowercased() == "bearer" else {
             return "INVALID_FORMAT"
         }
-        
+
         let token = String(parts[1])
         let length = token.count
-        
+
         // Show first 15 and last 10 chars for verification
         if length > 30 {
             let prefix = token.prefix(15)
@@ -53,12 +59,12 @@ struct NetworkLogger {
             return "Bearer EMPTY"
         }
     }
-    
+
     func logRequest(_ request: URLRequest) {
         guard enabled else { return }
         let method = request.httpMethod ?? "UNKNOWN"
         let urlStr = request.url?.absoluteString ?? "nil"
-        
+
         print("➡️ API Request: \(method) \(urlStr)")
         if let headers = request.allHTTPHeaderFields, !headers.isEmpty {
             print("   Headers:")
@@ -88,26 +94,30 @@ struct NetworkLogger {
             }
         }
     }
-    
-    func logResponse(for request: URLRequest, response: HTTPURLResponse, data: Data?, durationMS: Double) {
+
+    func logResponse(
+        for request: URLRequest, response: HTTPURLResponse, data: Data?, durationMS: Double
+    ) {
         guard enabled else { return }
         let method = request.httpMethod ?? "UNKNOWN"
         let urlStr = request.url?.absoluteString ?? "nil"
-        print("⬅️ API Response: \(response.statusCode) \(method) \(urlStr) (\(String(format: "%.1f", durationMS)) ms)")
-        
+        print(
+            "⬅️ API Response: \(response.statusCode) \(method) \(urlStr) (\(String(format: "%.1f", durationMS)) ms)"
+        )
+
         // Headers (response)
         let headers = response.allHeaderFields
         if !headers.isEmpty {
-//            print("   Response Headers:")
-//            for (kAny, vAny) in headers {
-//                let key = String(describing: kAny)
-//                let value = String(describing: vAny)
-//                let keyLower = key.lowercased()
-//                let val = redactHeaders.contains(keyLower) ? "REDACTED" : value
-//                print("   • \(key): \(val)")
-//            }
+            //            print("   Response Headers:")
+            //            for (kAny, vAny) in headers {
+            //                let key = String(describing: kAny)
+            //                let value = String(describing: vAny)
+            //                let keyLower = key.lowercased()
+            //                let val = redactHeaders.contains(keyLower) ? "REDACTED" : value
+            //                print("   • \(key): \(val)")
+            //            }
         }
-        
+
         // Body
         if let data, !data.isEmpty {
             if let pretty = data.prettyJSONString(maxLength: maxBodyLength) {
@@ -130,17 +140,21 @@ struct APIRequest {
     var queryItems: [URLQueryItem] = []
     var headers: [String: String] = [:]
     var body: Data? = nil
-    
-    static func json<T: Encodable>(method: String = "POST",
-                                   path: String,
-                                   body: T,
-                                   headers: [String: String] = [:],
-                                   encoder: JSONEncoder? = nil) throws -> APIRequest {
-        let enc = encoder ?? {
-            let e = JSONEncoder()
-            e.keyEncodingStrategy = .convertToSnakeCase
-            return e
-        }()
+
+    static func json<T: Encodable>(
+        method: String = "POST",
+        path: String,
+        body: T,
+        headers: [String: String] = [:],
+        encoder: JSONEncoder? = nil
+    ) throws -> APIRequest {
+        let enc =
+            encoder
+            ?? {
+                let e = JSONEncoder()
+                e.keyEncodingStrategy = .convertToSnakeCase
+                return e
+            }()
         let data = try enc.encode(body)
         var mergedHeaders = headers
         if mergedHeaders["Content-Type"] == nil {
@@ -150,7 +164,7 @@ struct APIRequest {
     }
 }
 
- // Envelope types for standardized responses
+// Envelope types for standardized responses
 struct Envelope<T: Decodable>: Decodable {
     let success: Bool
     let data: T?
@@ -170,30 +184,37 @@ struct MetaEnvelope: Decodable {
     // pagination omitted for brevity
 }
 
- // MARK: - API Client
+// MARK: - API Client
 
 @preconcurrency
 protocol APIClientProtocol {
-    func send<T: Decodable>(_ request: APIRequest,
-                            as type: T.Type,
-                            authToken: String?,
-                            decoder: JSONDecoder?) async throws -> T
+    func send<T: Decodable>(
+        _ request: APIRequest,
+        as type: T.Type,
+        authToken: String?,
+        decoder: JSONDecoder?
+    ) async throws -> T
 
     // Standardized envelope decode
-    func sendEnvelope<T: Decodable>(_ request: APIRequest,
-                                    as type: T.Type,
-                                    authToken: String?,
-                                    decoder: JSONDecoder?) async throws -> T
+    func sendEnvelope<T: Decodable>(
+        _ request: APIRequest,
+        as type: T.Type,
+        authToken: String?,
+        decoder: JSONDecoder?
+    ) async throws -> T
 
     // Standardized envelope decode with single 401 retry using a token provider
-    func sendEnvelopeRetry401<T: Decodable>(_ request: APIRequest,
-                                            as type: T.Type,
-                                            authToken: String?,
-                                            decoder: JSONDecoder?,
-                                            tokenProvider: (() async throws -> String)?) async throws -> T
-    
-    func sendVoid(_ request: APIRequest,
-                  authToken: String?) async throws
+    func sendEnvelopeRetry401<T: Decodable>(
+        _ request: APIRequest,
+        as type: T.Type,
+        authToken: String?,
+        decoder: JSONDecoder?,
+        tokenProvider: (() async throws -> String)?
+    ) async throws -> T
+
+    func sendVoid(
+        _ request: APIRequest,
+        authToken: String?) async throws
 }
 
 final class APIClient: APIClientProtocol {
@@ -201,25 +222,29 @@ final class APIClient: APIClientProtocol {
     let session: URLSession
     var defaultHeaders: [String: String]
     var logger: NetworkLogger
-    
-    init(baseURL: URL = AppConfig.backendBaseURL,
-         session: URLSession = .shared,
-         defaultHeaders: [String: String] = ["Accept": "application/json"],
-         logger: NetworkLogger = NetworkLogger()) {
+
+    init(
+        baseURL: URL = AppConfig.backendBaseURL,
+        session: URLSession = .shared,
+        defaultHeaders: [String: String] = ["Accept": "application/json"],
+        logger: NetworkLogger = NetworkLogger()
+    ) {
         self.baseURL = baseURL
         self.session = session
         self.defaultHeaders = defaultHeaders
         self.logger = logger
     }
-    
+
     // Generic send that decodes JSON to T
-    func send<T: Decodable>(_ request: APIRequest,
-                            as type: T.Type = T.self,
-                            authToken: String? = nil,
-                            decoder: JSONDecoder? = nil) async throws -> T {
+    func send<T: Decodable>(
+        _ request: APIRequest,
+        as type: T.Type = T.self,
+        authToken: String? = nil,
+        decoder: JSONDecoder? = nil
+    ) async throws -> T {
         let urlRequest = try buildURLRequest(from: request, authToken: authToken)
         logger.logRequest(urlRequest)
-        
+
         let start = CFAbsoluteTimeGetCurrent()
         do {
             let (data, response) = try await session.data(for: urlRequest)
@@ -228,18 +253,20 @@ final class APIClient: APIClientProtocol {
                 throw APIClientError.invalidResponse
             }
             logger.logResponse(for: urlRequest, response: http, data: data, durationMS: duration)
-            
+
             guard 200..<300 ~= http.statusCode else {
                 let bodyStr = data.asUTF8String(maxLength: 10_000)
                 throw APIClientError.httpStatus(http.statusCode, body: bodyStr)
             }
-            
-            let dec = decoder ?? {
-                let d = JSONDecoder()
-                d.keyDecodingStrategy = .convertFromSnakeCase
-                d.dateDecodingStrategy = .iso8601
-                return d
-            }()
+
+            let dec =
+                decoder
+                ?? {
+                    let d = JSONDecoder()
+                    d.keyDecodingStrategy = .convertFromSnakeCase
+                    d.dateDecodingStrategy = .iso8601
+                    return d
+                }()
             do {
                 return try dec.decode(T.self, from: data)
             } catch {
@@ -252,12 +279,14 @@ final class APIClient: APIClientProtocol {
             throw APIClientError.transport(error)
         }
     }
-    
-        // Decode standardized envelope and return inner data when success=true.
-    func sendEnvelope<T: Decodable>(_ request: APIRequest,
-                                    as type: T.Type = T.self,
-                                    authToken: String? = nil,
-                                    decoder: JSONDecoder? = nil) async throws -> T {
+
+    // Decode standardized envelope and return inner data when success=true.
+    func sendEnvelope<T: Decodable>(
+        _ request: APIRequest,
+        as type: T.Type = T.self,
+        authToken: String? = nil,
+        decoder: JSONDecoder? = nil
+    ) async throws -> T {
         let urlRequest = try buildURLRequest(from: request, authToken: authToken)
         logger.logRequest(urlRequest)
 
@@ -270,12 +299,14 @@ final class APIClient: APIClientProtocol {
             }
             logger.logResponse(for: urlRequest, response: http, data: data, durationMS: duration)
 
-            let dec = decoder ?? {
-                let d = JSONDecoder()
-                d.keyDecodingStrategy = .convertFromSnakeCase
-                d.dateDecodingStrategy = .iso8601
-                return d
-            }()
+            let dec =
+                decoder
+                ?? {
+                    let d = JSONDecoder()
+                    d.keyDecodingStrategy = .convertFromSnakeCase
+                    d.dateDecodingStrategy = .iso8601
+                    return d
+                }()
 
             if (200..<300).contains(http.statusCode) {
                 do {
@@ -286,50 +317,63 @@ final class APIClient: APIClientProtocol {
                         } else {
                             // Success but no data - log for debugging
                             #if DEBUG
-                            if let jsonString = String(data: data, encoding: .utf8) {
-                                print("⚠️ Envelope decode: success=true but data is nil. Response: \(jsonString.prefix(500))")
-                            }
+                                if let jsonString = String(data: data, encoding: .utf8) {
+                                    print(
+                                        "⚠️ Envelope decode: success=true but data is nil. Response: \(jsonString.prefix(500))"
+                                    )
+                                }
                             #endif
                             throw APIClientError.decodingFailed(APIClientError.invalidResponse)
                         }
                     } else if let error = env.error {
                         // Envelope has error field
-                        throw APIClientError.httpStatus(http.statusCode, body: "\(error.code): \(error.message)")
+                        throw APIClientError.httpStatus(
+                            http.statusCode, body: "\(error.code): \(error.message)")
                     } else {
                         // Success is false but no error field - invalid envelope
                         #if DEBUG
-                        if let jsonString = String(data: data, encoding: .utf8) {
-                            print("⚠️ Envelope decode: success=false but no error. Response: \(jsonString.prefix(500))")
-                        }
+                            if let jsonString = String(data: data, encoding: .utf8) {
+                                print(
+                                    "⚠️ Envelope decode: success=false but no error. Response: \(jsonString.prefix(500))"
+                                )
+                            }
                         #endif
                         throw APIClientError.decodingFailed(APIClientError.invalidResponse)
                     }
                 } catch let decodeError as DecodingError {
                     // Detailed decoding error logging
                     #if DEBUG
-                    if let jsonString = String(data: data, encoding: .utf8) {
-                        print("❌ Failed to decode Envelope<\(T.self)>:")
-                        print("   Response JSON: \(jsonString.prefix(1000))")
-                        switch decodeError {
-                        case .keyNotFound(let key, let context):
-                            print("   Missing key: \(key.stringValue) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
-                        case .typeMismatch(let type, let context):
-                            print("   Type mismatch: expected \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
-                        case .valueNotFound(let type, let context):
-                            print("   Value not found: expected \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
-                        case .dataCorrupted(let context):
-                            print("   Data corrupted: \(context.debugDescription)")
-                        @unknown default:
-                            print("   Unknown error: \(decodeError)")
+                        if let jsonString = String(data: data, encoding: .utf8) {
+                            print("❌ Failed to decode Envelope<\(T.self)>:")
+                            print("   Response JSON: \(jsonString.prefix(1000))")
+                            switch decodeError {
+                            case .keyNotFound(let key, let context):
+                                print(
+                                    "   Missing key: \(key.stringValue) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+                                )
+                            case .typeMismatch(let type, let context):
+                                print(
+                                    "   Type mismatch: expected \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+                                )
+                            case .valueNotFound(let type, let context):
+                                print(
+                                    "   Value not found: expected \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+                                )
+                            case .dataCorrupted(let context):
+                                print("   Data corrupted: \(context.debugDescription)")
+                            @unknown default:
+                                print("   Unknown error: \(decodeError)")
+                            }
                         }
-                    }
                     #endif
                     throw APIClientError.decodingFailed(decodeError)
                 }
             } else {
                 if let envErr = try? dec.decode(Envelope<[String: String]>.self, from: data),
-                   let e = envErr.error {
-                    throw APIClientError.httpStatus(http.statusCode, body: "\(e.code): \(e.message)")
+                    let e = envErr.error
+                {
+                    throw APIClientError.httpStatus(
+                        http.statusCode, body: "\(e.code): \(e.message)")
                 }
                 let bodyStr = data.asUTF8String(maxLength: 10_000)
                 throw APIClientError.httpStatus(http.statusCode, body: bodyStr)
@@ -342,15 +386,19 @@ final class APIClient: APIClientProtocol {
     }
 
     // Retry helper: decode envelope and retry once on 401 using tokenProvider
-    func sendEnvelopeRetry401<T: Decodable>(_ request: APIRequest,
-                                            as type: T.Type = T.self,
-                                            authToken: String? = nil,
-                                            decoder: JSONDecoder? = nil,
-                                            tokenProvider: (() async throws -> String)? = nil) async throws -> T {
+    func sendEnvelopeRetry401<T: Decodable>(
+        _ request: APIRequest,
+        as type: T.Type = T.self,
+        authToken: String? = nil,
+        decoder: JSONDecoder? = nil,
+        tokenProvider: (() async throws -> String)? = nil
+    ) async throws -> T {
         do {
             return try await sendEnvelope(request, as: type, authToken: authToken, decoder: decoder)
         } catch let APIClientError.httpStatus(code, _) where code == 401 {
-            guard let provider = tokenProvider else { throw APIClientError.httpStatus(code, body: nil) }
+            guard let provider = tokenProvider else {
+                throw APIClientError.httpStatus(code, body: nil)
+            }
             let refreshed = try await provider()
             return try await sendEnvelope(request, as: type, authToken: refreshed, decoder: decoder)
         }
@@ -360,7 +408,7 @@ final class APIClient: APIClientProtocol {
     func sendVoid(_ request: APIRequest, authToken: String? = nil) async throws {
         let urlRequest = try buildURLRequest(from: request, authToken: authToken)
         logger.logRequest(urlRequest)
-        
+
         let start = CFAbsoluteTimeGetCurrent()
         do {
             let (data, response) = try await session.data(for: urlRequest)
@@ -369,7 +417,7 @@ final class APIClient: APIClientProtocol {
                 throw APIClientError.invalidResponse
             }
             logger.logResponse(for: urlRequest, response: http, data: data, durationMS: duration)
-            
+
             guard 200..<300 ~= http.statusCode else {
                 let bodyStr = data.asUTF8String(maxLength: 10_000)
                 throw APIClientError.httpStatus(http.statusCode, body: bodyStr)
@@ -380,16 +428,18 @@ final class APIClient: APIClientProtocol {
             throw APIClientError.transport(error)
         }
     }
-    
+
     // MARK: - Helpers
-    
+
     private func buildURLRequest(from req: APIRequest, authToken: String?) throws -> URLRequest {
         guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
             throw APIClientError.invalidURL
         }
         // Join paths safely (base may have path prefix)
         let incoming = req.path.hasPrefix("/") ? req.path : "/" + req.path
-        components.path = (components.path.hasSuffix("/") ? String(components.path.dropLast()) : components.path) + incoming
+        components.path =
+            (components.path.hasSuffix("/") ? String(components.path.dropLast()) : components.path)
+            + incoming
         if !req.queryItems.isEmpty {
             components.queryItems = req.queryItems
         }
@@ -399,13 +449,19 @@ final class APIClient: APIClientProtocol {
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = req.method
         urlRequest.httpBody = req.body
-        
+
         // Merge headers (default -> request)
         var finalHeaders = defaultHeaders
         req.headers.forEach { finalHeaders[$0.key] = $0.value }
         if let token = authToken, finalHeaders["Authorization"] == nil {
             finalHeaders["Authorization"] = "Bearer \(token)"
         }
+
+        // Add device ID header for anonymous user tracking
+        if let deviceId = UIDevice.current.identifierForVendor?.uuidString {
+            finalHeaders["X-Device-ID"] = deviceId
+        }
+
         for (k, v) in finalHeaders {
             urlRequest.setValue(v, forHTTPHeaderField: k)
         }
@@ -421,7 +477,7 @@ enum APIClientError: LocalizedError {
     case httpStatus(Int, body: String?)
     case decodingFailed(Error)
     case transport(Error)
-    
+
     var errorDescription: String? {
         switch self {
         case .invalidURL:
@@ -443,27 +499,28 @@ enum APIClientError: LocalizedError {
 
 // MARK: - Utilities
 
-private extension Data {
-    func prettyJSONString(maxLength: Int) -> String? {
+extension Data {
+    fileprivate func prettyJSONString(maxLength: Int) -> String? {
         guard !self.isEmpty else { return nil }
         do {
             let obj = try JSONSerialization.jsonObject(with: self, options: [])
-            let prettyData = try JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys])
+            let prettyData = try JSONSerialization.data(
+                withJSONObject: obj, options: [.prettyPrinted, .sortedKeys])
             let str = String(decoding: prettyData, as: UTF8.self)
             return str.truncated(max: maxLength)
         } catch {
             return nil
         }
     }
-    
-    func asUTF8String(maxLength: Int) -> String {
+
+    fileprivate func asUTF8String(maxLength: Int) -> String {
         let str = String(decoding: self, as: UTF8.self)
         return str.truncated(max: maxLength)
     }
 }
 
-private extension String {
-    func truncated(max: Int) -> String {
+extension String {
+    fileprivate func truncated(max: Int) -> String {
         if self.count <= max { return self }
         let idx = self.index(self.startIndex, offsetBy: max)
         return String(self[..<idx]) + "… [truncated]"

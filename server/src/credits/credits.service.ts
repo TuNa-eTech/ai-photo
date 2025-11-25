@@ -16,7 +16,7 @@ import {
 export class CreditsService {
   private readonly logger = new Logger(CreditsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   /**
    * Get credits balance for a user
@@ -82,22 +82,29 @@ export class CreditsService {
       });
     }
 
+    // Credit check with helpful message for anonymous users
     if (user.credits < amount) {
       throw new ForbiddenException({
         code: 'insufficient_credits',
-        message: 'Insufficient credits',
+        message: user.isAnonymous
+          ? 'You have used your free trial. Sign in to get 2 more free credits!'
+          : 'Insufficient credits',
       });
     }
 
     // Use transaction to ensure atomicity
     await this.prisma.$transaction(async (tx) => {
-      // Update user credits
+      // Update user credits and usage tracking
       await tx.user.update({
         where: { firebaseUid },
         data: {
           credits: {
             decrement: amount,
           },
+          processCount: {
+            increment: 1,
+          },
+          lastActiveAt: new Date(),
         },
       });
 
@@ -114,7 +121,7 @@ export class CreditsService {
     });
 
     this.logger.log(
-      `Deducted ${amount} credits from user ${firebaseUid}. New balance: ${user.credits - amount}`,
+      `Deducted ${amount} credits from ${user.isAnonymous ? 'anonymous' : 'registered'} user ${firebaseUid}. New balance: ${user.credits - amount}`,
     );
   }
 

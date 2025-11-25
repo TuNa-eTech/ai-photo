@@ -67,10 +67,16 @@ export class BearerAuthGuard implements CanActivate {
       initFirebaseAdmin();
       const authAdmin = getAuth();
       const decodedToken = await authAdmin.verifyIdToken(token);
+
       // Attach Firebase UID to request for use in controllers
       req.firebaseUid = decodedToken.uid;
+
+      // Detect anonymous users
+      const isAnonymous = decodedToken.firebase?.sign_in_provider === 'anonymous';
+      (req as any).isAnonymous = isAnonymous;
+
       this.logger.debug(
-        `Firebase Auth: Authenticated user ${decodedToken.uid} for ${req.url}`,
+        `Firebase Auth: ${isAnonymous ? 'Anonymous' : 'Registered'} user ${decodedToken.uid} for ${req.url}`,
       );
       return true;
     } catch (error) {

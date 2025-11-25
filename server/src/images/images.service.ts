@@ -54,10 +54,53 @@ export class ImagesService {
   async processImage(
     dto: ProcessImageDto,
     firebaseUid: string,
+    isAnonymous: boolean = false,
+    deviceId?: string,
   ): Promise<ProcessImageResponse> {
     const startTime = Date.now();
 
     try {
+      // Auto-create anonymous user if needed
+      if (isAnonymous) {
+        const user = await this.prisma.user.findUnique({
+          where: { firebaseUid },
+        });
+
+        if (!user) {
+          // Check device limit before creating
+          if (deviceId) {
+            const existingDevice = await this.prisma.user.findFirst({
+              where: {
+                deviceId,
+                isAnonymous: true,
+              },
+            });
+
+            if (existingDevice) {
+              throw new ForbiddenException({
+                code: 'device_limit_exceeded',
+                message: 'This device already has an anonymous account. Please sign in to continue.',
+              });
+            }
+          }
+
+          await this.prisma.user.create({
+            data: {
+              firebaseUid,
+              name: 'Guest User',
+              email: `${firebaseUid}@anonymous.local`,
+              isAnonymous: true,
+              deviceId,
+              credits: 1,
+            },
+          });
+
+          this.logger.log(
+            `Auto-created anonymous user ${firebaseUid} from device ${deviceId}`,
+          );
+        }
+      }
+
       // Check credits before processing
       const hasEnoughCredits =
         await this.creditsService.checkCreditsAvailability(firebaseUid, 1);

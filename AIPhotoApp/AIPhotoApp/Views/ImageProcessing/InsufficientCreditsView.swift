@@ -4,10 +4,15 @@
 //
 //  Full-screen view shown when user runs out of credits.
 //  Provides options: Watch rewarded ad, or purchase credits via IAP.
+//  For anonymous users: Shows sign-in option to get 2 free credits.
 //
 
 import SwiftUI
 import UIKit
+
+#if canImport(FirebaseAuth)
+    import FirebaseAuth
+#endif
 
 struct InsufficientCreditsView: View {
     @Environment(\.dismiss) private var dismiss
@@ -17,6 +22,7 @@ struct InsufficientCreditsView: View {
     @State private var showCreditsPurchase = false
     @State private var showLoadingOverlay = false
     @State private var hasRefreshed = false
+    @State private var isAnonymous = false
 
     var body: some View {
         ZStack {
@@ -45,6 +51,17 @@ struct InsufficientCreditsView: View {
                 await creditsViewModel.refreshCreditsBalance()
                 hasRefreshed = true
             }
+        }
+        .onAppear {
+            // Detect if current user is anonymous
+            #if canImport(FirebaseAuth)
+                if let user = Auth.auth().currentUser {
+                    isAnonymous = user.isAnonymous
+                    print(
+                        "📊 [InsufficientCreditsView] User is \(isAnonymous ? "anonymous" : "registered")"
+                    )
+                }
+            #endif
         }
         .sheet(isPresented: $showCreditsPurchase) {
             CreditsPurchaseView()
@@ -101,25 +118,32 @@ struct InsufficientCreditsView: View {
     // MARK: - Header
     private var headerSection: some View {
         VStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [
-                            GlassTokens.accent1,
-                            GlassTokens.accent2,
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+            Image(
+                systemName: isAnonymous
+                    ? "person.crop.circle.badge.exclamationmark" : "exclamationmark.triangle.fill"
+            )
+            .font(.system(size: 48))
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [
+                        GlassTokens.accent1,
+                        GlassTokens.accent2,
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
-            Text(L10n.tr("l10n.credits.header.title"))
+            )
+            Text(isAnonymous ? "Free Trial Used" : L10n.tr("l10n.credits.header.title"))
                 .font(.title2.bold())
                 .foregroundStyle(GlassTokens.textPrimary)
-            Text(L10n.tr("l10n.credits.header.subtitle"))
-                .font(.subheadline)
-                .foregroundStyle(GlassTokens.textSecondary)
-                .multilineTextAlignment(.center)
+            Text(
+                isAnonymous
+                    ? "Sign in to get 2 more free credits and continue!"
+                    : L10n.tr("l10n.credits.header.subtitle")
+            )
+            .font(.subheadline)
+            .foregroundStyle(GlassTokens.textSecondary)
+            .multilineTextAlignment(.center)
         }
         .padding(.vertical, 8)
     }
@@ -127,9 +151,34 @@ struct InsufficientCreditsView: View {
     // MARK: - Options
     private var optionsSection: some View {
         VStack(spacing: 16) {
-            purchaseCreditsCard
+            // Show sign-in card for anonymous users, buy credits for registered
+            if isAnonymous {
+                signInCard
+            } else {
+                purchaseCreditsCard
+            }
             watchAdCard
         }
+    }
+
+    // NEW: Sign In Card (for anonymous users)
+    private var signInCard: some View {
+        OptionCard(
+            icon: "person.fill.checkmark",
+            title: "Sign In for Free Credits",  // Fallback: L10n.tr("l10n.credits.signIn.title")
+            description: "Create an account to get 2 free credits and save your work!",  // Fallback: L10n.tr("l10n.credits.signIn.desc")
+            buttonText: "Sign In Now",  // Fallback: L10n.tr("l10n.credits.signIn.button")
+            gradientColors: [
+                GlassTokens.primary1,
+                GlassTokens.primary2,
+            ],
+            isLoading: false,
+            action: {
+                // Log out anonymous user to show login screen
+                authViewModel.logout()
+                dismiss()
+            }
+        )
     }
 
     private var watchAdCard: some View {

@@ -3,17 +3,18 @@
 //
 //  State + actions for Authentication flow (Google / Apple) and profile registration.
 
+import AuthenticationServices
 import Foundation
 import Observation
-import AuthenticationServices
+
 #if canImport(UIKit)
-import UIKit
+    import UIKit
 #endif
 #if canImport(FirebaseAuth)
-import FirebaseAuth
+    import FirebaseAuth
 #endif
 #if canImport(GoogleSignIn)
-import GoogleSignIn
+    import GoogleSignIn
 #endif
 
 @Observable
@@ -53,7 +54,8 @@ final class AuthViewModel {
     @MainActor
     func signInWithGoogle() {
         guard let presenter = UIApplication.topMostViewController() else {
-            self.errorMessage = NSLocalizedString("l10n.auth.googleCannotPresent", comment: "Cannot present Google sign-in")
+            self.errorMessage = NSLocalizedString(
+                "l10n.auth.googleCannotPresent", comment: "Cannot present Google sign-in")
             return
         }
         isLoading = true
@@ -91,16 +93,81 @@ final class AuthViewModel {
                 let rawNonce = appleRawNonce
             else {
                 self.isLoading = false
-                self.errorMessage = NSLocalizedString("l10n.auth.appleCredentialMissing", comment: "Apple credential missing")
+                self.errorMessage = NSLocalizedString(
+                    "l10n.auth.appleCredentialMissing", comment: "Apple credential missing")
                 return
             }
             Task { @MainActor in
                 do {
-                    let sess = try await authService.signInWithApple(credential: credential, rawNonce: rawNonce)
+                    let sess = try await authService.signInWithApple(
+                        credential: credential, rawNonce: rawNonce)
                     handleSignedIn(session: sess)
                 } catch {
                     setError(error.localizedDescription)
                 }
+            }
+        }
+    }
+
+    // MARK: - Anonymous Sign-In
+
+    @MainActor
+    func signInAnonymously() {
+        isLoading = true
+        errorMessage = nil
+        Task { @MainActor in
+            do {
+                let sess = try await authService.signInAnonymously()
+                self.session = sess
+
+                print("✅ [AuthViewModel] Anonymous sign-in successful")
+                print("   • Token length: \(sess.idToken.count)")
+
+                // Persist token and start listener
+                persistToken(sess.idToken)
+                authService.startIDTokenListener { [weak self] newToken in
+                    self?.persistToken(newToken)
+                }
+
+                // IMPORTANT: Call POST /users/register to create/migrate user in database
+                // Backend will:
+                // 1. Check for existing account by deviceId
+                // 2. If exists: migrate to new Firebase UID (app reinstall case)
+                // 3. If not: create new with Guest name using deviceId suffix
+                do {
+                    let profile = try await userRepository.registerUser(
+                        name: "Guest User",  // Backend will override with "Guest XXXX"
+                        email: "",  // Backend will generate based on deviceId
+                        avatarURL: nil,
+                        bearerIDToken: sess.idToken
+                    )
+
+                    // Update local state with backend-generated values
+                    self.name = profile.name
+                    self.email = profile.email
+                    self.avatarURL = URL(string: profile.avatarUrl ?? "")
+                    self.createdAt = profile.createdAt
+
+                    print("✅ [AuthViewModel] Anonymous user registered in database")
+                    print("   • Name: \(profile.name)")
+                    print("   • Email: \(profile.email)")
+                } catch {
+                    // Registration failed, but user is still authenticated
+                    // They'll be created on first API call (e.g., process image)
+                    print(
+                        "⚠️ [AuthViewModel] Registration failed (will retry on next API call): \(error.localizedDescription)"
+                    )
+                    self.name = "Guest User"
+                    self.email = ""
+                }
+
+                self.isLoading = false
+                self.isAuthenticated = true
+
+                print("✅ [AuthViewModel] Anonymous user authenticated")
+            } catch {
+                print("❌ [AuthViewModel] Anonymous sign-in failed: \(error.localizedDescription)")
+                setError(error.localizedDescription)
             }
         }
     }
@@ -110,13 +177,15 @@ final class AuthViewModel {
     @MainActor
     func submitProfile() {
         guard let sess = session else {
-            self.errorMessage = NSLocalizedString("l10n.auth.sessionInvalid", comment: "Invalid session")
+            self.errorMessage = NSLocalizedString(
+                "l10n.auth.sessionInvalid", comment: "Invalid session")
             return
         }
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              isValidEmail(email)
+            isValidEmail(email)
         else {
-            self.errorMessage = NSLocalizedString("l10n.auth.invalidProfile", comment: "Invalid name/email")
+            self.errorMessage = NSLocalizedString(
+                "l10n.auth.invalidProfile", comment: "Invalid name/email")
             return
         }
         isLoading = true
@@ -128,7 +197,9 @@ final class AuthViewModel {
                     email: email,
                     avatarURL: avatarURL,
                     idToken: sess.idToken,
-                    tokenProvider: { try await self.authService.fetchFirebaseIDToken(forceRefresh: true) }
+                    tokenProvider: {
+                        try await self.authService.fetchFirebaseIDToken(forceRefresh: true)
+                    }
                 )
                 setAuthenticated()
             } catch {
@@ -145,10 +216,10 @@ final class AuthViewModel {
         errorMessage = nil
         Task { @MainActor in
             #if canImport(FirebaseAuth)
-            _ = try? Auth.auth().signOut()
+                _ = try? Auth.auth().signOut()
             #endif
             #if canImport(GoogleSignIn)
-            GIDSignIn.sharedInstance.signOut()
+                GIDSignIn.sharedInstance.signOut()
             #endif
             // Stop token listener and clear persisted token
             authService.stopIDTokenListener()
@@ -156,7 +227,7 @@ final class AuthViewModel {
             clearSession()
         }
     }
-    
+
     // Alias for logout (async version for ProfileView)
     @MainActor
     func signOut() async throws {
@@ -201,34 +272,34 @@ final class AuthViewModel {
         errorMessage = nil
         Task { @MainActor in
             #if canImport(FirebaseAuth)
-            if Auth.auth().currentUser != nil {
-                do {
-                    let token = try await authService.fetchFirebaseIDToken(forceRefresh: false)
-                    persistToken(token)
-                    
-                    // Load profile from backend to get latest data including created_at
-                    try await fetchUserProfile()
-                    
-                    setAuthenticated()
-                } catch {
-                    // If profile fetch fails, still set authenticated but without backend profile data
-                    // Fallback to Firebase session data if available
-                    #if canImport(FirebaseAuth)
-                    if let user = Auth.auth().currentUser {
-                        self.name = user.displayName ?? ""
-                        self.email = user.email ?? ""
-                        if let photoURL = user.photoURL {
-                            self.avatarURL = photoURL
-                        }
+                if Auth.auth().currentUser != nil {
+                    do {
+                        let token = try await authService.fetchFirebaseIDToken(forceRefresh: false)
+                        persistToken(token)
+
+                        // Load profile from backend to get latest data including created_at
+                        try await fetchUserProfile()
+
+                        setAuthenticated()
+                    } catch {
+                        // If profile fetch fails, still set authenticated but without backend profile data
+                        // Fallback to Firebase session data if available
+                        #if canImport(FirebaseAuth)
+                            if let user = Auth.auth().currentUser {
+                                self.name = user.displayName ?? ""
+                                self.email = user.email ?? ""
+                                if let photoURL = user.photoURL {
+                                    self.avatarURL = photoURL
+                                }
+                            }
+                        #endif
+                        self.isAuthenticated = true
                     }
-                    #endif
-                    self.isAuthenticated = true
+                } else {
+                    self.isAuthenticated = false
                 }
-            } else {
-                self.isAuthenticated = false
-            }
             #else
-            self.isAuthenticated = false
+                self.isAuthenticated = false
             #endif
             self.isBootstrapped = true
             self.isLoading = false
@@ -248,9 +319,11 @@ final class AuthViewModel {
             let token = try await authService.fetchFirebaseIDToken(forceRefresh: false)
             let response = try await userRepository.getUserProfile(
                 bearerIDToken: token,
-                tokenProvider: { try await self.authService.fetchFirebaseIDToken(forceRefresh: true) }
+                tokenProvider: {
+                    try await self.authService.fetchFirebaseIDToken(forceRefresh: true)
+                }
             )
-            
+
             // Update profile data from backend (backend is source of truth)
             self.name = response.name
             self.email = response.email
@@ -260,7 +333,7 @@ final class AuthViewModel {
                 self.avatarURL = nil
             }
             self.createdAt = response.createdAt
-            
+
             print("✅ [AuthViewModel] Profile loaded from backend:")
             print("   • Name: \(self.name)")
             print("   • Email: \(self.email)")
@@ -268,7 +341,9 @@ final class AuthViewModel {
                 print("   • Created At: \(createdAt)")
             }
         } catch {
-            print("⚠️ [AuthViewModel] Failed to fetch profile from backend: \(error.localizedDescription)")
+            print(
+                "⚠️ [AuthViewModel] Failed to fetch profile from backend: \(error.localizedDescription)"
+            )
             // Don't throw - fallback to Firebase session data
             // This allows app to continue working even if backend is unavailable
         }
@@ -284,7 +359,7 @@ final class AuthViewModel {
             bearerIDToken: token,
             tokenProvider: { try await self.authService.fetchFirebaseIDToken(forceRefresh: true) }
         )
-        
+
         // Refresh profile from backend to get latest data including created_at
         try await fetchUserProfile()
     }
@@ -294,7 +369,7 @@ final class AuthViewModel {
     @MainActor
     private func handleSignedIn(session: AuthSession) {
         self.session = session
-        
+
         // Log Firebase token info (safely)
         let tokenLength = session.idToken.count
         let tokenPrefix = session.idToken.prefix(15)
@@ -303,16 +378,17 @@ final class AuthViewModel {
         print("   • Length: \(tokenLength) chars")
         print("   • Prefix: \(tokenPrefix)...")
         print("   • Suffix: ...\(tokenSuffix)")
-        
+
         // Prefill profile from provider (may be nil/empty depending on provider)
         let emailValue = (session.email ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let providedName = (session.name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let derivedName: String = providedName.isEmpty ? deriveName(fromEmail: emailValue) : providedName
+        let derivedName: String =
+            providedName.isEmpty ? deriveName(fromEmail: emailValue) : providedName
 
         self.name = derivedName
         self.email = emailValue
         self.avatarURL = session.avatarURL
-        
+
         print("👤 [AuthViewModel] User profile:")
         print("   • Name: \(self.name)")
         print("   • Email: \(self.email)")
@@ -326,13 +402,15 @@ final class AuthViewModel {
                     email: self.email,
                     avatarURL: self.avatarURL,
                     idToken: session.idToken,
-                    tokenProvider: { try await self.authService.fetchFirebaseIDToken(forceRefresh: true) }
+                    tokenProvider: {
+                        try await self.authService.fetchFirebaseIDToken(forceRefresh: true)
+                    }
                 )
                 print("✅ [AuthViewModel] Registration successful")
-                
+
                 // After successful registration, fetch full profile from backend to get created_at
                 try await fetchUserProfile()
-                
+
                 setAuthenticated()
             } catch {
                 print("❌ [AuthViewModel] Registration failed: \(error.localizedDescription)")
@@ -341,8 +419,13 @@ final class AuthViewModel {
         }
     }
 
-    private func register(name: String, email: String, avatarURL: URL?, idToken: String, tokenProvider: (() async throws -> String)? = nil) async throws {
-        _ = try await userRepository.registerUser(name: name, email: email, avatarURL: avatarURL, bearerIDToken: idToken, tokenProvider: tokenProvider)
+    private func register(
+        name: String, email: String, avatarURL: URL?, idToken: String,
+        tokenProvider: (() async throws -> String)? = nil
+    ) async throws {
+        _ = try await userRepository.registerUser(
+            name: name, email: email, avatarURL: avatarURL, bearerIDToken: idToken,
+            tokenProvider: tokenProvider)
     }
 
     @MainActor

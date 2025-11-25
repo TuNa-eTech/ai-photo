@@ -78,6 +78,7 @@
 "l10n.auth.welcome.to" = "Welcome to";
 "l10n.auth.subtitle" = "Turn photos into AI styles";
 "l10n.auth.google" = "Continue with Google";
+"l10n.auth.skip" = "Skip & Try as Guest";
 "l10n.auth.terms.prefix" = "By continuing, you agree to";
 "l10n.auth.terms" = "Terms";
 "l10n.auth.privacy" = "Privacy Policy";

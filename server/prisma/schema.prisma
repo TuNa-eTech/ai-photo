@@ -172,20 +172,32 @@ model ProcessedImage {
 }
 
 model User {
-  id          String        @id @default(uuid())
-  firebaseUid String        @unique @map("firebase_uid")
-  name        String
-  email       String        @unique
-  avatarUrl   String?       @map("avatar_url")
-  credits     Int           @default(2)
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
+  id               String        @id @default(uuid())
+  firebaseUid      String        @unique @map("firebase_uid")
+  name             String
+  email            String        @unique
+  avatarUrl        String?       @map("avatar_url")
+  credits          Int           @default(2)
+  
+  // Anonymous authentication support
+  isAnonymous      Boolean       @default(false) @map("is_anonymous")
+  deviceId         String?       @map("device_id")
+  
+  // Usage tracking for anti-spam
+  firstSeenAt      DateTime      @default(now()) @map("first_seen_at")
+  lastActiveAt     DateTime      @default(now()) @map("last_active_at")
+  processCount     Int           @default(0) @map("process_count")
+  
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
 
   transactions Transaction[]
   processedImages ProcessedImage[]
 
   @@index([firebaseUid])
   @@index([email])
+  @@index([deviceId])
+  @@index([isAnonymous, createdAt])
   @@map("users")
 }
 

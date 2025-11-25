@@ -10,7 +10,7 @@ import { UsersService } from './users.service';
  */
 @Controller('v1/users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   /**
    * GET /v1/users/me
@@ -35,11 +35,14 @@ export class UsersController {
   @Post('register')
   @UseGuards(BearerAuthGuard)
   async register(
-    @Req() req: Request & { firebaseUid?: string },
+    @Req() req: Request & { firebaseUid?: string; isAnonymous?: boolean },
     @Body() dto: RegisterUserDto,
   ): Promise<UserResponseDto> {
-    // firebaseUid is attached by BearerAuthGuard after verifying the token
+    // firebaseUid and isAnonymous are attached by BearerAuthGuard
     const firebaseUid = req.firebaseUid!;
-    return this.usersService.registerUser(firebaseUid, dto);
+    const isAnonymous = req.isAnonymous || false;
+    const deviceId = req.headers['x-device-id'] as string | undefined;
+
+    return this.usersService.registerUser(firebaseUid, dto, isAnonymous, deviceId);
   }
 }

@@ -4,14 +4,15 @@
 //  Handles Google Sign-In and Sign in with Apple, then signs into Firebase
 //  and returns an AuthSession containing a fresh Firebase ID token.
 
-import Foundation
-#if canImport(UIKit)
-import UIKit
-#endif
 import AuthenticationServices
-import FirebaseCore
 import FirebaseAuth
+import FirebaseCore
+import Foundation
 import GoogleSignIn
+
+#if canImport(UIKit)
+    import UIKit
+#endif
 
 final class AuthService {
 
@@ -22,23 +23,23 @@ final class AuthService {
     /// Start listening for Firebase ID token changes. Calls onUpdate with a fresh (non-forced) token.
     func startIDTokenListener(onUpdate: @escaping (String) -> Void) {
         #if canImport(FirebaseAuth)
-        idTokenHandle = Auth.auth().addIDTokenDidChangeListener { _, user in
-            user?.getIDTokenForcingRefresh(false) { token, _ in
-                if let token = token {
-                    onUpdate(token)
+            idTokenHandle = Auth.auth().addIDTokenDidChangeListener { _, user in
+                user?.getIDTokenForcingRefresh(false) { token, _ in
+                    if let token = token {
+                        onUpdate(token)
+                    }
                 }
             }
-        }
         #endif
     }
 
     /// Stop the Firebase ID token change listener if active.
     func stopIDTokenListener() {
         #if canImport(FirebaseAuth)
-        if let handle = idTokenHandle {
-            Auth.auth().removeIDTokenDidChangeListener(handle)
-        }
-        idTokenHandle = nil
+            if let handle = idTokenHandle {
+                Auth.auth().removeIDTokenDidChangeListener(handle)
+            }
+            idTokenHandle = nil
         #endif
     }
 
@@ -52,7 +53,8 @@ final class AuthService {
 
         // Present Google Sign-In
         if GIDSignIn.sharedInstance.configuration == nil,
-           let clientID = FirebaseApp.app()?.options.clientID {
+            let clientID = FirebaseApp.app()?.options.clientID
+        {
             GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
         }
         let result: GIDSignInResult = try await withCheckedThrowingContinuation { continuation in
@@ -75,7 +77,8 @@ final class AuthService {
         // In recent GoogleSignIn, accessToken is non-optional
         let accessToken = result.user.accessToken.tokenString
 
-        let credential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: accessToken)
+        let credential = GoogleAuthProvider.credential(
+            withIDToken: idToken, accessToken: accessToken)
         let authData = try await signInToFirebase(with: credential)
 
         // Prefer Firebase user profile as source of truth
@@ -105,9 +108,12 @@ final class AuthService {
     }
 
     // Finish Apple sign-in by signing into Firebase with the provided credential and raw nonce.
-    func signInWithApple(credential appleCredential: ASAuthorizationAppleIDCredential, rawNonce: String) async throws -> AuthSession {
+    func signInWithApple(
+        credential appleCredential: ASAuthorizationAppleIDCredential, rawNonce: String
+    ) async throws -> AuthSession {
         guard let identityToken = appleCredential.identityToken,
-              let idTokenString = String(data: identityToken, encoding: .utf8) else {
+            let idTokenString = String(data: identityToken, encoding: .utf8)
+        else {
             throw AuthError.missingAppleIdentityToken
         }
 
@@ -132,6 +138,88 @@ final class AuthService {
             avatarURL: avatarURL,
             idToken: firebaseIDToken
         )
+    }
+
+    // MARK: - Anonymous Authentication
+
+    /// Check for existing Firebase user session from previous app launch
+    /// Does NOT create anonymous users automatically
+    func checkExistingUser() async -> (user: User?, isAnonymous: Bool) {
+        #if canImport(FirebaseAuth)
+            if let user = Auth.auth().currentUser {
+                let isAnonymous = user.isAnonymous
+                print("✅ Existing user found: \(user.uid) (anonymous: \(isAnonymous))")
+                return (user, isAnonymous)
+            } else {
+                print("ℹ️ No existing user - will show onboarding")
+                return (nil, false)
+            }
+        #else
+            return (nil, false)
+        #endif
+    }
+
+    /// Explicit anonymous sign-in (called when user taps "Skip" on login screen)
+    /// Returns AuthSession with anonymous user info
+    func signInAnonymously() async throws -> AuthSession {
+        #if canImport(FirebaseAuth)
+            let result = try await Auth.auth().signInAnonymously()
+            let user = result.user
+
+            print("✅ Signed in anonymously: \(user.uid)")
+
+            let firebaseIDToken = try await fetchFirebaseIDToken(forceRefresh: true)
+
+            return AuthSession(
+                name: "Guest User",
+                email: nil,
+                avatarURL: nil,
+                idToken: firebaseIDToken
+            )
+        #else
+            throw AuthError.firebaseNotConfigured
+        #endif
+    }
+
+    /// Upgrade anonymous account to full account with email/password
+    /// Links the anonymous account with email credential
+    func linkAnonymousAccount(email: String, password: String) async throws -> AuthSession {
+        #if canImport(FirebaseAuth)
+            guard let user = Auth.auth().currentUser, user.isAnonymous else {
+                throw AuthError.notAnonymousAccount
+            }
+
+            let credential = EmailAuthProvider.credential(withEmail: email, password: password)
+
+            let result = try await withCheckedThrowingContinuation {
+                (continuation: CheckedContinuation<AuthDataResult, Error>) in
+                user.link(with: credential) { authResult, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                        return
+                    }
+                    guard let authResult = authResult else {
+                        continuation.resume(throwing: AuthError.unknown)
+                        return
+                    }
+                    continuation.resume(returning: authResult)
+                }
+            }
+
+            let upgradedUser = result.user
+            print("✅ Upgraded anonymous account to full account: \(upgradedUser.uid)")
+
+            let firebaseIDToken = try await fetchFirebaseIDToken(forceRefresh: true)
+
+            return AuthSession(
+                name: upgradedUser.displayName,
+                email: upgradedUser.email,
+                avatarURL: upgradedUser.photoURL,
+                idToken: firebaseIDToken
+            )
+        #else
+            throw AuthError.firebaseNotConfigured
+        #endif
     }
 
     // MARK: - Firebase helpers
@@ -177,6 +265,7 @@ enum AuthError: LocalizedError {
     case missingGoogleIDToken
     case missingAppleIdentityToken
     case notSignedIn
+    case notAnonymousAccount
     case unknown
 
     var errorDescription: String? {
@@ -185,6 +274,7 @@ enum AuthError: LocalizedError {
         case .missingGoogleIDToken: return "Missing Google ID token."
         case .missingAppleIdentityToken: return "Missing Apple identity token."
         case .notSignedIn: return "No Firebase user is signed in."
+        case .notAnonymousAccount: return "Current user is not an anonymous account."
         case .unknown: return "Unknown authentication error."
         }
     }

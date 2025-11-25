@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
@@ -8,7 +8,9 @@ import { UserResponseDto } from './dto/user-response.dto';
  */
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(UsersService.name);
+
+  constructor(private prisma: PrismaService) { }
 
   /**
    * Get user profile by Firebase UID
@@ -42,23 +44,36 @@ export class UsersService {
 
   /**
    * Register or update user based on Firebase UID
-   * - If user with firebaseUid exists: update name, email, avatarUrl
-   * - If user doesn't exist: create new user with credits = 2 (default from schema)
+   * - For anonymous users: delegates to getOrCreateAnonymousUser (handles migration + deviceId naming)
+   * - For registered users: creates/updates with provided data
    *
    * @param firebaseUid - Firebase UID from verified token
    * @param dto - User registration data (snake_case from client)
+   * @param isAnonymous - Whether this is an anonymous user
+   * @param deviceId - Device ID for anonymous user tracking
    * @returns User data (snake_case)
    */
   async registerUser(
     firebaseUid: string,
     dto: RegisterUserDto,
+    isAnonymous: boolean = false,
+    deviceId?: string,
   ): Promise<UserResponseDto> {
+    // Handle anonymous users - delegate to getOrCreateAnonymousUser
+    // This handles UID migration and deviceId-based naming
+    if (isAnonymous) {
+      return this.getOrCreateAnonymousUser(firebaseUid, deviceId);
+    }
+
+    // Handle registered users
     const user = await this.prisma.user.upsert({
       where: { firebaseUid },
       update: {
         name: dto.name,
         email: dto.email,
         avatarUrl: dto.avatar_url,
+        isAnonymous: false,
+        lastActiveAt: new Date(),
         updatedAt: new Date(),
       },
       create: {
@@ -66,9 +81,101 @@ export class UsersService {
         name: dto.name,
         email: dto.email,
         avatarUrl: dto.avatar_url,
-        credits: 2, // Explicitly set credits = 2 for new users (default from schema)
+        isAnonymous: false,
+        credits: 2,
       },
     });
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      avatar_url: user.avatarUrl ?? undefined,
+      credits: user.credits,
+      created_at: user.createdAt,
+      updated_at: user.updatedAt,
+    };
+  }
+
+  /**
+   * Get or create anonymous user
+   * - Checks for existing anonymous account by deviceId (migration support)
+   * - If exists with different UID: migrates to new Firebase UID (app reinstall case)
+   * - If not exists: creates new with deviceId-based naming
+   * - Updates lastActiveAt for existing users
+   *
+   * @param firebaseUid - Firebase UID from anonymous auth
+   * @param deviceId - Device ID for tracking
+   * @returns User data (snake_case)
+   */
+  async getOrCreateAnonymousUser(
+    firebaseUid: string,
+    deviceId?: string,
+  ): Promise<UserResponseDto> {
+    let user = await this.prisma.user.findUnique({
+      where: { firebaseUid },
+    });
+
+    if (!user && deviceId) {
+      // Check if device already has an anonymous account (migration case)
+      const existingDevice = await this.prisma.user.findFirst({
+        where: {
+          deviceId,
+          isAnonymous: true,
+        },
+      });
+
+      if (existingDevice) {
+        // MIGRATION: Update existing user to new Firebase UID (app reinstall)
+        this.logger.log(
+          `🔄 Migrating anonymous user: ${existingDevice.firebaseUid} → ${firebaseUid} (device: ${deviceId.slice(-4)})`,
+        );
+
+        user = await this.prisma.user.update({
+          where: { id: existingDevice.id },
+          data: {
+            firebaseUid, // Update to new UID
+            lastActiveAt: new Date(),
+          },
+        });
+
+        this.logger.log(
+          `✅ Migration successful: User ${user.id} now linked to ${firebaseUid}`,
+        );
+      }
+    }
+
+    if (!user) {
+      // Generate guest name and email from deviceId last 4 chars
+      const deviceSuffix = deviceId
+        ? deviceId.slice(-4).toUpperCase()
+        : firebaseUid.slice(-4).toUpperCase();
+
+      const guestName = `Guest ${deviceSuffix}`; // e.g., "Guest A1B2"
+      const guestEmail = `guest-${deviceSuffix.toLowerCase()}@anonymous.temp`; // e.g., "guest-a1b2@anonymous.temp"
+
+      // Create new anonymous user
+      user = await this.prisma.user.create({
+        data: {
+          firebaseUid,
+          name: guestName,
+          email: guestEmail,
+          isAnonymous: true,
+          deviceId,
+          credits: 1,
+        },
+      });
+
+      this.logger.log(
+        `✨ Created anonymous user: ${guestName} (${firebaseUid}, device: ${deviceSuffix})`,
+      );
+    } else {
+      // Update last active time for existing user
+      await this.prisma.user.update({
+        where: { firebaseUid },
+        data: { lastActiveAt: new Date() },
+      });
+    }
 
     return {
       id: user.id,

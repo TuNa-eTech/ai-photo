@@ -6,6 +6,7 @@
 //  Designed with beige + liquid glass minimalist aesthetic
 //
 
+import FirebaseAuth
 import SwiftUI
 
 struct ProfileView: View {
@@ -18,6 +19,9 @@ struct ProfileView: View {
     @State private var showDeleteConfirm = false
     @State private var showCreditsPurchase = false
     @State private var creditsViewModel = CreditsViewModel()
+
+    // Anonymous user detection
+    @State private var isAnonymous = false
 
     // Settings toggles
     @State private var notificationsEnabled = true
@@ -41,6 +45,11 @@ struct ProfileView: View {
                     VStack(spacing: 20) {
                         // Hero Card
                         heroSection
+
+                        // Anonymous User Banner (show only for anonymous users)
+                        if isAnonymous {
+                            anonymousUserBanner
+                        }
 
                         // Account Settings
                         accountSection
@@ -94,6 +103,14 @@ struct ProfileView: View {
                 await creditsViewModel.refreshCreditsBalance()
             }
             .onAppear {
+                // Detect anonymous user
+                #if canImport(FirebaseAuth)
+                    if let user = Auth.auth().currentUser {
+                        isAnonymous = user.isAnonymous
+                        print("📊 [ProfileView] User is \(isAnonymous ? "anonymous" : "registered")")
+                    }
+                #endif
+
                 Task {
                     await creditsViewModel.refreshCreditsBalance()
                 }
@@ -132,6 +149,109 @@ struct ProfileView: View {
             avatarURL: model.avatarURL?.absoluteString,
             credits: animatedCreditsValue
         )
+    }
+
+    // MARK: - Anonymous User Banner
+
+    private var anonymousUserBanner: some View {
+        VStack(spacing: 16) {
+            // Header
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    GlassTokens.accent1.opacity(0.3),
+                                    GlassTokens.accent2.opacity(0.2),
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 48, height: 48)
+
+                    Image(systemName: "person.crop.circle.badge.questionmark")
+                        .font(.system(size: 24))
+                        .foregroundStyle(GlassTokens.textPrimary)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("You're in Guest Mode")
+                        .font(.headline.bold())
+                        .foregroundStyle(GlassTokens.textPrimary)
+                    Text("Sign in to unlock all features")
+                        .font(.subheadline)
+                        .foregroundStyle(GlassTokens.textSecondary)
+                }
+
+                Spacer()
+            }
+
+            // Benefits
+            VStack(spacing: 10) {
+                BenefitRow(icon: "gift.fill", text: "Get 2 free credits")
+                BenefitRow(icon: "clock.arrow.circlepath", text: "Save your editing history")
+                BenefitRow(icon: "icloud.fill", text: "Sync across devices")
+            }
+            .padding(.leading, 4)
+
+            // CTA Button
+            Button {
+                // Log out anonymous user to show login screen
+                model.logout()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "person.fill.checkmark")
+                        .font(.headline)
+                    Text("Sign In Now")
+                        .font(.headline)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    LinearGradient(
+                        colors: [GlassTokens.primary1, GlassTokens.primary2],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                )
+                .shadow(color: GlassTokens.primary1.opacity(0.3), radius: 8, x: 0, y: 4)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(20)
+        .glassCard()
+    }
+
+    // MARK: - Benefit Row
+
+    private struct BenefitRow: View {
+        let icon: String
+        let text: String
+
+        var body: some View {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [GlassTokens.accent1, GlassTokens.primary1],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 20, height: 20)
+
+                Text(text)
+                    .font(.subheadline)
+                    .foregroundStyle(GlassTokens.textPrimary)
+
+                Spacer()
+            }
+        }
     }
 
     private var accountSection: some View {

@@ -65,6 +65,7 @@
 "l10n.auth.welcome.to" = "Chào mừng đến";
 "l10n.auth.subtitle" = "Biến ảnh thành phong cách AI";
 "l10n.auth.google" = "Tiếp tục với Google";
+"l10n.auth.skip" = "Bỏ qua & Dùng thử";
 "l10n.auth.terms.prefix" = "Bằng việc tiếp tục, bạn đồng ý với";
 "l10n.auth.terms" = "Điều khoản";
 "l10n.auth.privacy" = "Chính sách";

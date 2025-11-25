@@ -136,6 +136,25 @@ struct AuthLandingView: View {
                                     ) {
                                         model.signInWithGoogle()
                                     }
+
+                                    // NEW: Skip / Guest Mode Button
+                                    Button {
+                                        model.signInAnonymously()
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "person.fill.questionmark")
+                                                .font(.headline)
+                                            Text(L10n.tr("l10n.auth.skip"))
+                                                .font(.subheadline.weight(.medium))
+                                        }
+                                        .foregroundStyle(GlassTokens.textSecondary)
+                                        .padding(.vertical, 12)
+                                    }
+                                    .accessibilityLabel(Text(L10n.tr("l10n.auth.skip")))
+                                    .accessibilityHint(
+                                        Text("Try the app without signing in. Get 1 free credit.")
+                                    )
+                                    .accessibilityIdentifier("skip_signin")
                                 }
 
                                 // Terms & Privacy
