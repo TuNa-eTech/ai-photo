@@ -48,7 +48,12 @@ Key code paths (backend)
   - Idempotency: Uses `original_transaction_id` to prevent duplicate credit awards.
 - Auth:
   - server/src/auth/bearer-auth.guard.ts (Firebase token verification + DevAuth).
+  - server/src/auth/bearer-auth.guard.ts (Firebase token verification + DevAuth + Anonymous detection).
   - server/src/auth/firebase-admin.ts (Firebase Admin SDK initialization).
+  - **Anonymous Auth**:
+    - Detects `sign_in_provider: anonymous` in token claims.
+    - Uses `X-Device-ID` header to enforce "One Account Per Device".
+    - Handles "Lazy Creation" and "UID Migration" in `UsersService`.
 - Data access:
   - server/src/prisma/prisma.service.ts (Prisma client service).
   - server/prisma/schema.prisma (database schema definition).
@@ -208,7 +213,9 @@ iOS app architecture (AIPhotoApp/)
       - AuthLandingView.v2.swift → Premium login screen with Liquid Glass Beige design
       - ProfileCompletionView.swift → Profile editing modal
       - Components/ → Authentication-specific components
+      - Components/ → Authentication-specific components
     - Home/ProfileView.swift → User profile and settings (part of tab navigation)
+      - Includes "Guest Mode" banner for anonymous users with upgrade CTA.
   - Utilities/ → Shared utilities
     - Networking/ → APIClient with envelope handling and 401 retry
     - Constants/ → Design tokens (GlassTokens with beige color palette), API paths (AppConfig)

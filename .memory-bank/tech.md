@@ -84,6 +84,8 @@ Database & Migrations
   - Enums: TemplateStatus (draft, published, archived), TemplateVisibility (public, private).
   - Future: template_versions, template_assets models.
 - Recent migrations:
+  - 20251125025704_add_anonymous_auth_support (added is_anonymous, device_id, first_seen_at)
+  - 20251109190005_add_credits_and_iap_system (added credits, transactions, iap_products)
   - 20251026115941_add_prompt_fields (added prompt, negativePrompt, modelProvider, modelName)
   - 20251026105027_add_admin_fields_to_templates (added slug, status, visibility, tags, dates)
 - Migrate methods:
@@ -103,6 +105,11 @@ Auth Patterns
   - DEV_AUTH_TOKEN environment variable for simple token-based auth.
   - BearerAuthGuard checks token against DEV_AUTH_TOKEN when DEV_AUTH_ENABLED=1.
   - Do not enable in production.
+- Anonymous Auth:
+  - Uses Firebase Anonymous Auth + Custom Backend Logic.
+  - Header `X-Device-ID` required for tracking anonymous users.
+  - Enforces "One Anonymous Account Per Device" policy.
+  - Supports UID Migration on app reinstall.
 
 Observability & Debugging (dev)
 - NestJS built-in logging with request/response tracking.

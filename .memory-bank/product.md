@@ -35,6 +35,11 @@ User experience goals
     - "See All" navigation to full templates with search/filters
     - Focus on clarity and quick access to popular templates
     - Sharp, clear template thumbnails (no blur effects)
+  - **Guest Mode (Anonymous Auth):**
+    - "Skip & Try as Guest" option on login screen
+    - Immediate access to core features (1 free credit)
+    - Persistent identity via Device ID (restores account on reinstall)
+    - Clear upgrade path to full account (2 free credits)
 - **Web CMS:** Professional, modern UI with Material-UI v7 design system
   - Fast, reliable admin workflows: create template, configure AI, upload thumbnail, test generation, publish in minutes
   - Intuitive template testing with dual input modes (file upload / URL paste)

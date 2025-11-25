@@ -37,6 +37,20 @@ Current work focus
     - Updated implementation-summary-admin-templates.md to Phase 3
     - Added detailed changelog entries
   - **Status:** Fully implemented, tested, and production-ready
+- **✅ Anonymous Authentication & Guest Mode:** ✅ COMPLETED (November 25, 2025)
+  - **Backend Implementation:**
+    - `POST /users/register` supports anonymous registration with `X-Device-ID` header
+    - Implemented "One Anonymous Account Per Device" policy
+    - Implemented "Lazy Creation" (user created only when needed)
+    - Implemented "UID Migration" (restore account after reinstall)
+    - Database: Added `is_anonymous`, `device_id`, `first_seen_at` to `users` table
+  - **Frontend Implementation (iOS):**
+    - Added "Skip & Try as Guest" button to Login screen
+    - Added "Guest Mode" banner in Profile view with "Sign In" CTA
+    - Updated `AuthViewModel` for anonymous session management
+    - Updated `APIClient` to auto-send `X-Device-ID`
+    - Updated `InsufficientCreditsView` with anonymous-specific messaging
+  - **Status:** Fully implemented and verified
 
 - **✅ In-App Purchase Credits System Integration:** ✅ COMPLETED
   - **Database & Backend:**
