@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2025-11-25 - Anonymous Authentication & Guest Mode 👤
+
+#### Added - Anonymous User Support
+- **Firebase Anonymous Auth**: Users can now "Skip" login and use the app as a Guest.
+- **Backend Integration**:
+  - `POST /users/register` supports anonymous registration.
+  - **Device-Based Identity**: Anonymous users are tracked via `X-Device-ID` header.
+  - **Lazy Creation**: Guest users are created in the database only when needed (e.g., on skip).
+  - **UID Migration**: Reinstalling the app restores the previous Guest account based on Device ID.
+  - **Naming**: Guest users are automatically named "Guest XXXX" (last 4 chars of Device ID).
+- **Database Schema**:
+  - Added `is_anonymous`, `device_id`, `first_seen_at` to `users` table.
+  - Added indexes for performance.
+- **Frontend (iOS)**:
+  - Added "Skip & Try as Guest" button to Login screen.
+  - Added "Guest Mode" banner in Profile view with "Sign In" CTA.
+  - Updated `AuthViewModel` to handle anonymous session management.
+  - Updated `APIClient` to automatically send `X-Device-ID` header.
+
 ### 2025-11-22 - Template-Category Integration & Display Order 🎯
 
 #### Added - Database-Driven Categories
