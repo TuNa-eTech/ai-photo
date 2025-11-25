@@ -1,0 +1,244 @@
+/v1/images/process:
+  post:
+    summary: Process image with AI template (Synchronous)
+    description: |
+      Process image with selected AI template using Gemini AI.
+      
+      **⚠️ IMPORTANT: This is a SYNCHRONOUS operation**
+      - Request will wait until processing completes
+      - Response time: 5-30 seconds
+      - Returns processed image directly in response
+      
+      **Flow:**
+      1. Client sends image (base64) + template_id
+      2. Backend validates image and checks credits (1 credit required)
+      3. Backend calls Gemini AI API synchronously
+      4. Backend deducts 1 credit upon success
+      5. Backend returns processed image immediately as base64
+      
+      **Constraints:**
+     - Max image size: 10MB (decoded)
+      - Supported formats: JPEG, PNG
+      - Anonymous users: 1 free credit
+      - Real users: 2 free credits on signup
+      
+      **Anonymous Auth:**
+      - Requires `X-Device-ID` header for device tracking
+      - One anonymous account per device permanently
+      
+    tags:
+      - Images
+    
+    security:
+      - bearerAuth: []
+    
+    parameters:
+      - name: X-Device-ID
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Device ID for anonymous user tracking (required for anonymous users)
+    
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/images.yaml#/components/schemas/ProcessImageRequest'
+          example:
+            template_id: "550e8400-e29b-41d4-a716-446655440000"
+            image_base64: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+            options:
+              width: 1024
+              height: 1024
+              quality: "standard"
+    
+    responses:
+      '200':
+        description: Image processed successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                data:
+                  $ref: '../schemas/images.yaml#/components/schemas/ProcessImageResponse'
+                meta:
+                  $ref: '../schemas/common.yaml#/components/schemas/Meta'
+            example:
+              success: true
+              data:
+                processed_image_base64: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+                metadata:
+                  template_id: "550e8400-e29b-41d4-a716-446655440000"
+                  template_name: "Anime Style Pro"
+                  model_used: "gemini-2.5-flash-image"
+                  generation_time_ms: 8500
+                  processed_dimensions:
+                    width: 1024
+                    height: 1024
+              meta:
+                requestId: "req_abc123"
+                timestamp: "2025-11-25T15:00:00Z"
+      
+      '400':
+        description: Invalid request (bad image format, invalid base64, etc.)
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/components/schemas/EnvelopeError'
+            example:
+              success: false
+              error:
+                code: "invalid_image_format"
+                message: "Image format not supported. Please use JPEG or PNG."
+                details:
+                  supported_formats: ["image/jpeg", "image/png"]
+              meta:
+                requestId: "req_xyz"
+                timestamp: "2025-11-25T15:00:00Z"
+      
+      '401':
+        description: Unauthorized (invalid or missing Firebase token)
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/components/schemas/EnvelopeError'
+            example:
+              success: false
+              error:
+                code: "unauthorized"
+                message: "Please sign in again"
+              meta:
+                requestId: "req_xyz"
+                timestamp: "2025-11-25T15:00:00Z"
+      
+      '403':
+        description: Forbidden (insufficient credits or device limit exceeded)
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/components/schemas/EnvelopeError'
+            examples:
+              insufficient_credits:
+                summary: Insufficient credits
+                value:
+                  success: false
+                  error:
+                    code: "insufficient_credits"
+                    message: "Insufficient credits. Please purchase more credits to continue."
+                    details:
+                      required: 1
+                      current: 0
+                  meta:
+                    requestId: "req_xyz"
+                    timestamp: "2025-11-25T15:00:00Z"
+              device_limit:
+                summary: Device limit exceeded (anonymous user)
+                value:
+                  success: false
+                  error:
+                    code: "device_limit_exceeded"
+                    message: "This device already has an anonymous account. Please sign in to continue."
+                  meta:
+                    requestId: "req_xyz"
+                    timestamp: "2025-11-25T15:00:00Z"
+      
+      '404':
+        description: Template not found or not published
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/components/schemas/EnvelopeError'
+            example:
+              success: false
+              error:
+                code: "template_not_found"
+                message: "Template not found or not published"
+                details:
+                  template_id: "invalid-uuid"
+              meta:
+                requestId: "req_xyz"
+                timestamp: "2025-11-25T15:00:00Z"
+      
+      '413':
+        description: Image too large (max 10MB)
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/components/schemas/EnvelopeError'
+            example:
+              success: false
+              error:
+                code: "image_too_large"
+                message: "Image is too large. Maximum 10MB."
+                details:
+                  max_size_mb: 10
+                  current_size_mb: 15.2
+              meta:
+                requestId: "req_xyz"
+                timestamp: "2025-11-25T15:00:00Z"
+      
+      '422':
+        description: Content policy violation (inappropriate content detected by AI)
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/components/schemas/EnvelopeError'
+            example:
+              success: false
+              error:
+                code: "inappropriate_content"
+                message: "This image cannot be processed due to content policy"
+              meta:
+                requestId: "req_xyz"
+                timestamp: "2025-11-25T15:00:00Z"
+      
+      '429':
+        description: Rate limit exceeded or quota reached
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/components/schemas/EnvelopeError'
+            example:
+              success: false
+              error:
+                code: "rate_limit_exceeded"
+                message: "API quota exceeded. Please check your billing and retry later."
+              meta:
+                requestId: "req_xyz"
+                timestamp: "2025-11-25T15:00:00Z"
+      
+      '502':
+        description: Gemini API error (AI service unavailable)
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/components/schemas/EnvelopeError'
+            example:
+              success: false
+              error:
+                code: "gemini_api_error"
+                message: "AI service unavailable. Please try again."
+              meta:
+                requestId: "req_xyz"
+                timestamp: "2025-11-25T15:00:00Z"
+      
+      '504':
+        description: Processing timeout (took longer than 45s)
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/components/schemas/EnvelopeError'
+            example:
+              success: false
+              error:
+                code: "processing_timeout"
+                message: "Processing took too long. Please try again."
+              meta:
+                requestId: "req_xyz"
+                timestamp: "2025-11-25T15:00:00Z"

@@ -1,0 +1,175 @@
+components:
+  schemas:
+    TemplatePublic:
+      type: object
+      description: Public template (prompts hidden)
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        thumbnail_url:
+          type: string
+          nullable: true
+          deprecated: true
+          description: "Deprecated: Use template_assets instead"
+        template_assets:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              kind:
+                type: string
+                enum: [thumbnail, preview, cover, sample]
+              file:
+                type: object
+                properties:
+                  file_url:
+                    type: string
+                  width:
+                    type: integer
+                  height:
+                    type: integer
+        status:
+          type: string
+          enum: [draft, published, archived]
+        visibility:
+          type: string
+          enum: [public, private]
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        usage_count:
+          type: integer
+        is_trending_manual:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        category:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+            slug:
+              type: string
+            name:
+              type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    Template:
+      allOf:
+        - $ref: '#/components/schemas/TemplatePublic'
+        - type: object
+          description: Full template with prompts (admin only)
+          properties:
+            prompt:
+              type: string
+              nullable: true
+            negative_prompt:
+              type: string
+              nullable: true
+            model_provider:
+              type: string
+              default: gemini
+            model_name:
+              type: string
+              default: gemini-1.5-pro
+    
+    TemplatesListResponse:
+      type: object
+      properties:
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplatePublic'
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+            limit:
+              type: integer
+            offset:
+              type: integer
+    
+    CreateTemplateDto:
+      type: object
+      required: [slug, name]
+      properties:
+        slug:
+          type: string
+          pattern: '^[a-z0-9-]+$'
+        name:
+          type: string
+        description:
+          type: string
+        prompt:
+          type: string
+        negative_prompt:
+          type: string
+        model_provider:
+          type: string
+          default: gemini
+        model_name:
+          type: string
+          default: gemini-1.5-pro
+        status:
+          type: string
+          enum: [draft, published, archived]
+          default: draft
+        visibility:
+          type: string
+          enum: [public, private]
+          default: public
+        tags:
+          type: array
+          items:
+            type: string
+        category_id:
+          type: string
+          format: uuid
+    
+    UpdateTemplateDto:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        prompt:
+          type: string
+        negative_prompt:
+          type: string
+        model_provider:
+          type: string
+        model_name:
+          type: string
+        status:
+          type: string
+          enum: [draft, published, archived]
+        visibility:
+          type: string
+          enum: [public, private]
+        tags:
+          type: array
+          items:
+            type: string
+        category_id:
+          type: string

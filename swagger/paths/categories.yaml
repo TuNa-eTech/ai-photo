@@ -1,0 +1,76 @@
+/categories:
+  get:
+    summary: List all categories
+    tags: [Categories]
+    responses:
+      '200':
+        description: Categories list
+  
+  post:
+    summary: Create category
+    tags: [Categories]
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [slug, name]
+            properties:
+              slug:
+                type: string
+              name:
+                type: string
+              description:
+                type: string
+              image_url:
+                type: string
+              display_order:
+                type: integer
+    responses:
+      '201':
+        description: Category created
+
+/categories/{id}:
+  get:
+    summary: Get category
+    tags: [Categories]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      '200':
+        description: Category details
+  
+  patch:
+    summary: Update category
+    tags: [Categories]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+    responses:
+      '200':
+        description: Category updated
+  
+  delete:
+    summary: Delete category
+    tags: [Categories]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      '204':
+        description: Category deleted

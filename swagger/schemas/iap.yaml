@@ -1,0 +1,48 @@
+components:
+  schemas:
+    IAPProduct:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          description: App Store product ID
+          example: "com.aiimagestylist.credits.starter"
+        name:
+          type: string
+          example: "10 Credits"
+        description:
+          type: string
+          example: "Buy 10 credits"
+        credits:
+          type: integer
+          example: 10
+        price:
+          type: number
+          format: decimal
+          nullable: true
+          example: 0.99
+        currency:
+          type: string
+          nullable: true
+          example: "USD"
+        is_active:
+          type: boolean
+        display_order:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    IAPProductsListResponse:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/IAPProduct'

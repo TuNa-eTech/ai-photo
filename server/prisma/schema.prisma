@@ -55,12 +55,6 @@ enum AssetKind {
   sample
 }
 
-enum ProcessedImageStatus {
-  pending
-  processing
-  completed
-  failed
-}
 
 model File {
   id           String       @id @default(uuid())
@@ -81,7 +75,6 @@ model File {
   updatedAt    DateTime     @updatedAt @map("updated_at")
 
   templateAssets TemplateAsset[]
-  processedImages ProcessedImage[]
 
   @@index([mimeType])
   @@index([storageType])
@@ -129,7 +122,6 @@ model Template {
   updatedAt        DateTime           @updatedAt @map("updated_at")
 
   templateAssets TemplateAsset[]
-  processedImages ProcessedImage[]
   category         Category?          @relation(fields: [categoryId], references: [id])
   categoryId       String?            @map("category_id")
 
@@ -140,36 +132,6 @@ model Template {
   @@map("templates")
 }
 
-model ProcessedImage {
-  id               String              @id @default(uuid())
-  userId           String              @map("user_id")
-  templateId       String              @map("template_id")
-  originalFileId   String?             @map("original_file_id")  // For future image uploads
-  resultFileId     String              @map("result_file_id")    // Generated image file
-  prompt           String?
-  negativePrompt   String?             @map("negative_prompt")
-  modelUsed        String              @map("model_used")
-  modelVersion     String?             @map("model_version")
-  width            Int?
-  height           Int?
-  processingTimeMs Int?                @map("processing_time_ms")
-  creditsUsed      Int                 @default(1) @map("credits_used")
-  status           ProcessedImageStatus @default(completed)
-  error            String?
-  metadata         Json?               // Additional processing metadata
-  createdAt        DateTime            @default(now()) @map("created_at")
-  updatedAt        DateTime            @updatedAt @map("updated_at")
-
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  template Template @relation(fields: [templateId], references: [id])
-  file     File     @relation(fields: [resultFileId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([templateId])
-  @@index([createdAt])
-  @@index([status])
-  @@map("processed_images")
-}
 
 model User {
   id               String        @id @default(uuid())
@@ -192,7 +154,6 @@ model User {
   updatedAt        DateTime      @updatedAt @map("updated_at")
 
   transactions Transaction[]
-  processedImages ProcessedImage[]
 
   @@index([firebaseUid])
   @@index([email])

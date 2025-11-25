@@ -1,0 +1,167 @@
+openapi: 3.0.3
+
+info:
+  title: AI Image Stylist API
+  version: 2.0.0
+  description: |
+    Backend API for AI Image Stylist - Template-based AI image processing application.
+    
+    **Key Features:**
+    - 🎨 Template-based image styling with Gemini AI
+    - 💳 Credits-based usage system (1 credit per process)
+    - 🛒 In-App Purchase integration (iOS StoreKit 2)
+    - 👤 User management with anonymous authentication
+    - 📁 Category-based template organization
+    
+    **Authentication:**
+    - Firebase ID Token (Bearer token)
+    - Dev token for local development (DEV_AUTH_TOKEN)
+    
+    **Documentation:**
+    - See `.documents/` for architecture and workflows
+    - See `.memory-bank/` for technical context
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+  - url: https://api.aiimagestylist.com
+    description: Production (TBD)
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Templates
+    description: Public template listing endpoints
+  - name: Images
+    description: AI image processing
+  - name: Users
+    description: User registration and profile
+  - name: Credits
+    description: Credits balance and transactions
+  - name: IAP
+    description: In-App Purchase products
+  - name: Categories
+    description: Template categories
+  - name: Admin - Templates
+    description: Template management (Web CMS)
+  - name: Admin - IAP
+    description: IAP product management (Web CMS)
+
+paths:
+  # Templates (Public)
+  /v1/templates:
+    $ref: './paths/templates.yaml#/~1v1~1templates'
+  /v1/templates/trending:
+    $ref: './paths/templates.yaml#/~1v1~1templates~1trending'
+  /v1/templates/categories:
+    $ref: './paths/templates.yaml#/~1v1~1templates~1categories'
+  
+  # Images
+  /v1/images/process:
+    $ref: './paths/images.yaml#/~1v1~1images~1process'
+  
+  # Users
+  /v1/users/me:
+    $ref: './paths/users.yaml#/~1v1~1users~1me'
+  /v1/users/register:
+    $ref: './paths/users.yaml#/~1v1~1users~1register'
+  /v1/users:
+    $ref: './paths/users.yaml#/~1v1~1users'
+  
+  # Credits
+  /v1/credits/balance:
+    $ref: './paths/credits.yaml#/~1v1~1credits~1balance'
+  /v1/credits/transactions:
+    $ref: './paths/credits.yaml#/~1v1~1credits~1transactions'
+  /v1/credits/purchase:
+    $ref: './paths/credits.yaml#/~1v1~1credits~1purchase'
+  /v1/credits/reward:
+    $ref: './paths/credits.yaml#/~1v1~1credits~1reward'
+  
+  # IAP (Public)
+  /v1/iap/products:
+    $ref: './paths/iap.yaml#/~1v1~1iap~1products'
+  
+  # Categories
+  /categories:
+    $ref: './paths/categories.yaml#/~1categories'
+  /categories/{id}:
+    $ref: './paths/categories.yaml#/~1categories~1{id}'
+  
+  # Admin - Templates
+  /v1/admin/templates:
+    $ref: './paths/templates-admin.yaml#/~1v1~1admin~1templates'
+  /v1/admin/templates/{slug}:
+    $ref: './paths/templates-admin.yaml#/~1v1~1admin~1templates~1{slug}'
+  /v1/admin/templates/{slug}/publish:
+    $ref: './paths/templates-admin.yaml#/~1v1~1admin~1templates~1{slug}~1publish'
+  /v1/admin/templates/{slug}/unpublish:
+    $ref: './paths/templates-admin.yaml#/~1v1~1admin~1templates~1{slug}~1unpublish'
+  /v1/admin/templates/{slug}/trending:
+    $ref: './paths/templates-admin.yaml#/~1v1~1admin~1templates~1{slug}~1trending'
+  /v1/admin/templates/{slug}/assets:
+    $ref: './paths/templates-admin.yaml#/~1v1~1admin~1templates~1{slug}~1assets'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Firebase ID Token
+      description: |
+        Firebase ID Token obtained from Firebase Authentication.
+        In development, can use DEV_AUTH_TOKEN instead.
+  
+  schemas:
+    # Common schemas
+    Envelope:
+      $ref: './schemas/common.yaml#/components/schemas/Envelope'
+    EnvelopeError:
+      $ref: './schemas/common.yaml#/components/schemas/EnvelopeError'
+    Meta:
+      $ref: './schemas/common.yaml#/components/schemas/Meta'
+    Error:
+      $ref: './schemas/common.yaml#/components/schemas/Error'
+    Pagination:
+      $ref: './schemas/common.yaml#/components/schemas/Pagination'
+    
+    # Template schemas
+    Template:
+      $ref: './schemas/templates.yaml#/components/schemas/Template'
+    TemplatePublic:
+      $ref: './schemas/templates.yaml#/components/schemas/TemplatePublic'
+    TemplatesListResponse:
+      $ref: './schemas/templates.yaml#/components/schemas/TemplatesListResponse'
+    CreateTemplateDto:
+      $ref: './schemas/templates.yaml#/components/schemas/CreateTemplateDto'
+    UpdateTemplateDto:
+      $ref: './schemas/templates.yaml#/components/schemas/UpdateTemplateDto'
+    
+    # Image schemas
+    ProcessImageRequest:
+      $ref: './schemas/images.yaml#/components/schemas/ProcessImageRequest'
+    ProcessImageResponse:
+      $ref: './schemas/images.yaml#/components/schemas/ProcessImageResponse'
+    
+    # User schemas
+    UserResponse:
+      $ref: './schemas/users.yaml#/components/schemas/UserResponse'
+    RegisterUserDto:
+      $ref: './schemas/users.yaml#/components/schemas/RegisterUserDto'
+    
+    # Credits schemas
+    CreditsBalanceResponse:
+      $ref: './schemas/credits.yaml#/components/schemas/CreditsBalanceResponse'
+    TransactionHistoryResponse:
+      $ref: './schemas/credits.yaml#/components/schemas/TransactionHistoryResponse'
+    PurchaseRequest:
+      $ref: './schemas/credits.yaml#/components/schemas/PurchaseRequest'
+    RewardRequest:
+      $ref: './schemas/credits.yaml#/components/schemas/RewardRequest'
+    
+    # IAP schemas
+    IAPProduct:
+      $ref: './schemas/iap.yaml#/components/schemas/IAPProduct'
+    IAPProductsListResponse:
+      $ref: './schemas/iap.yaml#/components/schemas/IAPProductsListResponse'

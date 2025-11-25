@@ -1,0 +1,89 @@
+components:
+  schemas:
+    CreditsBalanceResponse:
+      type: object
+      properties:
+        credits:
+          type: integer
+          description: Current credits balance
+          example: 5
+    
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [purchase, usage, bonus]
+        amount:
+          type: integer
+          description: Positive for purchase/bonus, negative for usage
+        product_id:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, completed, failed, refunded]
+        created_at:
+          type: string
+          format: date-time
+    
+    TransactionHistoryResponse:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+            limit:
+              type: integer
+            offset:
+              type: integer
+    
+    PurchaseRequest:
+      type: object
+      required: [transaction_data, product_id]
+      properties:
+        transaction_data:
+          type: string
+          description: JWT transaction data from StoreKit 2
+          example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+        product_id:
+          type: string
+          description: App Store product ID
+          example: "com.aiimagestylist.credits.starter"
+    
+    PurchaseResponse:
+      type: object
+      properties:
+        transaction_id:
+          type: string
+        credits_added:
+          type: integer
+        new_balance:
+          type: integer
+    
+    RewardRequest:
+      type: object
+      properties:
+        source:
+          type: string
+          default: rewarded_ad
+          example: rewarded_ad
+    
+    RewardResponse:
+      type: object
+      properties:
+        credits_added:
+          type: integer
+          example: 1
+        new_balance:
+          type: integer
+          example: 3

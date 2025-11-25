@@ -1,0 +1,71 @@
+/v1/users/me:
+  get:
+    summary: Get current user profile
+    tags: [Users]
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: User profile
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/users.yaml#/components/schemas/UserResponse'
+
+/v1/users/register:
+  post:
+    summary: Register or update user
+    description: Register new user or update existing user profile
+    tags: [Users]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: X-Device-ID
+        in: header
+        schema:
+          type: string
+        description: Device ID for anonymous users
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/users.yaml#/components/schemas/RegisterUserDto'
+    responses:
+      '200':
+        description: User registered/updated
+
+/v1/users:
+  get:
+    summary: List users (Admin only)
+    description: Get paginated list of users with filtering
+    tags: [Users]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          default: 1
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 10
+      - name: search
+        in: query
+        schema:
+          type: string
+      - name: type
+        in: query
+        schema:
+          enum: [all, anonymous, real]
+          default: all
+    responses:
+      '200':
+        description: Users list
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/users.yaml#/components/schemas/UsersListResponse'

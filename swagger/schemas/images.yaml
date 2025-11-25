@@ -1,0 +1,69 @@
+components:
+  schemas:
+    ProcessImageRequest:
+      type: object
+      required: [template_id, image_base64]
+      properties:
+        template_id:
+          type: string
+          format: uuid
+          description: UUID of the template to apply
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        image_base64:
+          type: string
+          description: Base64-encoded image (with or without data URI prefix)
+          example: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+        options:
+          type: object
+          description: Optional processing options
+          properties:
+            width:
+              type: integer
+              minimum: 256
+              maximum: 2048
+              default: 1024
+              description: Output image width
+            height:
+              type: integer
+              minimum: 256
+              maximum: 2048
+              default: 1024
+              description: Output image height
+            quality:
+              type: string
+              enum: [standard, high]
+              default: standard
+              description: Processing quality level
+    
+    ProcessImageResponse:
+      type: object
+      properties:
+        processed_image_base64:
+          type: string
+          description: Base64-encoded processed image with data URI prefix
+          example: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+        metadata:
+          type: object
+          properties:
+            template_id:
+              type: string
+              example: "550e8400-e29b-41d4-a716-446655440000"
+            template_name:
+              type: string
+              example: "Anime Style Pro"
+            model_used:
+              type: string
+              example: "gemini-2.5-flash-image"
+            generation_time_ms:
+              type: integer
+              description: Time taken to generate image in milliseconds
+              example: 8500
+            processed_dimensions:
+              type: object
+              properties:
+                width:
+                  type: integer
+                  example: 1024
+                height:
+                  type: integer
+                  example: 1024

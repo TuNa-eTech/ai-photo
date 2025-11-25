@@ -1,0 +1,12 @@
+/v1/iap/products:
+  get:
+    summary: Get IAP products (Public)
+    description: Get list of active IAP products for purchase
+    tags: [IAP]
+    responses:
+      '200':
+        description: IAP products list
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/iap.yaml#/components/schemas/IAPProductsListResponse'
