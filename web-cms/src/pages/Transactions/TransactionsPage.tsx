@@ -64,10 +64,10 @@ export function TransactionsPage(): React.ReactElement {
   const filteredTransactions = transactions.filter((tx) => {
     // Type filter
     if (typeFilter !== 'all' && tx.type !== typeFilter) return false
-    
+
     // Status filter
     if (statusFilter !== 'all' && tx.status !== statusFilter) return false
-    
+
     // Search filter (by transaction ID or product ID)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim()
@@ -75,7 +75,7 @@ export function TransactionsPage(): React.ReactElement {
       const matchesProductId = tx.product_id?.toLowerCase().includes(query) || false
       if (!matchesId && !matchesProductId) return false
     }
-    
+
     return true
   })
 
@@ -229,7 +229,7 @@ export function TransactionsPage(): React.ReactElement {
         />
       ) : (
         <>
-          <TableContainer component={Paper} elevation={0} sx={{ border: 1, borderColor: 'divider', mb: 2 }}>
+          <TableContainer component={Paper} elevation={0} sx={{ border: 1, borderColor: 'divider', mb: 2, overflowX: 'auto' }}>
             <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: 'grey.50' }}>

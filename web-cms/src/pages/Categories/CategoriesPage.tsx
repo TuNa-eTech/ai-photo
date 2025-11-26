@@ -84,7 +84,7 @@ export function CategoriesPage() {
                 </Button>
             </Box>
 
-            <TableContainer component={Paper}>
+            <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
                 <Table>
                     <TableHead>
                         <TableRow>

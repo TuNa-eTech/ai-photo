@@ -138,7 +138,7 @@ export const UsersPage = () => {
                 </Stack>
             </Card>
 
-            <TableContainer component={Paper} variant="outlined">
+            <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
                 <Table>
                     <TableHead>
                         <TableRow>

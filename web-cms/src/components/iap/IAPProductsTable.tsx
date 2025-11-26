@@ -72,7 +72,7 @@ export function IAPProductsTable({
 
   return (
     <Box>
-      <TableContainer component={Paper} elevation={0} sx={{ border: 1, borderColor: 'divider' }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: 1, borderColor: 'divider', overflowX: 'auto' }}>
         <Table>
           <TableHead>
             <TableRow sx={{ bgcolor: 'grey.50' }}>

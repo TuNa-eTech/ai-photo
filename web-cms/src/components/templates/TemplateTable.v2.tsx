@@ -133,6 +133,7 @@ export function TemplateTable({
         border: 1,
         borderColor: 'divider',
         borderRadius: 2,
+        overflowX: 'auto',
       }}
     >
       <Table>
