@@ -9,10 +9,7 @@ import FirebaseAuth
 import FirebaseCore
 import Foundation
 import GoogleSignIn
-
-#if canImport(UIKit)
-    import UIKit
-#endif
+import UIKit
 
 final class AuthService {
 

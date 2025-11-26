@@ -66,11 +66,19 @@ struct MainTabView: View {
                 }
             }
             .tint(GlassTokens.textPrimary)
-            .tabBarMinimizeBehavior(.onScrollDown)
             .onAppear {
-                setupTabBarAppearance()
+                if #available(iOS 26.0, *) {
+                    setupTabBarAppearance()
+                }
             }
             .environment(navigationViewModel)
+            .apply { view in
+                if #available(iOS 26.0, *) {
+                    view.tabBarMinimizeBehavior(.onScrollDown)
+                } else {
+                    view
+                }
+            }
         }
     }
 
@@ -100,6 +108,14 @@ struct MainTabView: View {
         // Add glass effect
         UITabBar.appearance().isTranslucent = true
         UITabBar.appearance().barTintColor = .clear
+    }
+}
+
+// Extension helper
+extension View {
+    @ViewBuilder
+    func apply<V: View>(@ViewBuilder _ transform: (Self) -> V) -> some View {
+        transform(self)
     }
 }
 
