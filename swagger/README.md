@@ -17,7 +17,9 @@ swagger/
 │   ├── users.yaml             # User registration/profile
 │   ├── credits.yaml           # Credits & transactions
 │   ├── iap.yaml               # IAP products (public)
-│   └── categories.yaml        # Categories CRUD
+│   ├── categories.yaml        # Categories CRUD
+│   └── admin/
+│       └── transactions.yaml  # Admin transactions (all users)
 └── schemas/                   # Data models and DTOs
     ├── common.yaml            # Envelope, Error, Pagination
     ├── templates.yaml         # Template schemas
@@ -56,8 +58,9 @@ swagger/
 | Credits | 4 | ✅ Complete |
 | IAP | 1 | ✅ Complete |
 | Categories | 5 | ✅ Complete |
+| Admin - Credits | 1 | ✅ Complete |
 
-**Total**: 27+ documented endpoints
+**Total**: 28+ documented endpoints
 
 ## Usage
 

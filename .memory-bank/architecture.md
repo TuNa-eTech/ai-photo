@@ -39,8 +39,9 @@ Key code paths (backend)
   - Mock mode: When `USE_MOCK_IMAGE=true`, returns `mock_dev/test_img.png` instead of calling GeminiService (cost-saving for development).
 - **Credits & IAP:**
   - server/src/credits/credits.module.ts (Credits management module).
-  - server/src/credits/credits.service.ts (Balance, deduct, add, history operations).
+  - server/src/credits/credits.service.ts (Balance, deduct, add, history operations, admin transaction history).
   - server/src/credits/credits.controller.ts (GET /v1/credits/balance, GET /v1/credits/transactions, POST /v1/credits/purchase).
+  - server/src/credits/credits-admin.controller.ts (GET /v1/admin/transactions - all transactions with user info).
   - server/src/iap/iap.module.ts (IAP processing module).
   - server/src/iap/iap.service.ts (StoreKit 2 JWT/JSON verification, purchase processing with idempotency).
   - server/src/iap/iap.controller.ts (GET /v1/iap/products - public endpoint).
@@ -132,7 +133,7 @@ Web CMS architecture (web-cms/)
     - client.ts → Base API client with auth interceptor
     - templates.ts → Templates API functions
     - images.ts → Image processing API functions
-    - credits.ts → (NEW) Credits and IAP API functions (balance, transactions, purchase, IAP products)
+    - credits.ts → (NEW) Credits and IAP API functions (balance, transactions, purchase, IAP products, **admin transactions with user info**)
   - src/components/ → Reusable UI components
     - common/ → LoadingState, EmptyState
     - dashboard/ → StatsCard
@@ -143,7 +144,7 @@ Web CMS architecture (web-cms/)
     - Templates/TemplatesListPage.tsx → Templates list with CRUD
     - Templates/TemplateDetailPage.tsx → Template detail with image generator
     - IAP/IAPProductsPage.tsx → (NEW) IAP products list view
-    - Transactions/TransactionsPage.tsx → (NEW) Transaction history with filters and search
+    - Transactions/TransactionsPage.tsx → (NEW) Admin transaction history (all users) with filters, search (ID/product/user), and user info display
     - Login/LoginPage.tsx → Firebase auth login
   - src/theme/theme.ts → Custom Material-UI theme (Indigo + Teal, Inter font)
   - src/types/ → TypeScript type definitions (TemplateAdmin, CreateTemplateRequest, etc.)

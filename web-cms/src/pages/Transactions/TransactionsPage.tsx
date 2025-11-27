@@ -31,8 +31,8 @@ import { useQuery } from '@tanstack/react-query'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import SearchIcon from '@mui/icons-material/Search'
 import ClearIcon from '@mui/icons-material/Clear'
-import { getTransactionHistory } from '../../api/credits'
-import type { Transaction } from '../../api/credits'
+import { getAdminTransactionHistory } from '../../api/credits'
+import type { AdminTransaction } from '../../api/credits'
 import { LoadingState } from '../../components/common/LoadingState'
 import { EmptyState } from '../../components/common/EmptyState'
 
@@ -52,8 +52,8 @@ export function TransactionsPage(): React.ReactElement {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['transactions', offset, typeFilter, statusFilter],
-    queryFn: () => getTransactionHistory({ limit: ITEMS_PER_PAGE, offset }),
+    queryKey: ['admin-transactions', offset, typeFilter, statusFilter],
+    queryFn: () => getAdminTransactionHistory({ limit: ITEMS_PER_PAGE, offset }),
   })
 
   const transactions = data?.transactions || []
@@ -68,18 +68,20 @@ export function TransactionsPage(): React.ReactElement {
     // Status filter
     if (statusFilter !== 'all' && tx.status !== statusFilter) return false
 
-    // Search filter (by transaction ID or product ID)
+    // Search filter (by transaction ID, product ID, user name, or email)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim()
       const matchesId = tx.id.toLowerCase().includes(query)
       const matchesProductId = tx.product_id?.toLowerCase().includes(query) || false
-      if (!matchesId && !matchesProductId) return false
+      const matchesUserName = tx.user.name.toLowerCase().includes(query)
+      const matchesUserEmail = tx.user.email.toLowerCase().includes(query)
+      if (!matchesId && !matchesProductId && !matchesUserName && !matchesUserEmail) return false
     }
 
     return true
   })
 
-  const getTypeColor = (type: Transaction['type']): 'success' | 'error' | 'info' => {
+  const getTypeColor = (type: AdminTransaction['type']): 'success' | 'error' | 'info' => {
     switch (type) {
       case 'purchase':
         return 'success'
@@ -92,7 +94,7 @@ export function TransactionsPage(): React.ReactElement {
     }
   }
 
-  const getStatusColor = (status: Transaction['status']): 'success' | 'error' | 'warning' | 'default' => {
+  const getStatusColor = (status: AdminTransaction['status']): 'success' | 'error' | 'warning' | 'default' => {
     switch (status) {
       case 'completed':
         return 'success'
@@ -148,7 +150,7 @@ export function TransactionsPage(): React.ReactElement {
         <TextField
           fullWidth
           size="small"
-          placeholder="Search by Transaction ID or Product ID..."
+          placeholder="Search by ID, Product, User Name, or Email..."
           value={searchQuery}
           onChange={(e) => {
             setSearchQuery(e.target.value)
@@ -234,6 +236,7 @@ export function TransactionsPage(): React.ReactElement {
               <TableHead>
                 <TableRow sx={{ bgcolor: 'grey.50' }}>
                   <TableCell><strong>ID</strong></TableCell>
+                  <TableCell><strong>User</strong></TableCell>
                   <TableCell><strong>Type</strong></TableCell>
                   <TableCell><strong>Amount</strong></TableCell>
                   <TableCell><strong>Product ID</strong></TableCell>
@@ -248,6 +251,19 @@ export function TransactionsPage(): React.ReactElement {
                       <Typography variant="body2" fontFamily="monospace" sx={{ fontSize: '0.75rem' }}>
                         {tx.id.slice(0, 8)}...
                       </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Stack>
+                        <Typography variant="body2" fontWeight={500}>
+                          {tx.user.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {tx.user.email}
+                        </Typography>
+                        {tx.user.is_anonymous && (
+                          <Chip label="Anonymous" size="small" sx={{ mt: 0.5, width: 'fit-content' }} />
+                        )}
+                      </Stack>
                     </TableCell>
                     <TableCell>
                       <Chip

@@ -87,3 +87,44 @@ components:
         new_balance:
           type: integer
           example: 3
+    
+    AdminTransaction:
+      allOf:
+        - $ref: '#/components/schemas/Transaction'
+        - type: object
+          properties:
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  example: "John Doe"
+                email:
+                  type: string
+                  example: "john@example.com"
+                is_anonymous:
+                  type: boolean
+                  example: false
+    
+    AdminTransactionHistoryResponse:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminTransaction'
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+              description: Total number of transactions
+            limit:
+              type: integer
+              description: Number of transactions per page
+            offset:
+              type: integer
+              description: Number of transactions skipped

@@ -101,6 +101,32 @@ export interface TransactionHistoryParams {
   offset?: number
 }
 
+export interface AdminTransaction extends Transaction {
+  user: {
+    id: string
+    name: string
+    email: string
+    is_anonymous: boolean
+  }
+}
+
+export interface AdminTransactionHistory {
+  transactions: AdminTransaction[]
+  meta: {
+    total: number
+    limit: number
+    offset: number
+  }
+}
+
+export interface AdminTransactionHistoryParams {
+  limit?: number
+  offset?: number
+  userId?: string
+  type?: 'purchase' | 'usage' | 'bonus'
+}
+
+
 // ============================================================================
 // CREDITS API
 // ============================================================================
@@ -127,6 +153,24 @@ export async function getTransactionHistory(
   const queryString = queryParams.toString()
   return apiClient.get<TransactionHistory>(`/v1/credits/transactions${queryString ? `?${queryString}` : ''}`)
 }
+
+/**
+ * Get all transaction history (admin view)
+ * GET /v1/admin/transactions
+ */
+export async function getAdminTransactionHistory(
+  params?: AdminTransactionHistoryParams
+): Promise<AdminTransactionHistory> {
+  const queryParams = new URLSearchParams()
+  if (params?.limit) queryParams.append('limit', String(params.limit))
+  if (params?.offset) queryParams.append('offset', String(params.offset))
+  if (params?.userId) queryParams.append('userId', params.userId)
+  if (params?.type) queryParams.append('type', params.type)
+  
+  const queryString = queryParams.toString()
+  return apiClient.get<AdminTransactionHistory>(`/v1/admin/transactions${queryString ? `?${queryString}` : ''}`)
+}
+
 
 // ============================================================================
 // IAP PRODUCTS API

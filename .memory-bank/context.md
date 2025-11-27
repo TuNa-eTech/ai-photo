@@ -62,7 +62,8 @@ Current work focus
     - IAP products seeded: starter (10 credits), popular (50 credits), bestvalue (100 credits)
   - **Backend API:**
     - `GET /v1/credits/balance` - Get user credits balance
-    - `GET /v1/credits/transactions` - Get transaction history with pagination
+    - `GET /v1/credits/transactions` - Get transaction history with pagination (user-scoped)
+    - `GET /v1/admin/transactions` - Get all transactions across all users with user info (admin endpoint for Web CMS)
     - `POST /v1/credits/purchase` - Process purchase with StoreKit 2 JWT/JSON verification
     - `GET /v1/iap/products` - Get IAP products list (public endpoint)
     - ImagesService enforces credit deduction (1 credit per image)
@@ -77,7 +78,7 @@ Current work focus
     - Insufficient credits error handling with alert and navigation to purchase screen
   - **Web CMS:**
     - IAP Products management page (view products list)
-    - Transaction History page with filters (type, status) and search (transaction ID, product ID)
+    - Transaction History page - Admin view showing all transactions across all users (filters: type, status; search: ID, product, user name, email; displays user info: name, email, anonymous badge)
     - Pull-to-refresh and refresh button support
   - **UI/UX Improvements:**
     - Fixed ProductCard to load credits from backend API (not regex extraction)
@@ -241,6 +242,7 @@ Recent changes (latest first)
     - CreditsService: getCreditsBalance, deductCredits, addCredits, checkCreditsAvailability, getTransactionHistory
     - IAPService: verifyTransaction (supports JWT and JSON), processPurchase (with idempotency), getProducts
     - CreditsController: GET /v1/credits/balance, GET /v1/credits/transactions, POST /v1/credits/purchase
+    - CreditsAdminController: GET /v1/admin/transactions (all users with user info)
     - IAPController: GET /v1/iap/products (public endpoint)
     - ImagesService: Enforces credit check before processing, deducts 1 credit after success
     - UsersService: Sets credits = 2 for new users
@@ -256,7 +258,7 @@ Recent changes (latest first)
     - BackgroundImageProcessor: Parses insufficient_credits error (403) and notifies with ProcessingError.insufficientCredits
   - **Web CMS:**
     - IAP Products Page: Displays all active IAP products in table format
-    - Transaction History Page: Lists user transactions with filters (type, status) and search (transaction ID, product ID)
+     - Transaction History Page: Admin view listing all transactions across all users with filters (type, status), search (ID, product, user), and user info display (name, email, anonymous badge)
     - Added navigation links in AppLayout for IAP Products and Transactions
     - Pull-to-refresh and refresh button support
   - **UI/UX Improvements:**

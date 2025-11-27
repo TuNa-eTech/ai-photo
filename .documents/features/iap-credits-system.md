@@ -222,6 +222,47 @@ Get user's transaction history with pagination.
 }
 ```
 
+#### GET /v1/admin/transactions
+Get all transactions across all users (admin view for Web CMS).
+
+**Auth**: Required (Bearer token with admin access)
+
+**Query Parameters**:
+- `limit` (optional, default: 20, max: 100)
+- `offset` (optional, default: 0)
+- `userId` (optional): Filter by specific user UUID
+- `type` (optional): `purchase`, `usage`, `bonus`
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "transactions": [
+      {
+        "id": "uuid",
+        "type": "purchase",
+        "amount": 10,
+        "product_id": "com.bokphoto.credits.starter",
+        "status": "completed",
+        "created_at": "2025-11-27T...",
+        "user": {
+          "id": "uuid",
+          "name": "John Doe",
+          "email": "john@example.com",
+          "is_anonymous": false
+        }
+      }
+    ],
+    "meta": {
+      "total": 50,
+      "limit": 20,
+      "offset": 0
+    }
+  }
+}
+```
+
 #### POST /v1/credits/purchase
 Process IAP purchase and add credits to user.
 
@@ -366,9 +407,10 @@ Three default consumable products are seeded in the database:
 - Read-only view (products managed in App Store Connect)
 
 ### Transaction History Page
-- Lists user transactions with pagination
+- Lists **all transactions across all users** (admin endpoint: `/v1/admin/transactions`)
+- Displays user information for each transaction (name, email, anonymous badge)
 - Filters: Type (purchase/usage/bonus), Status (completed/pending/failed/refunded)
-- Search: Transaction ID or Product ID
+- Search: Transaction ID, Product ID, User Name, or Email
 - Color-coded transaction types and statuses
 - Pull-to-refresh and refresh button support
 

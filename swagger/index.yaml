@@ -47,6 +47,8 @@ tags:
     description: Template management (Web CMS)
   - name: Admin - IAP
     description: IAP product management (Web CMS)
+  - name: Admin - Credits
+    description: Credits and transaction management (Web CMS)
 
 paths:
   # Templates (Public)
@@ -102,6 +104,10 @@ paths:
     $ref: './paths/templates-admin.yaml#/~1v1~1admin~1templates~1{slug}~1trending'
   /v1/admin/templates/{slug}/assets:
     $ref: './paths/templates-admin.yaml#/~1v1~1admin~1templates~1{slug}~1assets'
+  
+  # Admin - Credits
+  /v1/admin/transactions:
+    $ref: './paths/admin/transactions.yaml#/~1v1~1admin~1transactions'
 
 components:
   securitySchemes:
@@ -159,6 +165,10 @@ components:
       $ref: './schemas/credits.yaml#/components/schemas/PurchaseRequest'
     RewardRequest:
       $ref: './schemas/credits.yaml#/components/schemas/RewardRequest'
+    AdminTransaction:
+      $ref: './schemas/credits.yaml#/components/schemas/AdminTransaction'
+    AdminTransactionHistoryResponse:
+      $ref: './schemas/credits.yaml#/components/schemas/AdminTransactionHistoryResponse'
     
     # IAP schemas
     IAPProduct:

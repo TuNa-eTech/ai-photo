@@ -10,6 +10,8 @@ import {
   CreditsBalanceResponseDto,
   TransactionHistoryResponseDto,
   TransactionDto,
+  AdminTransactionHistoryResponseDto,
+  AdminTransactionDto,
 } from './dto';
 
 @Injectable()
@@ -284,6 +286,72 @@ export class CreditsService {
       product_id: t.productId || undefined,
       status: t.status as 'pending' | 'completed' | 'failed' | 'refunded',
       created_at: t.createdAt,
+    }));
+
+    return {
+      transactions: transactionDtos,
+      meta: {
+        total,
+        limit,
+        offset,
+      },
+    };
+  }
+
+  /**
+   * Get all transaction history (admin view)
+   * Returns transactions across all users with user information
+   */
+  async getAdminTransactionHistory(
+    limit: number = 20,
+    offset: number = 0,
+    userId?: string,
+    type?: 'purchase' | 'usage' | 'bonus',
+  ): Promise<AdminTransactionHistoryResponseDto> {
+    // Build where clause for filtering
+    const where: any = {};
+    
+    if (userId) {
+      where.userId = userId;
+    }
+    
+    if (type) {
+      where.type = type;
+    }
+
+    const [transactions, total] = await Promise.all([
+      this.prisma.transaction.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              isAnonymous: true,
+            },
+          },
+        },
+      }),
+      this.prisma.transaction.count({ where }),
+    ]);
+
+    const transactionDtos: AdminTransactionDto[] = transactions.map((t) => ({
+      id: t.id,
+      type: t.type as 'purchase' | 'usage' | 'bonus',
+      amount: t.amount,
+      product_id: t.productId || undefined,
+      status: t.status as 'pending' | 'completed' | 'failed' | 'refunded',
+      created_at: t.createdAt,
+      user: {
+        id: t.user.id,
+        name: t.user.name,
+        email: t.user.email,
+        is_anonymous: t.user.isAnonymous,
+      },
     }));
 
     return {
