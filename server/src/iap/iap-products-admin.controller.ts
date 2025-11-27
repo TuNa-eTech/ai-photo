@@ -15,13 +15,14 @@ import { IAPService } from './iap.service';
 import { CreateIAPProductDto } from './dto/create-iap-product.dto';
 import { UpdateIAPProductDto } from './dto/update-iap-product.dto';
 import { BearerAuthGuard } from '../auth/bearer-auth.guard';
+import { AdminGuard } from '../auth/admin.guard';
 
 /**
  * Admin IAP Products Controller
  * All endpoints require authentication (Bearer token)
  */
 @Controller('v1/admin/iap-products')
-@UseGuards(BearerAuthGuard)
+@UseGuards(BearerAuthGuard, AdminGuard)
 export class IAPProductsAdminController {
   constructor(private readonly iapService: IAPService) {}
 

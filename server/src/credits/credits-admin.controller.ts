@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { BearerAuthGuard } from '../auth/bearer-auth.guard';
+import { AdminGuard } from '../auth/admin.guard';
 import { CreditsService } from './credits.service';
 import { AdminTransactionHistoryResponseDto } from './dto';
 
@@ -15,7 +16,7 @@ import { AdminTransactionHistoryResponseDto } from './dto';
  * Endpoints for admin to view all transactions across all users
  */
 @Controller('v1/admin/transactions')
-@UseGuards(BearerAuthGuard)
+@UseGuards(BearerAuthGuard, AdminGuard)
 export class CreditsAdminController {
   constructor(private readonly creditsService: CreditsService) {}
 

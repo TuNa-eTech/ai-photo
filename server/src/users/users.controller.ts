@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { BearerAuthGuard } from '../auth/bearer-auth.guard';
+import { AdminGuard } from '../auth/admin.guard';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { UsersService } from './users.service';
@@ -51,10 +52,10 @@ export class UsersController {
   /**
    * GET /v1/users
    * Get all users with pagination and filtering
-   * Requires Admin privileges (TODO: Add AdminGuard)
+   * Requires Admin privileges
    */
   @Get()
-  @UseGuards(BearerAuthGuard)
+  @UseGuards(BearerAuthGuard, AdminGuard)
   async findAll(@Query() query: GetUsersDto) {
     return this.usersService.findAll(
       query.page || 1,

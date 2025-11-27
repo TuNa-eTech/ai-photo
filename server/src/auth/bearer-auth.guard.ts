@@ -26,6 +26,7 @@ export class BearerAuthGuard implements CanActivate {
       Request & {
         headers: Record<string, string | undefined>;
         firebaseUid?: string;
+        userEmail?: string;
         url?: string;
       }
     >();
@@ -56,6 +57,7 @@ export class BearerAuthGuard implements CanActivate {
       }
       // For dev mode, use a fixed test UID
       req.firebaseUid = 'dev-user-uid-123';
+      req.userEmail = 'dev@example.com';
       this.logger.debug(
         `DevAuth: Authenticated as dev-user-uid-123 for ${req.url}`,
       );
@@ -70,13 +72,16 @@ export class BearerAuthGuard implements CanActivate {
 
       // Attach Firebase UID to request for use in controllers
       req.firebaseUid = decodedToken.uid;
+      
+      // Attach user email for AdminGuard
+      req.userEmail = decodedToken.email || undefined;
 
       // Detect anonymous users
       const isAnonymous = decodedToken.firebase?.sign_in_provider === 'anonymous';
       (req as any).isAnonymous = isAnonymous;
 
       this.logger.debug(
-        `Firebase Auth: ${isAnonymous ? 'Anonymous' : 'Registered'} user ${decodedToken.uid} for ${req.url}`,
+        `Firebase Auth: ${isAnonymous ? 'Anonymous' : 'Registered'} user ${decodedToken.uid} (${req.userEmail || 'no email'}) for ${req.url}`,
       );
       return true;
     } catch (error) {

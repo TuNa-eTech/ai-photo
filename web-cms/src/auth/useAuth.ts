@@ -122,7 +122,35 @@ export function useAuth(): UseAuthReturn {
         const auth = getFirebaseAuth()
         const provider = new GoogleAuthProvider()
         const result = await signInWithPopup(auth, provider)
-        setUser(mapFirebaseUser(result.user))
+        
+        // Verify admin status
+        try {
+          const token = await result.user.getIdToken()
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/v1/auth/verify-admin`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+            },
+          })
+          
+          // Must be explicit 200 OK, not 304 or other status
+          if (response.status !== 200) {
+            // Not an admin or error, sign out immediately
+            await signOut(auth)
+            const errorMessage = response.status === 403 
+              ? 'Access denied. Your account does not have admin privileges.' 
+              : `Failed to verify admin status (${response.status})`;
+            throw new Error(errorMessage)
+          }
+          
+          // Admin verified, set user
+          setUser(mapFirebaseUser(result.user))
+        } catch (adminError) {
+          // Failed admin verification, sign out
+          await signOut(auth)
+          throw adminError
+        }
       }
     } catch (err) {
       const error = err as Error

@@ -20,13 +20,14 @@ import { CreateTemplateDto } from './dto/create-template.dto';
 import { UpdateTemplateDto } from './dto/update-template.dto';
 import { UploadAssetDto, AssetKind } from './dto/upload-asset.dto';
 import { BearerAuthGuard } from '../auth/bearer-auth.guard';
+import { AdminGuard } from '../auth/admin.guard';
 
 /**
  * Admin Templates Controller
  * All endpoints require authentication (Bearer token)
  */
 @Controller('v1/admin/templates')
-@UseGuards(BearerAuthGuard)
+@UseGuards(BearerAuthGuard, AdminGuard)
 export class TemplatesAdminController {
   constructor(private readonly templatesService: TemplatesService) { }
 
