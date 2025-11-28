@@ -14,6 +14,7 @@ struct CreditsPurchaseView: View {
 
     @State private var creditsViewModel = CreditsViewModel()
     @State private var selectedProductId: String?
+    @State private var toastMessage: ToastMessage?
 
     var body: some View {
         NavigationStack {
@@ -74,18 +75,23 @@ struct CreditsPurchaseView: View {
                     Text(error)
                 }
             }
-            .alert(
-                L10n.tr("l10n.common.success"),
-                isPresented: .constant(creditsViewModel.successMessage != nil)
-            ) {
-                Button(L10n.tr("l10n.common.ok")) {
+            .onChange(of: creditsViewModel.successMessage) { oldValue, newValue in
+                if let message = newValue {
+                    // Show toast instead of blocking alert
+                    toastMessage = ToastMessage(
+                        text: message,
+                        icon: "checkmark.circle.fill",
+                        type: .success
+                    )
                     creditsViewModel.successMessage = nil
-                }
-            } message: {
-                if let message = creditsViewModel.successMessage {
-                    Text(message)
+                    // Auto-dismiss after short delay
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(500))
+                        dismiss()
+                    }
                 }
             }
+            .toast($toastMessage)
             .analyticsScreen(name: "CreditsPurchase")
         }
     }

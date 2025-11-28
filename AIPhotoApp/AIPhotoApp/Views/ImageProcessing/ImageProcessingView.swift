@@ -12,6 +12,7 @@ struct ImageProcessingView: View {
     // MARK: - Properties
     let template: TemplateDTO
     let image: UIImage
+    var onDismiss: (() -> Void)? = nil  // Closure to dismiss entire navigation flow
 
     // MARK: - Environment & State
     @Environment(AuthViewModel.self) private var authViewModel
@@ -34,35 +35,34 @@ struct ImageProcessingView: View {
     var body: some View {
         Group {
             if let viewModel = viewModel {
-                NavigationStack {
-                    mainContent(viewModel: viewModel)
-                        .navigationDestination(isPresented: $showResultView) {
-                            if let project = resultProject {
-                                ResultView(project: project, originalImage: image)
-                                    .toolbar(.hidden, for: .tabBar)
-                            }
+                mainContent(viewModel: viewModel)
+                    .navigationDestination(isPresented: $showResultView) {
+                        if let project = resultProject {
+                            ResultView(project: project, originalImage: image, onDismiss: onDismiss)
+                                .toolbar(.hidden, for: .tabBar)
                         }
-                        .navigationDestination(isPresented: $navigateToInsufficientCredits) {
-                            InsufficientCreditsView()
-                                .environment(authViewModel)
-                        }
-                }
-                .task {
-                    await creditsViewModel.refreshCreditsBalance()
-                    // Skip initial process if returning from InsufficientCreditsView with 0 credits
-                    if !shouldSkipInitialProcess {
-                        await viewModel.processImage(template: template, image: image)
                     }
-                }
-                .onChange(of: viewModel.processingState) { oldValue, newValue in
-                    handleProcessingStateChange(newValue)
-                }
-                .onChange(of: navigateToInsufficientCredits) { oldValue, newValue in
-                    handleCreditsNavigationChange(newValue)
-                }
-                .onReceive(NotificationCenter.default.publisher(for: .creditsBalanceUpdated)) { _ in
-                    handleCreditsBalanceUpdate()
-                }
+                    .navigationDestination(isPresented: $navigateToInsufficientCredits) {
+                        InsufficientCreditsView()
+                            .environment(authViewModel)
+                    }
+                    .task {
+                        await creditsViewModel.refreshCreditsBalance()
+                        // Skip initial process if returning from InsufficientCreditsView with 0 credits
+                        if !shouldSkipInitialProcess {
+                            await viewModel.processImage(template: template, image: image)
+                        }
+                    }
+                    .onChange(of: viewModel.processingState) { oldValue, newValue in
+                        handleProcessingStateChange(newValue)
+                    }
+                    .onChange(of: navigateToInsufficientCredits) { oldValue, newValue in
+                        handleCreditsNavigationChange(newValue)
+                    }
+                    .onReceive(NotificationCenter.default.publisher(for: .creditsBalanceUpdated)) {
+                        _ in
+                        handleCreditsBalanceUpdate()
+                    }
             } else {
                 // Loading state while initializing ViewModel
                 ZStack {

@@ -65,7 +65,11 @@ struct SearchView: View {
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .navigationDestination(item: $selectedTemplate) { template in
-                TemplateSelectionView(template: template)
+                TemplateSelectionView(
+                    template: template,
+                    onDismiss: {
+                        selectedTemplate = nil  // Reset to pop entire navigation stack
+                    })
             }
             .onAppear {
                 // If there's a pending category from navigation, apply it

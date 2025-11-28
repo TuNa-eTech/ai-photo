@@ -111,8 +111,13 @@ struct HomeView: View {
                 }
             }
             .navigationDestination(item: $selectedTemplate) { template in
-                TemplateSelectionView(template: template)
-                    .toolbar(.hidden, for: .tabBar)
+                TemplateSelectionView(
+                    template: template,
+                    onDismiss: {
+                        selectedTemplate = nil  // Reset to pop entire navigation stack
+                    }
+                )
+                .toolbar(.hidden, for: .tabBar)
             }
         }
         .analyticsScreen(name: "Home")

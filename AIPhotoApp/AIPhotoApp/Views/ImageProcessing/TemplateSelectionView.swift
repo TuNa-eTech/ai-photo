@@ -12,6 +12,8 @@ import UniformTypeIdentifiers
 
 struct TemplateSelectionView: View {
     let template: TemplateDTO
+    var onDismiss: (() -> Void)? = nil  // Closure to dismiss entire navigation flow
+
     @Environment(AuthViewModel.self) private var authViewModel
 
     @State private var selectedPhotoItem: PhotosPickerItem?
@@ -84,7 +86,7 @@ struct TemplateSelectionView: View {
         }
         .navigationDestination(isPresented: $showImageProcessing) {
             if let image = selectedImage {
-                ImageProcessingView(template: template, image: image)
+                ImageProcessingView(template: template, image: image, onDismiss: onDismiss)
                     .toolbar(.hidden, for: .tabBar)
             } else {
                 EmptyView()

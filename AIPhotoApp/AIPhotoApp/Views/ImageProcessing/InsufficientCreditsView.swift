@@ -21,8 +21,10 @@ struct InsufficientCreditsView: View {
     @State private var creditsViewModel = CreditsViewModel()
     @State private var showCreditsPurchase = false
     @State private var showLoadingOverlay = false
+    @State private var showReturningOverlay = false
     @State private var hasRefreshed = false
     @State private var isAnonymous = false
+    @State private var toastMessage: ToastMessage?
 
     var body: some View {
         ZStack {
@@ -41,6 +43,10 @@ struct InsufficientCreditsView: View {
 
             if showLoadingOverlay {
                 loadingOverlay
+            }
+
+            if showReturningOverlay {
+                returningToProcessingOverlay
             }
         }
         .navigationTitle(L10n.tr("l10n.credits.notEnoughTitle"))
@@ -79,36 +85,27 @@ struct InsufficientCreditsView: View {
                 Text(error)
             }
         }
-        .alert(
-            L10n.tr("l10n.common.success"),
-            isPresented: .constant(creditsViewModel.successMessage != nil)
-        ) {
-            Button(L10n.tr("l10n.common.ok")) {
-                creditsViewModel.successMessage = nil
-                // Auto-pop on success
-                if creditsViewModel.successMessage != nil {
-                    dismiss()
-                }
-            }
-        } message: {
-            if let message = creditsViewModel.successMessage {
-                Text(message)
-            }
-        }
         .onChange(of: creditsViewModel.successMessage) { oldValue, newValue in
-            if newValue != nil {
-                Task {
-                    try? await Task.sleep(for: .milliseconds(500))
-                    dismiss()
-                }
+            if let message = newValue {
+                // Show toast instead of blocking alert
+                toastMessage = ToastMessage(
+                    text: message,
+                    icon: "checkmark.circle.fill",
+                    type: .success
+                )
+                creditsViewModel.successMessage = nil
             }
         }
+        .toast($toastMessage)
         .onReceive(NotificationCenter.default.publisher(for: .creditsBalanceUpdated)) { _ in
-            // Auto-dismiss InsufficientCreditsView when credits are added from purchase or rewarded ad
+            // Refresh balance and dismiss to let ImageProcessingView handle retry
             Task { @MainActor in
                 await creditsViewModel.refreshCreditsBalance()
                 if creditsViewModel.creditsBalance > 0 {
-                    try? await Task.sleep(for: .milliseconds(300))
+                    // Show "Returning to processing..." overlay
+                    showReturningOverlay = true
+                    // Give a short delay for user to see the transition
+                    try? await Task.sleep(for: .milliseconds(1000))
                     dismiss()
                 }
             }
@@ -277,6 +274,73 @@ struct InsufficientCreditsView: View {
                 in: RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius)
             )
         }
+    }
+
+    // MARK: - Returning to Processing Overlay
+    private var returningToProcessingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+            VStack(spacing: 20) {
+                // Success icon with animation
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    GlassTokens.accent1.opacity(0.3),
+                                    GlassTokens.accent2.opacity(0.2),
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 80, height: 80)
+                        .blur(radius: 16)
+
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    GlassTokens.accent1,
+                                    GlassTokens.accent2,
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 72, height: 72)
+
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 36, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+                .shadow(color: GlassTokens.accent1.opacity(0.4), radius: 16, x: 0, y: 8)
+
+                VStack(spacing: 8) {
+                    Text("Credits Added!")
+                        .font(.title3.bold())
+                        .foregroundStyle(.white)
+
+                    Text("Returning to processing...")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.85))
+                }
+
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .tint(.white)
+                    .scaleEffect(1.2)
+            }
+            .padding(40)
+            .background(
+                .ultraThinMaterial,
+                in: RoundedRectangle(cornerRadius: GlassTokens.cardCornerRadius)
+            )
+            .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+        }
+        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: showReturningOverlay)
     }
 }
 
