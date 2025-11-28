@@ -69,7 +69,9 @@ struct SearchView: View {
                     template: template,
                     onDismiss: {
                         selectedTemplate = nil  // Reset to pop entire navigation stack
-                    })
+                    }
+                )
+                .toolbar(.hidden, for: .tabBar)  // Hide tab bar during image flow
             }
             .onAppear {
                 // If there's a pending category from navigation, apply it
