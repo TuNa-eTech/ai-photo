@@ -52,6 +52,7 @@ struct MyProjectsView: View {
                     )
                 }
             }
+            .analyticsScreen(name: "MyProjects")
         }
     }
 

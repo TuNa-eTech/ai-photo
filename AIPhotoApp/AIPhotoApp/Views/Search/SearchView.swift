@@ -99,6 +99,7 @@ struct SearchView: View {
                 // Reload templates when selection changes
                 updateTemplates(for: newValue)
             }
+            .analyticsScreen(name: "Search")
         }
     }
 

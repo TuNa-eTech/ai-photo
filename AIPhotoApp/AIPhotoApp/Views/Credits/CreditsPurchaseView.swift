@@ -5,29 +5,29 @@
 //  Credits purchase screen with IAP products
 //
 
-import SwiftUI
 import StoreKit
+import SwiftUI
 
 struct CreditsPurchaseView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AuthViewModel.self) private var authViewModel
-    
+
     @State private var creditsViewModel = CreditsViewModel()
     @State private var selectedProductId: String?
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
                 GlassBackgroundView()
-                
+
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 28) {
                         // Hero Credits Display
                         heroCreditsCard
-                        
+
                         // Products Section
                         productsSection
-                        
+
                         // Info Section
                         infoSection
                     }
@@ -62,7 +62,10 @@ struct CreditsPurchaseView: View {
                 await creditsViewModel.refreshCreditsBalance()
                 await creditsViewModel.loadProducts()
             }
-            .alert(L10n.tr("l10n.common.error"), isPresented: .constant(creditsViewModel.errorMessage != nil)) {
+            .alert(
+                L10n.tr("l10n.common.error"),
+                isPresented: .constant(creditsViewModel.errorMessage != nil)
+            ) {
                 Button(L10n.tr("l10n.common.ok")) {
                     creditsViewModel.errorMessage = nil
                 }
@@ -71,7 +74,10 @@ struct CreditsPurchaseView: View {
                     Text(error)
                 }
             }
-            .alert(L10n.tr("l10n.common.success"), isPresented: .constant(creditsViewModel.successMessage != nil)) {
+            .alert(
+                L10n.tr("l10n.common.success"),
+                isPresented: .constant(creditsViewModel.successMessage != nil)
+            ) {
                 Button(L10n.tr("l10n.common.ok")) {
                     creditsViewModel.successMessage = nil
                 }
@@ -80,11 +86,12 @@ struct CreditsPurchaseView: View {
                     Text(message)
                 }
             }
+            .analyticsScreen(name: "CreditsPurchase")
         }
     }
-    
+
     // MARK: - Hero Credits Card
-    
+
     private var heroCreditsCard: some View {
         HStack(spacing: 16) {
             // Compact icon with gradient
@@ -95,7 +102,7 @@ struct CreditsPurchaseView: View {
                         LinearGradient(
                             colors: [
                                 GlassTokens.accent1.opacity(0.3),
-                                GlassTokens.accent2.opacity(0.2)
+                                GlassTokens.accent2.opacity(0.2),
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -103,14 +110,14 @@ struct CreditsPurchaseView: View {
                     )
                     .frame(width: 56, height: 56)
                     .blur(radius: 16)
-                
+
                 // Main icon
                 Circle()
                     .fill(
                         LinearGradient(
                             colors: [
                                 GlassTokens.accent1,
-                                GlassTokens.primary1.opacity(0.9)
+                                GlassTokens.primary1.opacity(0.9),
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -124,26 +131,28 @@ struct CreditsPurchaseView: View {
                                 lineWidth: 1
                             )
                     )
-                
+
                 Image(systemName: "sparkles")
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(GlassTokens.textPrimary.opacity(0.9))
             }
             .shadow(color: GlassTokens.accent1.opacity(0.2), radius: 8, x: 0, y: 4)
-            
+
             // Credits info - Modern horizontal layout
             VStack(alignment: .leading, spacing: 6) {
                 Text(L10n.tr("l10n.credits.balance"))
                     .font(.caption.weight(.medium))
                     .foregroundStyle(GlassTokens.textSecondary.opacity(0.8))
-                
+
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("\(creditsViewModel.creditsBalance)")
                         .font(.system(size: 36, weight: .bold, design: .rounded))
                         .foregroundStyle(GlassTokens.textPrimary)
                         .contentTransition(.numericText())
-                        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: creditsViewModel.creditsBalance)
-                    
+                        .animation(
+                            .spring(response: 0.3, dampingFraction: 0.8),
+                            value: creditsViewModel.creditsBalance)
+
                     // Status indicator
                     HStack(spacing: 4) {
                         Circle()
@@ -161,9 +170,9 @@ struct CreditsPurchaseView: View {
                     )
                 }
             }
-            
+
             Spacer()
-            
+
             // Action indicator
             VStack(spacing: 4) {
                 Image(systemName: "arrow.right.circle.fill")
@@ -172,7 +181,7 @@ struct CreditsPurchaseView: View {
                         LinearGradient(
                             colors: [
                                 GlassTokens.accent1.opacity(0.8),
-                                GlassTokens.accent2.opacity(0.7)
+                                GlassTokens.accent2.opacity(0.7),
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -184,9 +193,9 @@ struct CreditsPurchaseView: View {
         .padding(.vertical, 18)
         .glassCard()
     }
-    
+
     // MARK: - Products Section
-    
+
     private var productsSection: some View {
         VStack(alignment: .leading, spacing: 20) {
             // Section Header - Harmonized styling
@@ -195,16 +204,16 @@ struct CreditsPurchaseView: View {
                     Text(L10n.tr("l10n.credits.choosePackage"))
                         .font(.title2.weight(.bold))
                         .foregroundStyle(GlassTokens.textPrimary)
-                    
+
                     Text(L10n.tr("l10n.credits.plan.subtitle"))
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(GlassTokens.textSecondary.opacity(0.85))
                 }
-                
+
                 Spacer()
             }
             .padding(.horizontal, 4)
-            
+
             // Products List
             if creditsViewModel.isLoading && creditsViewModel.products.isEmpty {
                 ProgressView()
@@ -214,11 +223,13 @@ struct CreditsPurchaseView: View {
                 emptyStateView
             } else {
                 VStack(spacing: 16) {
-                    ForEach(Array(creditsViewModel.products.enumerated()), id: \.element.id) { index, product in
+                    ForEach(Array(creditsViewModel.products.enumerated()), id: \.element.id) {
+                        index, product in
                         ProductCard(
                             product: product,
                             creditsCount: creditsViewModel.getCreditsForProduct(product.id),
-                            isPurchasing: creditsViewModel.isPurchasing && selectedProductId == product.id,
+                            isPurchasing: creditsViewModel.isPurchasing
+                                && selectedProductId == product.id,
                             isSelected: selectedProductId == product.id,
                             index: index,
                             isLast: index == creditsViewModel.products.count - 1,
@@ -236,19 +247,19 @@ struct CreditsPurchaseView: View {
             }
         }
     }
-    
+
     // MARK: - Empty State
-    
+
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.circle")
                 .font(.system(size: 48))
                 .foregroundStyle(GlassTokens.textSecondary.opacity(0.6))
-            
+
             Text(L10n.tr("l10n.credits.noProducts"))
                 .font(.headline)
                 .foregroundStyle(GlassTokens.textPrimary)
-            
+
             Text(L10n.tr("l10n.credits.checkConnection"))
                 .font(.subheadline)
                 .foregroundStyle(GlassTokens.textSecondary)
@@ -258,9 +269,9 @@ struct CreditsPurchaseView: View {
         .padding(.vertical, 60)
         .padding(.horizontal, 20)
     }
-    
+
     // MARK: - Info Section
-    
+
     private var infoSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 10) {
@@ -270,33 +281,33 @@ struct CreditsPurchaseView: View {
                             LinearGradient(
                                 colors: [
                                     GlassTokens.accent1.opacity(0.3),
-                                    GlassTokens.accent2.opacity(0.2)
+                                    GlassTokens.accent2.opacity(0.2),
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                         .frame(width: 28, height: 28)
-                    
+
                     Image(systemName: "info.circle.fill")
                         .font(.caption)
                         .foregroundStyle(
                             LinearGradient(
                                 colors: [
                                     GlassTokens.accent1.opacity(0.9),
-                                    GlassTokens.accent2.opacity(0.8)
+                                    GlassTokens.accent2.opacity(0.8),
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                 }
-                
+
                 Text(L10n.tr("l10n.common.info"))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(GlassTokens.textPrimary)
             }
-            
+
             VStack(alignment: .leading, spacing: 10) {
                 InfoRow(icon: "checkmark.circle.fill", text: L10n.tr("l10n.credits.info.2"))
                 InfoRow(icon: "checkmark.circle.fill", text: L10n.tr("l10n.credits.info.3"))
@@ -307,9 +318,9 @@ struct CreditsPurchaseView: View {
         .padding(20)
         .glassCard()
     }
-    
+
     // MARK: - Helpers
-    
+
     private func refreshData() async {
         await creditsViewModel.refreshCreditsBalance()
         await creditsViewModel.loadProducts()
@@ -326,9 +337,9 @@ struct ProductCard: View {
     let index: Int
     let isLast: Bool
     let onPurchase: () -> Void
-    
+
     @State private var isPressed = false
-    
+
     var body: some View {
         Button(action: onPurchase) {
             HStack(spacing: 16) {
@@ -345,7 +356,7 @@ struct ProductCard: View {
                         )
                         .frame(width: 72, height: 72)
                         .blur(radius: 12)
-                    
+
                     // Main icon container
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(
@@ -363,7 +374,7 @@ struct ProductCard: View {
                                     lineWidth: 1
                                 )
                         )
-                    
+
                     if isPurchasing {
                         ProgressView()
                             .tint(GlassTokens.textPrimary.opacity(0.9))
@@ -380,14 +391,14 @@ struct ProductCard: View {
                     x: 0,
                     y: 5
                 )
-                
+
                 // Product Info
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
                         Text(product.displayName)
                             .font(.headline.weight(.bold))
                             .foregroundStyle(GlassTokens.textPrimary)
-                        
+
                         if let credits = creditsCount, credits > 0 {
                             // Best Value Badge - show on last product (usually bestvalue)
                             if isLast {
@@ -400,7 +411,7 @@ struct ProductCard: View {
                                         LinearGradient(
                                             colors: [
                                                 gradientColors[0].opacity(0.2),
-                                                gradientColors[1].opacity(0.15)
+                                                gradientColors[1].opacity(0.15),
                                             ],
                                             startPoint: .leading,
                                             endPoint: .trailing
@@ -417,13 +428,13 @@ struct ProductCard: View {
                             }
                         }
                     }
-                    
+
                     if let credits = creditsCount, credits > 0 {
                         Text(L10n.tr("l10n.credits.xCredits", credits))
                             .font(.subheadline)
                             .foregroundStyle(GlassTokens.textSecondary)
                     }
-                    
+
                     if !product.description.isEmpty {
                         Text(product.description)
                             .font(.caption)
@@ -431,17 +442,18 @@ struct ProductCard: View {
                             .lineLimit(2)
                     }
                 }
-                
+
                 Spacer()
-                
+
                 // Price
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(product.displayPrice)
                         .font(.title3.weight(.bold))
                         .foregroundStyle(GlassTokens.textPrimary)
-                    
+
                     if let credits = creditsCount, credits > 0 {
-                        let pricePerCredit = calculatePricePerCredit(price: product.displayPrice, credits: credits)
+                        let pricePerCredit = calculatePricePerCredit(
+                            price: product.displayPrice, credits: credits)
                         if let pricePerCredit = pricePerCredit {
                             Text(L10n.tr("l10n.credits.perCredit", pricePerCredit))
                                 .font(.caption2)
@@ -462,7 +474,7 @@ struct ProductCard: View {
                             ? LinearGradient(
                                 colors: [
                                     gradientColors[0].opacity(0.6),
-                                    gradientColors[1].opacity(0.4)
+                                    gradientColors[1].opacity(0.4),
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -470,7 +482,7 @@ struct ProductCard: View {
                             : LinearGradient(
                                 colors: [
                                     GlassTokens.borderColor.opacity(0.25),
-                                    GlassTokens.borderColor.opacity(0.2)
+                                    GlassTokens.borderColor.opacity(0.2),
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -492,11 +504,13 @@ struct ProductCard: View {
         }
         .disabled(isPurchasing)
         .buttonStyle(.plain)
-        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
-            isPressed = pressing
-        }, perform: {})
+        .onLongPressGesture(
+            minimumDuration: 0, maximumDistance: .infinity,
+            pressing: { pressing in
+                isPressed = pressing
+            }, perform: {})
     }
-    
+
     private var gradientColors: [Color] {
         // Harmonized gradients using only GlassTokens colors
         switch index % 3 {
@@ -505,25 +519,25 @@ struct ProductCard: View {
             return [
                 GlassTokens.accent1,
                 GlassTokens.accent1.opacity(0.85),
-                GlassTokens.primary1.opacity(0.9)
+                GlassTokens.primary1.opacity(0.9),
             ]
         case 1:
             // Popular package: Warm linen to dusty rose
             return [
                 GlassTokens.primary1,
                 GlassTokens.primary2.opacity(0.9),
-                GlassTokens.accent2.opacity(0.85)
+                GlassTokens.accent2.opacity(0.85),
             ]
         default:
             // Best value package: Champagne to dusty rose (premium feel)
             return [
                 GlassTokens.accent1,
                 GlassTokens.accent2,
-                GlassTokens.primary1.opacity(0.8)
+                GlassTokens.primary1.opacity(0.8),
             ]
         }
     }
-    
+
     private var iconForProduct: String {
         switch index % 3 {
         case 0:
@@ -534,13 +548,14 @@ struct ProductCard: View {
             return "crown.fill"
         }
     }
-    
+
     private func calculatePricePerCredit(price: String, credits: Int) -> String? {
         // Extract number from price string (e.g., "$0.99" -> 0.99)
-        let cleanedPrice = price.replacingOccurrences(of: "$", with: "").replacingOccurrences(of: ",", with: "")
+        let cleanedPrice = price.replacingOccurrences(of: "$", with: "").replacingOccurrences(
+            of: ",", with: "")
         guard let priceValue = Double(cleanedPrice) else { return nil }
         let pricePerCredit = priceValue / Double(credits)
-        
+
         if pricePerCredit < 0.01 {
             return String(format: "¢%.0f", pricePerCredit * 100)
         } else {
@@ -554,7 +569,7 @@ struct ProductCard: View {
 struct InfoRow: View {
     let icon: String
     let text: String
-    
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
@@ -563,18 +578,18 @@ struct InfoRow: View {
                     LinearGradient(
                         colors: [
                             GlassTokens.accent1.opacity(0.9),
-                            GlassTokens.primary1.opacity(0.8)
+                            GlassTokens.primary1.opacity(0.8),
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
                 .frame(width: 18, height: 18)
-            
+
             Text(text)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(GlassTokens.textSecondary.opacity(0.9))
-            
+
             Spacer()
         }
     }

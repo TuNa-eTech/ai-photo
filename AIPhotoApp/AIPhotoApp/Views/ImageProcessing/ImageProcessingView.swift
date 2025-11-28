@@ -74,6 +74,7 @@ struct ImageProcessingView: View {
         .onAppear {
             initializeViewModel()
         }
+        .analyticsScreen(name: "ImageProcessing")
     }
 
     // MARK: - Main Content

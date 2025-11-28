@@ -77,6 +77,12 @@
       <StoreKitConfigurationFileReference
          identifier = "../../AIPhotoApp/BokPhoto.storekit">
       </StoreKitConfigurationFileReference>
+      <CommandLineArguments>
+         <CommandLineArgument
+            argument = "-FIRAnalyticsDebugEnabled"
+            isEnabled = "YES">
+         </CommandLineArgument>
+      </CommandLineArguments>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"

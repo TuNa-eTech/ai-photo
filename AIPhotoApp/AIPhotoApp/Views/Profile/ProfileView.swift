@@ -137,6 +137,7 @@ struct ProfileView: View {
             } message: {
                 Text(L10n.tr("l10n.profile.delete.confirmMessage"))
             }
+            .analyticsScreen(name: "Profile")
         }
     }
 

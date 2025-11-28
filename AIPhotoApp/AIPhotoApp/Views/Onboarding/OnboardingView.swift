@@ -99,6 +99,7 @@ struct OnboardingView: View {
             }
         }
         .transition(.opacity)
+        .analyticsScreen(name: "Onboarding")
     }
 
     private func completeOnboarding() {

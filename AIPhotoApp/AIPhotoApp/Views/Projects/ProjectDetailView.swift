@@ -6,22 +6,23 @@
 //
 
 import SwiftUI
+
 #if canImport(UIKit)
-import UIKit
-import Photos
+    import UIKit
+    import Photos
 #endif
 
 struct ProjectDetailView: View {
     let project: Project
     let image: UIImage
     let onDelete: () -> Void
-    
+
     @Environment(\.dismiss) private var dismiss
     @State private var showShareSheet = false
     @State private var showDeleteConfirmation = false
     @State private var showSavedAlert: Bool = false
     @State private var showPermissionDeniedAlert: Bool = false
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -32,19 +33,19 @@ struct ProjectDetailView: View {
                         .aspectRatio(contentMode: .fit)
                         .cornerRadius(16)
                         .shadow(radius: 8)
-                    
+
                     // Details
                     VStack(alignment: .leading, spacing: 12) {
                         Label(project.templateName, systemImage: "wand.and.stars")
                             .font(.title3.bold())
-                        
+
                         HStack {
                             Image(systemName: "calendar")
                             Text(project.createdAt, style: .date)
                         }
                         .font(.subheadline)
                         .foregroundStyle(.gray)
-                        
+
                         if project.status == .completed {
                             HStack {
                                 Image(systemName: "checkmark.circle.fill")
@@ -71,13 +72,13 @@ struct ProjectDetailView: View {
                             .foregroundStyle(.red)
                     }
                 }
-                
+
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(L10n.tr("l10n.common.close")) {
                         dismiss()
                     }
                 }
-                
+
                 ToolbarItem(placement: .bottomBar) {
                     HStack(spacing: 12) {
                         Button {
@@ -89,10 +90,11 @@ struct ProjectDetailView: View {
                         .buttonStyle(GlassCTAButtonStyle())
                         // swiftlint:disable:next i18n_no_hardcoded_string_literals
                         .accessibilityLabel(Text("Save image to Photos"))
-                        
+
                         ShareLink(
                             item: Image(uiImage: image),
-                            preview: SharePreview(L10n.tr("l10n.share.previewTitle"), image: Image(uiImage: image))
+                            preview: SharePreview(
+                                L10n.tr("l10n.share.previewTitle"), image: Image(uiImage: image))
                         ) {
                             Label(L10n.tr("l10n.common.share"), systemImage: "square.and.arrow.up")
                                 .frame(maxWidth: .infinity)
@@ -111,12 +113,12 @@ struct ProjectDetailView: View {
                     dismiss()
                     onDelete()
                 }
-                Button(L10n.tr("l10n.common.cancel"), role: .cancel) { }
+                Button(L10n.tr("l10n.common.cancel"), role: .cancel) {}
             } message: {
                 Text(L10n.tr("l10n.projects.confirmDelete", project.templateName))
             }
             .alert(L10n.tr("l10n.photo.savedTitle"), isPresented: $showSavedAlert) {
-                Button(L10n.tr("l10n.common.ok"), role: .cancel) { }
+                Button(L10n.tr("l10n.common.ok"), role: .cancel) {}
             } message: {
                 Text(L10n.tr("l10n.photo.savedMessage"))
             }
@@ -126,13 +128,14 @@ struct ProjectDetailView: View {
                         UIApplication.shared.open(url)
                     }
                 }
-                Button(L10n.tr("l10n.common.cancel"), role: .cancel) { }
+                Button(L10n.tr("l10n.common.cancel"), role: .cancel) {}
             } message: {
                 Text(L10n.tr("l10n.photo.permissionMessage"))
             }
+            .analyticsScreen(name: "ProjectDetail")
         }
     }
-    
+
     // MARK: - Save
     private func saveToPhotos(_ image: UIImage) {
         Task {
@@ -141,7 +144,7 @@ struct ProjectDetailView: View {
                 if success {
                     showSavedAlert = true
                     #if canImport(UIKit)
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     #endif
                 } else {
                     showPermissionDeniedAlert = true
@@ -150,4 +153,3 @@ struct ProjectDetailView: View {
         }
     }
 }
-

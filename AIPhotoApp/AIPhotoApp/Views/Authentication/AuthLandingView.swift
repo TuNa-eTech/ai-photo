@@ -239,6 +239,7 @@ struct AuthLandingView: View {
                 showCard = true
             }
         }
+        .analyticsScreen(name: "AuthLanding")
     }
 }
 

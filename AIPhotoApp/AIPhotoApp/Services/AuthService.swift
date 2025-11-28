@@ -24,6 +24,10 @@ final class AuthService {
                 user?.getIDTokenForcingRefresh(false) { token, _ in
                     if let token = token {
                         onUpdate(token)
+                        // Update Analytics User ID
+                        if let uid = user?.uid {
+                            AnalyticsService.shared.setUserId(uid)
+                        }
                     }
                 }
             }
@@ -85,12 +89,15 @@ final class AuthService {
 
         let firebaseIDToken = try await fetchFirebaseIDToken(forceRefresh: true)
 
-        return AuthSession(
+        let session = AuthSession(
             name: name,
             email: email,
             avatarURL: avatarURL,
             idToken: firebaseIDToken
         )
+
+        AnalyticsService.shared.log(.login(method: "google"))
+        return session
     }
 
     // MARK: - Sign in with Apple
@@ -129,12 +136,15 @@ final class AuthService {
 
         let firebaseIDToken = try await fetchFirebaseIDToken(forceRefresh: true)
 
-        return AuthSession(
+        let session = AuthSession(
             name: name,
             email: email,
             avatarURL: avatarURL,
             idToken: firebaseIDToken
         )
+
+        AnalyticsService.shared.log(.login(method: "apple"))
+        return session
     }
 
     // MARK: - Anonymous Authentication
@@ -167,12 +177,15 @@ final class AuthService {
 
             let firebaseIDToken = try await fetchFirebaseIDToken(forceRefresh: true)
 
-            return AuthSession(
+            let session = AuthSession(
                 name: "Guest User",
                 email: nil,
                 avatarURL: nil,
                 idToken: firebaseIDToken
             )
+
+            AnalyticsService.shared.log(.login(method: "anonymous"))
+            return session
         #else
             throw AuthError.firebaseNotConfigured
         #endif
@@ -208,12 +221,15 @@ final class AuthService {
 
             let firebaseIDToken = try await fetchFirebaseIDToken(forceRefresh: true)
 
-            return AuthSession(
+            let session = AuthSession(
                 name: upgradedUser.displayName,
                 email: upgradedUser.email,
                 avatarURL: upgradedUser.photoURL,
                 idToken: firebaseIDToken
             )
+
+            AnalyticsService.shared.log(.signUp(method: "email_link"))
+            return session
         #else
             throw AuthError.firebaseNotConfigured
         #endif

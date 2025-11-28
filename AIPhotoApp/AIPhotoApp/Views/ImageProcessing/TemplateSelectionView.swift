@@ -115,6 +115,7 @@ struct TemplateSelectionView: View {
         } message: {
             Text(L10n.tr("l10n.camera.unavailable.message"))
         }
+        .analyticsScreen(name: "TemplateSelection")
     }
 
     // MARK: - Views

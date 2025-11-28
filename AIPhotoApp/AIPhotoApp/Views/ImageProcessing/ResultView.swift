@@ -140,6 +140,7 @@ struct ResultView: View {
         } message: {
             Text(L10n.tr("l10n.photo.permissionMessage"))
         }
+        .analyticsScreen(name: "Result")
     }
 
     // MARK: - Save

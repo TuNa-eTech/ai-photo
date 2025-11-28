@@ -115,6 +115,7 @@ struct HomeView: View {
                     .toolbar(.hidden, for: .tabBar)
             }
         }
+        .analyticsScreen(name: "Home")
         .navigationBarHidden(true)
         .onAppear {
             // Load trending templates for home screen (only if logged in)
